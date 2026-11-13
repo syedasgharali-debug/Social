@@ -1,0 +1,6 @@
+{
+  "name": "PulseCRM Social",
+  "description": "Social Media Management & Social CRM SaaS Platform combining Category Queues, Evergreen Recycling, Content Discovery, and HubSpot-style Social CRM.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
