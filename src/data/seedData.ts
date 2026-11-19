@@ -527,12 +527,14 @@ export const SEED_THREADS: Thread[] = [
 ];
 
 export const SEED_DEALS: Deal[] = [
-  { id: 'd1', workspaceId: 'ws-digixy', contactId: 'c1', title: 'TechFlow Enterprise (50 Seats)', value: 18000, stage: 'proposal_sent', probability: 75, expectedCloseDate: '2026-12-01' },
+  { id: 'd1', workspaceId: 'ws-digixy', contactId: 'c1', title: 'TechFlow Enterprise (50 Seats)', value: 18000, stage: 'proposal_sent', probability: 80, expectedCloseDate: '2026-12-01' },
   { id: 'd2', workspaceId: 'ws-digixy', contactId: 'c2', title: 'ScaleGrid RevOps Consolidation', value: 9600, stage: 'qualified', probability: 60, expectedCloseDate: '2026-12-10' },
   { id: 'd3', workspaceId: 'ws-digixy', contactId: 'c3', title: 'PixelPerfect Agency Upgrade', value: 7200, stage: 'won', probability: 100, expectedCloseDate: '2026-11-05' },
-  { id: 'd4', workspaceId: 'ws-digixy', contactId: 'c4', title: 'Vanguard Portfolio Bundle (6 Orgs)', value: 14400, stage: 'qualified', probability: 55, expectedCloseDate: '2026-12-18' },
+  { id: 'd4', workspaceId: 'ws-digixy', contactId: 'c4', title: 'Vanguard Portfolio Bundle (6 Orgs)', value: 14400, stage: 'new_lead', probability: 35, expectedCloseDate: '2026-12-18' },
   { id: 'd5', workspaceId: 'ws-digixy', contactId: 'c5', title: 'Lumina Health Compliance Suite', value: 14400, stage: 'proposal_sent', probability: 80, expectedCloseDate: '2026-11-22' },
   { id: 'd6', workspaceId: 'ws-digixy', contactId: 'c6', title: 'Northstar Ads + SCRM Annual', value: 6400, stage: 'won', probability: 100, expectedCloseDate: '2026-11-02' },
+  { id: 'd7', workspaceId: 'ws-personal', contactId: 'c7', title: 'Founders Weekly Podcast Sponsorship', value: 4200, stage: 'qualified', probability: 60, expectedCloseDate: '2026-12-08' },
+  { id: 'd8', workspaceId: 'ws-roasters', contactId: 'c8', title: 'SoHo City Guide Holiday Feature', value: 2400, stage: 'proposal_sent', probability: 80, expectedCloseDate: '2026-11-28' },
 ];
 
 export const SEED_POSTS: SocialPost[] = [

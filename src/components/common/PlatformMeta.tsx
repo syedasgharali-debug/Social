@@ -1,5 +1,8 @@
 import React from 'react';
 import { Platform } from '../../types';
+import { SocialLogo } from './SocialIcons';
+
+export { SocialLogo };
 
 export const ALL_PLATFORMS: Platform[] = [
   'instagram',
@@ -122,10 +125,7 @@ export function PlatformTag({ platform, showFull = true }: { platform: Platform;
   const meta = PLATFORM_META[platform] || PLATFORM_META.linkedin;
   return (
     <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-tight ${meta.textClass}`}>
-      <span
-        className="w-2 h-2 rounded-xs shrink-0"
-        style={{ backgroundColor: meta.accentHex }}
-      />
+      <SocialLogo platform={platform} size={14} />
       <span>{showFull ? meta.label : meta.short}</span>
     </span>
   );
@@ -172,6 +172,7 @@ export function ContactAvatar({
       <img
         src={src}
         alt={name}
+        referrerPolicy="no-referrer"
         onError={() => setImgFailed(true)}
         className={`${dims} rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0`}
       />

@@ -19,10 +19,11 @@ import {
   FileDown,
   Copy,
   X,
-  Play,
   SlidersHorizontal,
   Mail,
   Grid3X3,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import avatarSarah from '../../assets/images/avatar_sarah_1794611198086.jpg';
 import avatarMarcus from '../../assets/images/avatar_marcus_1794611199143.jpg';
@@ -30,26 +31,32 @@ import avatarElena from '../../assets/images/avatar_elena_1794611198972.jpg';
 import avatarJames from '../../assets/images/avatar_james_1794611199572.jpg';
 import mediaWorkspace from '../../assets/images/media_workspace_launch_1794611200573.jpg';
 import mediaTeamCollab from '../../assets/images/media_team_collab_1794611200467.jpg';
-import { PlanTier } from '../../types';
+import { PlanTier, Platform } from '../../types';
 import { aiService } from '../../services/aiService';
+import { SocialLogo } from '../common/SocialIcons';
 
 interface LandingPageProps {
   selectedPlan: PlanTier;
   onLaunch: (plan?: PlanTier, workspaceName?: string) => void;
   onToast?: (title: string, description?: string, variant?: 'info' | 'success' | 'warning') => void;
+  isSignedIn?: boolean;
+  userDisplayName?: string;
+  onSignInClick?: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
-const NETWORKS_DOCK = [
-  { name: 'Instagram', short: 'IG', color: '#E1306C', type: 'Reels & 3×3 Grid' },
-  { name: 'TikTok', short: 'TT', color: '#0F172A', type: 'Short Video & Spark' },
-  { name: 'LinkedIn', short: 'LI', color: '#0A66C2', type: 'Pages & Profiles' },
-  { name: 'X (Twitter)', short: 'X', color: '#1E293B', type: 'Threads & Replies' },
-  { name: 'Facebook', short: 'FB', color: '#1877F2', type: 'Pages & Groups' },
-  { name: 'YouTube Shorts', short: 'YT', color: '#DC2626', type: 'Shorts & Comments' },
-  { name: 'Pinterest', short: 'PI', color: '#BD081C', type: 'Idea Pins & Boards' },
-  { name: 'Threads', short: 'TH', color: '#334155', type: 'Carousels & Text' },
-  { name: 'Bluesky', short: 'BS', color: '#0285FF', type: 'AT Protocol Sync' },
-  { name: 'Google Business', short: 'GBP', color: '#1A73E8', type: 'Updates & Reviews' },
+const NETWORKS_DOCK: { id: Platform; name: string; type: string }[] = [
+  { id: 'instagram', name: 'Instagram', type: 'Reels & 3×3 Grid' },
+  { id: 'tiktok', name: 'TikTok', type: 'Short Video & Spark' },
+  { id: 'linkedin', name: 'LinkedIn', type: 'Pages & Profiles' },
+  { id: 'x', name: 'X (Twitter)', type: 'Threads & Replies' },
+  { id: 'facebook', name: 'Facebook', type: 'Pages & Groups' },
+  { id: 'youtube', name: 'YouTube Shorts', type: 'Shorts & Comments' },
+  { id: 'pinterest', name: 'Pinterest', type: 'Idea Pins & Boards' },
+  { id: 'threads', name: 'Threads', type: 'Carousels & Text' },
+  { id: 'bluesky', name: 'Bluesky', type: 'AT Protocol Sync' },
+  { id: 'gbp', name: 'Google Business', type: 'Updates & Reviews' },
 ];
 
 const TESTIMONIALS = [
@@ -123,9 +130,17 @@ const AGENCY_SCALE_TIERS: {
   { id: 'pro150', name: 'Pro150', monthly: 449, profiles: 150, workspaces: 35, users: 'Unlimited Users' },
 ];
 
-export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProps) {
+export function LandingPage({
+  selectedPlan,
+  onLaunch,
+  onToast,
+  isSignedIn = false,
+  userDisplayName,
+  onSignInClick,
+  darkMode = false,
+  onToggleDarkMode,
+}: LandingPageProps) {
   const [openMenu, setOpenMenu] = useState<'product' | 'solutions' | null>(null);
-  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // Hero 3D tilt state
   const [tilt, setTilt] = useState({ rx: -2, ry: 4 });
@@ -236,7 +251,7 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
         return { ...s, day: nextOrder[(currIdx + 1) % nextOrder.length] };
       })
     );
-    onToast?.('Scheduler Slot Shifted', 'Moved demo card to next available weekly queue slot.');
+    onToast?.('Scheduler Slot Shifted', 'Moved card to next available weekly queue slot.');
   };
 
   const handleSendSimReply = (e: React.FormEvent) => {
@@ -247,7 +262,7 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
         i === simInboxIdx ? { ...t, messages: [...t.messages, `You: ${simReplyInput.trim()}`] } : t
       )
     );
-    onToast?.('Simulated Reply Sent', `Delivered to ${simThreads[simInboxIdx].name} (${simThreads[simInboxIdx].channel}).`);
+    onToast?.('Reply Sent', `Delivered to ${simThreads[simInboxIdx].name} (${simThreads[simInboxIdx].channel}).`);
     setSimReplyInput('');
   };
 
@@ -295,30 +310,39 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
               </button>
             </div>
 
+            <a href="#showcase" className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
+              Features
+            </a>
+
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
               Pricing
             </a>
-
-            <button
-              onClick={() => setDemoModalOpen(true)}
-              className="hover:text-[#4F46E5] dark:hover:text-indigo-400 flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <Play size={13} className="text-amber-500 fill-amber-500" /> Interactive Demo
-            </button>
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => setDemoModalOpen(true)}
-              className="lg:hidden px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg"
-            >
-              Demo
-            </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            {onToggleDarkMode && (
+              <button
+                onClick={onToggleDarkMode}
+                aria-label="Toggle dark mode"
+                className="p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+              >
+                {darkMode ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} />}
+              </button>
+            )}
+            {!isSignedIn && onSignInClick && (
+              <button
+                onClick={onSignInClick}
+                className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+              >
+                Sign In
+              </button>
+            )}
             <button
               onClick={() => onLaunch(selectedPlan)}
               className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-md shadow-indigo-600/20 whitespace-nowrap flex items-center gap-1.5"
             >
-              Launch Dashboard <ArrowRight size={15} />
+              {isSignedIn ? `Open Dashboard${userDisplayName ? ` (${userDisplayName.split(' ')[0]})` : ''}` : 'Launch Dashboard'}{' '}
+              <ArrowRight size={15} />
             </button>
           </div>
         </div>
@@ -488,7 +512,11 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
                   <span className="flex items-center gap-1.5">
                     <Sparkles size={12} /> AI Copilot · Educational Queue
                   </span>
-                  <span className="text-slate-500 dark:text-slate-400">LinkedIn + X + Bluesky</span>
+                  <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <SocialLogo platform="linkedin" size={14} />
+                    <SocialLogo platform="x" size={14} />
+                    <SocialLogo platform="bluesky" size={14} />
+                  </span>
                 </div>
                 <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                   “Stop rewriting captions manually. Assign every pillar to an Evergreen Queue and ship 30 days of omnichannel posts in 42 minutes.”
@@ -548,19 +576,16 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
           <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2.5">
             {NETWORKS_DOCK.map((net, i) => (
               <motion.div
-                key={net.name}
+                key={net.id}
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.03 }}
                 whileHover={{ y: -4 }}
-                className="bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#4F46E5] rounded-xl p-3 text-center shadow-xs transition-colors"
+                className="bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#4F46E5] rounded-xl p-3 text-center shadow-xs hover:shadow-md transition-all"
               >
-                <div
-                  className="w-8 h-8 mx-auto rounded-lg text-white font-display font-extrabold text-[11px] flex items-center justify-center mb-2"
-                  style={{ backgroundColor: net.color }}
-                >
-                  {net.short}
+                <div className="w-10 h-10 mx-auto rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center mb-2 shadow-2xs">
+                  <SocialLogo platform={net.id} size={24} />
                 </div>
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{net.name}</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{net.type}</p>
@@ -856,7 +881,7 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
                     <input
                       value={simReplyInput}
                       onChange={(e) => setSimReplyInput(e.target.value)}
-                      placeholder="Write a simulated reply..."
+                      placeholder="Write a reply..."
                       className="flex-1 min-w-[180px] px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
                     />
                     <button
@@ -1317,7 +1342,7 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
               <div>
                 <h4 className="font-display font-bold text-white uppercase tracking-wider mb-3">Resources</h4>
                 <ul className="space-y-2 text-slate-400">
-                  <li><button onClick={() => setDemoModalOpen(true)} className="hover:text-white">Interactive Demo</button></li>
+                  <li><a href="#showcase" className="hover:text-white">Features & AI Copilot</a></li>
                   <li><a href="#pricing" className="hover:text-white">Pricing Calculator</a></li>
                   <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white">Launch Workspace</button></li>
                 </ul>
@@ -1331,43 +1356,6 @@ export function LandingPage({ selectedPlan, onLaunch, onToast }: LandingPageProp
           </div>
         </div>
       </footer>
-
-      {/* Interactive Demo Modal */}
-      {demoModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs" onClick={() => setDemoModalOpen(false)} />
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
-                  INTERACTIVE SANDBOX TOUR
-                </p>
-                <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
-                  Jump directly into a live module
-                </h3>
-              </div>
-              <button onClick={() => setDemoModalOpen(false)} className="text-slate-400 hover:text-slate-700">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              {[
-                { title: 'AI Copilot & Repurposer', desc: 'Test live caption + hashtag generation across 10 channels.', action: () => { setDemoModalOpen(false); handleJumpToAiDemo(); } },
-                { title: 'User Workspace Dashboard', desc: 'Explore pre-loaded Category Queues, Kanban CRM & Inbox.', action: () => { setDemoModalOpen(false); onLaunch(selectedPlan); } },
-              ].map((item) => (
-                <button
-                  key={item.title}
-                  onClick={item.action}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] bg-[#F8FAFC] dark:bg-slate-800 text-left transition-colors"
-                >
-                  <p className="font-bold text-slate-900 dark:text-white">{item.title}</p>
-                  <p className="mt-1 text-slate-500 dark:text-slate-400">{item.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Plan Confirmation Modal */}
       {planModalTier && (

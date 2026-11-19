@@ -30,7 +30,7 @@ import {
   Platform,
   TeamRole,
 } from '../../types';
-import { ALL_PLATFORMS, PLATFORM_META, PlatformTag } from '../common/PlatformMeta';
+import { ALL_PLATFORMS, PLATFORM_META, PlatformTag, SocialLogo } from '../common/PlatformMeta';
 import { CANVA_TEMPLATES, MEDIA_LIBRARY } from '../../data/seedData';
 import { aiService } from '../../services/aiService';
 import { DraftsWorkspace } from './DraftsWorkspace';
@@ -432,10 +432,7 @@ export function ContentStudio({
                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 text-slate-500 hover:text-slate-800'
                         }`}
                       >
-                        <span
-                          className="w-2 h-2 rounded-xs shrink-0"
-                          style={{ backgroundColor: meta.accentHex }}
-                        />
+                        <SocialLogo platform={p} size={15} />
                         {meta.label}
                         {active && <Check size={12} />}
                       </button>
@@ -834,13 +831,14 @@ export function ContentStudio({
                     key={pl}
                     type="button"
                     onClick={() => setPreviewPlatform(pl)}
-                    className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
+                    className={`px-2.5 py-1 rounded-md capitalize flex items-center gap-1.5 transition-colors ${
                       previewPlatform === pl
                         ? 'bg-[#4F46E5] text-white'
                         : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    {pl === 'x' ? 'X' : pl}
+                    <SocialLogo platform={pl} size={13} />
+                    <span>{pl === 'x' ? 'X' : pl}</span>
                   </button>
                 ))}
               </div>

@@ -1,0 +1,271 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 0: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Global Hardened Primitives
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'essadhiif@gmail.com' ||
+        request.auth.token.email == 'syedasgharkazmii@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidPlan(plan) {
+      return plan is string && plan in ['bootstrap', 'accelerate', 'pro_agency', 'pro50', 'pro100', 'pro150'];
+    }
+
+    function isValidTeamRole(role) {
+      return role is string && role in ['Owner', 'Manager', 'Publisher', 'Contributor'];
+    }
+
+    function isBoundedMapList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || arr[0] is map);
+    }
+
+    // =========================================================================
+    // Validation Blueprints (Anti-Update-Gap)
+    // =========================================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'selectedPlan', 'activeRole', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'selectedPlan', 'activeRole', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.email == request.auth.token.email
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && isValidPlan(data.selectedPlan)
+        && isValidTeamRole(data.activeRole)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidWorkspaceSnapshot(data) {
+      return data.keys().hasAll([
+          'ownerId', 'activeWorkspaceId', 'activeRole', 'selectedPlan', 'darkMode',
+          'workspaces', 'categories', 'connectedProfiles', 'teamMembers', 'contacts',
+          'threads', 'deals', 'posts', 'ads', 'drafts', 'discoveryAlerts',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'activeWorkspaceId', 'activeRole', 'selectedPlan', 'darkMode',
+          'workspaces', 'categories', 'connectedProfiles', 'teamMembers', 'contacts',
+          'threads', 'deals', 'posts', 'ads', 'drafts', 'discoveryAlerts',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && isValidId(data.activeWorkspaceId)
+        && isValidTeamRole(data.activeRole)
+        && isValidPlan(data.selectedPlan)
+        && data.darkMode is bool
+        && isBoundedMapList(data.workspaces, 25)
+        && isBoundedMapList(data.categories, 50)
+        && isBoundedMapList(data.connectedProfiles, 150)
+        && isBoundedMapList(data.teamMembers, 50)
+        && isBoundedMapList(data.contacts, 200)
+        && isBoundedMapList(data.threads, 200)
+        && isBoundedMapList(data.deals, 200)
+        && isBoundedMapList(data.posts, 300)
+        && isBoundedMapList(data.ads, 100)
+        && isBoundedMapList(data.drafts, 200)
+        && isBoundedMapList(data.discoveryAlerts, 100)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRole(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'createdAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.createdAt is timestamp;
+    }
+
+    function isValidPlatformAdminState(data) {
+      return data.keys().hasAll([
+          'updatedBy', 'tenants', 'featureFlags', 'auditLogs', 'apiHealthNodes',
+          'aiGovernance', 'promoCodes', 'invoices', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'updatedBy', 'tenants', 'featureFlags', 'auditLogs', 'apiHealthNodes',
+          'aiGovernance', 'promoCodes', 'invoices', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.updatedBy)
+        && data.updatedBy == request.auth.uid
+        && isBoundedMapList(data.tenants, 200)
+        && isBoundedMapList(data.featureFlags, 50)
+        && isBoundedMapList(data.auditLogs, 200)
+        && isBoundedMapList(data.apiHealthNodes, 30)
+        && data.aiGovernance is map
+        && isBoundedMapList(data.promoCodes, 100)
+        && isBoundedMapList(data.invoices, 200)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // Collection: /users/{userId} (PII Isolated)
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isVerifiedUser() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isVerifiedUser() && resource.data.uid == request.auth.uid;
+
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isOwner(userId);
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'photoURL', 'selectedPlan', 'activeRole', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isVerifiedUser() && isValidId(userId) && (isOwner(userId) || isAdmin());
+
+      // =======================================================================
+      // Subcollection: /users/{userId}/workspaces/{workspaceDocId} (Master Gate)
+      // =======================================================================
+      match /workspaces/{workspaceDocId} {
+        allow get: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(workspaceDocId)
+          && (isOwner(userId) || isAdmin())
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && get(/databases/$(database)/documents/users/$(userId)).data.uid == userId;
+
+        allow list: if isVerifiedUser() && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(workspaceDocId)
+          && isValidWorkspaceSnapshot(incoming())
+          && incoming().ownerId == userId
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(workspaceDocId)
+          && isValidWorkspaceSnapshot(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              isOwner(userId)
+              && exists(/databases/$(database)/documents/users/$(userId))
+              && get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid
+              && incoming().diff(existing()).affectedKeys().hasOnly([
+                'activeWorkspaceId', 'activeRole', 'selectedPlan', 'darkMode',
+                'workspaces', 'categories', 'connectedProfiles', 'teamMembers',
+                'contacts', 'threads', 'deals', 'posts', 'ads', 'drafts',
+                'discoveryAlerts', 'updatedAt'
+              ])
+            )
+          );
+
+        allow delete: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(workspaceDocId)
+          && (isOwner(userId) || isAdmin())
+          && exists(/databases/$(database)/documents/users/$(userId));
+      }
+    }
+
+    // =========================================================================
+    // Collection: /admins/{adminId}
+    // =========================================================================
+    match /admins/{adminId} {
+      allow get: if isVerifiedUser() && isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if false;
+
+      allow create: if isAdmin()
+        && isValidId(adminId)
+        && isValidAdminRole(incoming())
+        && incoming().uid == adminId
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(adminId);
+    }
+
+    // =========================================================================
+    // Collection: /adminState/{configId} (Super Admin Control Panel)
+    // =========================================================================
+    match /adminState/{configId} {
+      allow get: if isVerifiedUser() && isValidId(configId) && isAdmin();
+      allow list: if false;
+
+      allow create: if isAdmin()
+        && isValidId(configId)
+        && isValidPlatformAdminState(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isAdmin()
+        && isValidId(configId)
+        && isValidPlatformAdminState(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'updatedBy', 'tenants', 'featureFlags', 'auditLogs', 'apiHealthNodes',
+          'aiGovernance', 'promoCodes', 'invoices', 'updatedAt'
+        ]);
+
+      allow delete: if isAdmin() && isValidId(configId);
+    }
+  }
+}

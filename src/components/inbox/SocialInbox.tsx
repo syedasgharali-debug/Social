@@ -24,6 +24,8 @@ interface SocialInboxProps {
   contacts: Contact[];
   deals: Deal[];
   selectedThreadId?: string;
+  currentUserName?: string;
+  currentUserAvatar?: string;
   onUpdateThread: (thread: Thread) => void;
   onUpdateContact: (contact: Contact) => void;
   onOpenContactInCrm: (contactId: string) => void;
@@ -38,6 +40,8 @@ export function SocialInbox({
   contacts,
   deals,
   selectedThreadId,
+  currentUserName = 'You',
+  currentUserAvatar = '',
   onUpdateThread,
   onUpdateContact,
   onOpenContactInCrm,
@@ -128,8 +132,8 @@ export function SocialInbox({
     const newMsg = {
       id: `m-${Date.now()}`,
       senderId: 'me',
-      senderName: isInternalNote ? 'Internal Team Note · Alex Rivera' : 'Alex Rivera',
-      senderAvatar: '',
+      senderName: isInternalNote ? `Internal Team Note · ${currentUserName}` : currentUserName,
+      senderAvatar: currentUserAvatar,
       text: replyText.trim(),
       timestamp: now,
       isMe: true,

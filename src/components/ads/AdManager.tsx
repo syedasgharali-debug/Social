@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Sparkles, Copy, Trash2, X, Check } from 'lucide-react';
 import { AdCampaign, AdPlatform } from '../../types';
 import { aiService } from '../../services/aiService';
+import { SocialLogo } from '../common/SocialIcons';
 
 interface AdManagerProps {
   workspaceId: string;
@@ -152,13 +153,14 @@ export function AdManager({
           <button
             key={tab.id}
             onClick={() => setPlatformTab(tab.id)}
-            className={`px-4 py-1.5 rounded-md transition-colors ${
+            className={`px-4 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
               platformTab === tab.id
                 ? 'bg-slate-900 dark:bg-[#4F46E5] text-white'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            {tab.label}
+            {tab.id !== 'all' && <SocialLogo platform={tab.id} size={14} />}
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
@@ -187,7 +189,10 @@ export function AdManager({
                     <p className="text-[11px] text-slate-500 truncate">{ad.adCopy || ad.audience}</p>
                   </td>
                   <td className="py-3.5 px-5 font-semibold uppercase text-slate-700 dark:text-slate-300">
-                    {ad.platform}
+                    <span className="inline-flex items-center gap-2">
+                      <SocialLogo platform={ad.platform} size={16} />
+                      <span>{ad.platform === 'meta' ? 'Meta' : ad.platform === 'tiktok' ? 'TikTok' : 'Google'}</span>
+                    </span>
                   </td>
                   <td className="py-3.5 px-5">
                     <button

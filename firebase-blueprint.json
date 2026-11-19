@@ -1,0 +1,246 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private authenticated user profile for socialifyai.com",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "selectedPlan": {
+          "type": "string",
+          "enum": ["bootstrap", "accelerate", "pro_agency", "pro50", "pro100", "pro150"]
+        },
+        "activeRole": {
+          "type": "string",
+          "enum": ["Owner", "Manager", "Publisher", "Contributor"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "email", "selectedPlan", "activeRole", "createdAt", "updatedAt"]
+    },
+    "WorkspaceSnapshot": {
+      "title": "WorkspaceSnapshot",
+      "description": "Cloud-synced social media management & Social CRM workspace state owned by a user",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "activeWorkspaceId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "activeRole": {
+          "type": "string",
+          "enum": ["Owner", "Manager", "Publisher", "Contributor"]
+        },
+        "selectedPlan": {
+          "type": "string",
+          "enum": ["bootstrap", "accelerate", "pro_agency", "pro50", "pro100", "pro150"]
+        },
+        "darkMode": {
+          "type": "boolean"
+        },
+        "workspaces": {
+          "type": "array",
+          "description": "Brand workspaces (max 25)"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Evergreen content categories (max 50)"
+        },
+        "connectedProfiles": {
+          "type": "array",
+          "description": "Connected social profiles (max 150)"
+        },
+        "teamMembers": {
+          "type": "array",
+          "description": "Workspace team members (max 50)"
+        },
+        "contacts": {
+          "type": "array",
+          "description": "Social CRM contacts (max 200)"
+        },
+        "threads": {
+          "type": "array",
+          "description": "Unified inbox threads (max 200)"
+        },
+        "deals": {
+          "type": "array",
+          "description": "CRM pipeline deals (max 200)"
+        },
+        "posts": {
+          "type": "array",
+          "description": "Scheduled and published posts (max 300)"
+        },
+        "ads": {
+          "type": "array",
+          "description": "Cross-platform ad campaigns (max 100)"
+        },
+        "drafts": {
+          "type": "array",
+          "description": "Saved studio drafts (max 200)"
+        },
+        "discoveryAlerts": {
+          "type": "array",
+          "description": "Content discovery trend alerts (max 100)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "activeWorkspaceId",
+        "activeRole",
+        "selectedPlan",
+        "darkMode",
+        "workspaces",
+        "categories",
+        "connectedProfiles",
+        "teamMembers",
+        "contacts",
+        "threads",
+        "deals",
+        "posts",
+        "ads",
+        "drafts",
+        "discoveryAlerts",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Authoritative Super Admin registry entry",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "PlatformAdminState": {
+      "title": "PlatformAdminState",
+      "description": "Super Admin SaaS governance state (tenants, feature flags, AI governance, promos, invoices, audit logs)",
+      "type": "object",
+      "properties": {
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "tenants": {
+          "type": "array",
+          "description": "Registered tenant accounts (max 200)"
+        },
+        "featureFlags": {
+          "type": "array",
+          "description": "Global platform feature flags (max 50)"
+        },
+        "auditLogs": {
+          "type": "array",
+          "description": "Admin audit trail (max 200)"
+        },
+        "apiHealthNodes": {
+          "type": "array",
+          "description": "Social API gateway health nodes (max 30)"
+        },
+        "aiGovernance": {
+          "type": "object",
+          "description": "AI Copilot governance configuration"
+        },
+        "promoCodes": {
+          "type": "array",
+          "description": "Active billing promo codes (max 100)"
+        },
+        "invoices": {
+          "type": "array",
+          "description": "Platform invoice ledger (max 200)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "updatedBy",
+        "tenants",
+        "featureFlags",
+        "auditLogs",
+        "apiHealthNodes",
+        "aiGovernance",
+        "promoCodes",
+        "invoices",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user account profile keyed by Firebase Auth UID"
+    },
+    "/users/{userId}/workspaces/{workspaceDocId}": {
+      "schema": { "$ref": "#/entities/WorkspaceSnapshot" },
+      "description": "User-owned cloud-synced workspace snapshot"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Authoritative Super Admin role registry"
+    },
+    "/adminState/{configId}": {
+      "schema": { "$ref": "#/entities/PlatformAdminState" },
+      "description": "Super Admin SaaS platform configuration and tenant directory"
+    }
+  }
+}

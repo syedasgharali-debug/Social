@@ -20,6 +20,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   Download,
+  ArrowLeft,
+  Globe,
+  Sun,
+  Moon,
+  LogOut,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -44,6 +49,20 @@ import {
   InvoiceRecord,
 } from '../../types';
 import { SEED_AI_GOVERNANCE } from '../../data/seedData';
+import { SocialLogo, SocialBrandKey } from '../common/SocialIcons';
+
+function resolveApiBrand(nodeName: string): SocialBrandKey {
+  const lower = nodeName.toLowerCase();
+  if (lower.includes('meta') || lower.includes('facebook') || lower.includes('instagram')) return 'meta';
+  if (lower.includes('tiktok')) return 'tiktok';
+  if (lower.includes('linkedin')) return 'linkedin';
+  if (lower.includes('youtube')) return 'youtube';
+  if (lower.includes('pinterest')) return 'pinterest';
+  if (lower.includes('bluesky')) return 'bluesky';
+  if (lower.includes('threads')) return 'threads';
+  if (lower.includes('google')) return 'gbp';
+  return 'x';
+}
 
 interface SuperAdminPanelProps {
   state: AppState;
@@ -60,6 +79,11 @@ interface SuperAdminPanelProps {
   onRetryInvoice: (invoice: InvoiceRecord) => void;
   onInspectWorkspace: (workspaceId?: string) => void;
   onToast: (title: string, description?: string) => void;
+  onBackToWorkspace?: () => void;
+  onBackToLanding?: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
+  onSignOut?: () => void;
 }
 
 const PLAN_PRICING: Record<PlanTier, { mrr: number; profiles: number; aiLimit: number; label: string }> = {
@@ -125,6 +149,11 @@ export function SuperAdminPanel({
   onRetryInvoice,
   onInspectWorkspace,
   onToast,
+  onBackToWorkspace,
+  onBackToLanding,
+  darkMode = false,
+  onToggleDarkMode,
+  onSignOut,
 }: SuperAdminPanelProps) {
   const [activeSection, setActiveSection] = useState<AdminSection>('all');
 
@@ -273,7 +302,52 @@ export function SuperAdminPanel({
     activeSection === 'all' || activeSection === section;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-[#090D16] p-6 md:p-8 custom-scrollbar">
+    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-[#090D16] custom-scrollbar">
+      {/* Clean Single Admin Header Bar */}
+      <header className="sticky top-0 z-30 h-14 px-6 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {onBackToWorkspace && (
+            <button
+              onClick={onBackToWorkspace}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
+            >
+              <ArrowLeft size={13} /> Workspace Dashboard
+            </button>
+          )}
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#4F46E5] dark:text-indigo-400">
+            <ShieldCheck size={14} /> socialifyai.com Super Admin
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {onBackToLanding && (
+            <button
+              onClick={onBackToLanding}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5"
+            >
+              <Globe size={13} /> Home
+            </button>
+          )}
+          {onToggleDarkMode && (
+            <button
+              onClick={onToggleDarkMode}
+              aria-label="Toggle dark mode"
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+            >
+              {darkMode ? <Sun size={14} className="text-amber-400" /> : <Moon size={14} />}
+            </button>
+          )}
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5"
+            >
+              <LogOut size={13} /> Sign Out
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="p-6 md:p-8">
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Top Control Plane Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -671,13 +745,18 @@ export function SuperAdminPanel({
                     className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between gap-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">
-                          {node.name}
-                        </h3>
-                        <p className="text-[11px] text-slate-500">
-                          {node.provider} · Tested {node.lastTestedAt}
-                        </p>
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center shrink-0">
+                          <SocialLogo platform={resolveApiBrand(node.name)} size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white truncate">
+                            {node.name}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 truncate">
+                            {node.provider} · Tested {node.lastTestedAt}
+                          </p>
+                        </div>
                       </div>
                       <span
                         className={`text-xs font-bold flex items-center gap-1 shrink-0 ${
@@ -1296,6 +1375,7 @@ export function SuperAdminPanel({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { SocialPost, ContentCategory, Platform } from '../../types';
-import { PlatformTag } from '../common/PlatformMeta';
+import { PlatformTag, SocialLogo } from '../common/PlatformMeta';
 
 interface VisualSchedulerProps {
   workspaceId: string;
@@ -311,12 +311,16 @@ export function VisualScheduler({
                               className="p-2 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-800/95 hover:border-[#4F46E5] hover:-translate-y-0.5 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all duration-150"
                             >
                               <div className="flex items-center justify-between gap-1 text-[10px]">
-                                <span className="font-bold uppercase tracking-tight text-slate-500 flex items-center gap-1 min-w-0 truncate">
+                                <span className="font-bold uppercase tracking-tight text-slate-500 flex items-center gap-1 min-w-0">
                                   <span
                                     className="w-1.5 h-1.5 rounded-full shrink-0"
                                     style={{ backgroundColor: catColor }}
                                   />
-                                  {post.platforms.slice(0, 2).join(' · ')}
+                                  <span className="inline-flex items-center gap-1">
+                                    {post.platforms.slice(0, 3).map((pl) => (
+                                      <SocialLogo key={pl} platform={pl} size={12} />
+                                    ))}
+                                  </span>
                                 </span>
                                 <span
                                   className={`font-semibold shrink-0 ${

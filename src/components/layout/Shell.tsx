@@ -29,6 +29,7 @@ import {
   RotateCcw,
   Menu,
   Command,
+  LogOut,
 } from 'lucide-react';
 import { AppState, TeamRole, DiscoveryAlert } from '../../types';
 import { ContactAvatar } from '../common/PlatformMeta';
@@ -60,6 +61,8 @@ interface SidebarProps {
   onCreateWorkspace: (name: string, industry: string, handle: string) => void;
   onOpenSettings: () => void;
   onBackToLanding: () => void;
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
 }
 
 export function Sidebar({
@@ -76,6 +79,8 @@ export function Sidebar({
   onCreateWorkspace,
   onOpenSettings,
   onBackToLanding,
+  isAdmin = false,
+  onOpenAdmin,
 }: SidebarProps) {
   const [wsDropdownOpen, setWsDropdownOpen] = useState(false);
   const [showCreateWsModal, setShowCreateWsModal] = useState(false);
@@ -279,6 +284,18 @@ export function Sidebar({
             <Settings size={15} />
             {!effectiveCollapsed && <span>Workspace Settings</span>}
           </button>
+          {isAdmin && onOpenAdmin && (
+            <button
+              onClick={() => {
+                onOpenAdmin();
+                onCloseMobile();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+            >
+              <ShieldCheck size={15} />
+              {!effectiveCollapsed && <span>Super Admin Console</span>}
+            </button>
+          )}
           <button
             onClick={() => {
               onBackToLanding();
@@ -287,7 +304,7 @@ export function Sidebar({
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             <Globe size={15} />
-            {!effectiveCollapsed && <span>Public Landing Site</span>}
+            {!effectiveCollapsed && <span>socialifyai.com Home</span>}
           </button>
         </div>
       </aside>
@@ -358,6 +375,8 @@ export function Sidebar({
 
 interface CommandBarProps {
   state: AppState;
+  userProfile: { displayName: string; email: string; photoURL?: string };
+  onSignOut: () => void;
   onQuickCreatePost: () => void;
   onSwitchRole: (role: TeamRole) => void;
   onToggleDarkMode: () => void;
@@ -372,6 +391,8 @@ interface CommandBarProps {
 
 export function CommandBar({
   state,
+  userProfile,
+  onSignOut,
   onQuickCreatePost,
   onSwitchRole,
   onToggleDarkMode,
@@ -592,16 +613,22 @@ export function CommandBar({
             }}
             className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800"
           >
-            <ContactAvatar name="Alex Rivera" size="sm" />
-            <div className="hidden md:block text-left">
-              <p className="text-xs font-bold text-slate-900 dark:text-white leading-none">Alex Rivera</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{state.activeRole}</p>
+            <ContactAvatar name={userProfile.displayName} src={userProfile.photoURL} size="sm" />
+            <div className="hidden md:block text-left max-w-[140px]">
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-none truncate">
+                {userProfile.displayName}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{state.activeRole}</p>
             </div>
             <ChevronDown size={13} className="text-slate-400" />
           </button>
 
           {profileMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-2 z-50 text-xs">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-2 z-50 text-xs">
+              <div className="px-2.5 py-2 border-b border-slate-100 dark:border-slate-800">
+                <p className="font-bold text-slate-900 dark:text-white truncate">{userProfile.displayName}</p>
+                <p className="text-[11px] text-slate-500 truncate">{userProfile.email}</p>
+              </div>
               <div className="px-2.5 py-2 border-b border-slate-100 dark:border-slate-800">
                 <p className="font-bold text-slate-900 dark:text-white">Switch Active Role</p>
                 <div className="mt-1.5 grid grid-cols-2 gap-1">
@@ -639,9 +666,18 @@ export function CommandBar({
                     onResetDemo();
                     setProfileMenuOpen(false);
                   }}
-                  className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center gap-2 text-rose-600"
+                  className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2 text-amber-700 dark:text-amber-400"
                 >
-                  <RotateCcw size={13} /> Reset Demo Workspace
+                  <RotateCcw size={13} /> Reset Workspace Data
+                </button>
+                <button
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    onSignOut();
+                  }}
+                  className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center gap-2 text-rose-600 font-semibold"
+                >
+                  <LogOut size={13} /> Sign Out
                 </button>
               </div>
             </div>

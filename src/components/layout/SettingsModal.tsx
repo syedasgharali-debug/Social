@@ -1,12 +1,14 @@
 import React from 'react';
-import { X, Building2, ShieldCheck, RotateCcw, Download, Check } from 'lucide-react';
+import { X, Building2, ShieldCheck, RotateCcw, Download, Check, LogOut } from 'lucide-react';
 import { AppState, Platform, TeamRole, PlanTier } from '../../types';
-import { ALL_PLATFORMS, PLATFORM_META } from '../common/PlatformMeta';
+import { ALL_PLATFORMS, PLATFORM_META, SocialLogo, ContactAvatar } from '../common/PlatformMeta';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   state: AppState;
+  userProfile?: { displayName: string; email: string; photoURL?: string };
+  onSignOut?: () => void;
   onUpdateState: (updater: Partial<AppState> | ((prev: AppState) => AppState)) => void;
   onResetDemo: () => void;
   onToast: (title: string, description?: string) => void;
@@ -19,7 +21,16 @@ const ROLE_PERMISSIONS: Record<TeamRole, string> = {
   Contributor: 'Create drafts and submit posts into Pending Approval for Manager sign-off.',
 };
 
-export function SettingsModal({ isOpen, onClose, state, onUpdateState, onResetDemo, onToast }: SettingsModalProps) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  state,
+  userProfile,
+  onSignOut,
+  onUpdateState,
+  onResetDemo,
+  onToast,
+}: SettingsModalProps) {
   if (!isOpen) return null;
 
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId) || state.workspaces[0];
@@ -73,6 +84,28 @@ export function SettingsModal({ isOpen, onClose, state, onUpdateState, onResetDe
         </div>
 
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          {userProfile && (
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <ContactAvatar name={userProfile.displayName} src={userProfile.photoURL} size="md" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{userProfile.displayName}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{userProfile.email} · Verified Firebase Session</p>
+                </div>
+              </div>
+              {onSignOut && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onSignOut();
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                >
+                  <LogOut size={13} /> Sign Out
+                </button>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
@@ -126,13 +159,16 @@ export function SettingsModal({ isOpen, onClose, state, onUpdateState, onResetDe
                   <button
                     key={platform}
                     onClick={() => togglePlatform(platform)}
-                    className={`px-2.5 py-2 rounded-lg border text-[11px] font-semibold flex items-center justify-between gap-1 transition-all ${
+                    className={`px-2.5 py-2 rounded-lg border text-[11px] font-semibold flex items-center justify-between gap-1.5 transition-all ${
                       connected
                         ? 'border-[#4F46E5] bg-indigo-50/70 dark:bg-indigo-950/50 text-slate-900 dark:text-white'
                         : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <span className="truncate">{meta.label}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <SocialLogo platform={platform} size={15} />
+                      <span className="truncate">{meta.label}</span>
+                    </span>
                     {connected && <Check size={12} className="text-[#4F46E5] shrink-0" />}
                   </button>
                 );
@@ -186,7 +222,7 @@ export function SettingsModal({ isOpen, onClose, state, onUpdateState, onResetDe
                 }}
                 className="px-3.5 py-2 border border-rose-200 dark:border-rose-900 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center gap-1.5"
               >
-                <RotateCcw size={14} /> Reset Demo Data
+                <RotateCcw size={14} /> Reset Workspace Data
               </button>
             </div>
             <button

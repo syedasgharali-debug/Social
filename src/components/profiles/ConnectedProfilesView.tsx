@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { ConnectedProfile, Platform } from '../../types';
-import { ALL_PLATFORMS, PLATFORM_META } from '../common/PlatformMeta';
+import { ALL_PLATFORMS, PLATFORM_META, SocialLogo } from '../common/PlatformMeta';
 
 interface ConnectedProfilesViewProps {
   workspaceId: string;
@@ -123,15 +123,19 @@ export function ConnectedProfilesView({
               className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between gap-4 hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${meta.textClass}`}>
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: meta.accentHex }} />
-                    {meta.label}
-                  </span>
-                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-white mt-0.5">
-                    {profile.accountName}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-mono">{profile.handle}</p>
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center shrink-0">
+                    <SocialLogo platform={profile.platform} size={22} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className={`text-[11px] font-bold uppercase tracking-wider ${meta.textClass}`}>
+                      {meta.label}
+                    </span>
+                    <h3 className="font-display text-base font-bold text-slate-900 dark:text-white mt-0.5 truncate">
+                      {profile.accountName}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono truncate">{profile.handle}</p>
+                  </div>
                 </div>
 
                 {profile.status === 'connected' ? (

@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckCircle2, TrendingUp } from 'lucide-react';
-import { TopModeSwitcher } from './components/layout/TopModeSwitcher';
+import { X, CheckCircle2, TrendingUp, Loader2, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Sidebar, CommandBar, NavTabId } from './components/layout/Shell';
 import { CommandPalette } from './components/layout/CommandPalette';
+import { AuthScreen } from './components/auth/AuthScreen';
 import { WorkspaceOverview } from './components/overview/WorkspaceOverview';
 import { AiCopilotWizard } from './components/studio/AiCopilotWizard';
 import { ContentStudio, ComposerPreset } from './components/studio/ContentStudio';
@@ -17,6 +17,7 @@ import { AdManager } from './components/ads/AdManager';
 import { LandingPage } from './components/layout/LandingPage';
 import { SettingsModal } from './components/layout/SettingsModal';
 import { SuperAdminPanel } from './components/admin/SuperAdminPanel';
+import { useAuth } from './contexts/AuthContext';
 import { useStorage } from './hooks/useStorage';
 import {
   Thread,
@@ -40,7 +41,30 @@ import {
 } from './types';
 
 export default function App() {
-  const { state, updateState, resetDemoData, toasts, pushToast, dismissToast } = useStorage();
+  const {
+    user,
+    profile,
+    authReady,
+    isAdmin,
+    signingIn,
+    authError,
+    signInWithEmailPassword,
+    signUpWithEmailPassword,
+    signInWithGoogle,
+    redirectSignInUser,
+    clearRedirectSignIn,
+    logout,
+    clearAuthError,
+    updateProfilePrefs,
+  } = useAuth();
+
+  const { state, updateState, resetDemoData, toasts, pushToast, dismissToast, cloudLoading } = useStorage(
+    user,
+    authReady,
+    Boolean(profile),
+    isAdmin
+  );
+
   const [activeTab, setActiveTab] = useState<NavTabId>('overview');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -51,19 +75,50 @@ export default function App() {
   const [focusedContactId, setFocusedContactId] = useState<string | undefined>(undefined);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [composerPreset, setComposerPreset] = useState<ComposerPreset | null>(null);
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'signup'>('login');
+
+  const currentUserProfile = useMemo(
+    () =>
+      user
+        ? {
+            displayName: profile?.displayName || user.displayName || user.email?.split('@')[0] || 'Workspace User',
+            email: profile?.email || user.email || '',
+            photoURL: profile?.photoURL || user.photoURL || undefined,
+          }
+        : null,
+    [user, profile]
+  );
+
+  const actorEmail = currentUserProfile?.email || 'admin@socialifyai.com';
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
+        if (user) {
+          setIsCommandPaletteOpen((prev) => !prev);
+        }
       } else if (e.key === 'Escape') {
         setMobileDrawerOpen(false);
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (!redirectSignInUser) return;
+    const targetView = redirectSignInUser.isAdmin ? 'admin' : 'app';
+    updateState((prev) => ({ ...prev, viewMode: targetView }));
+    pushToast(
+      redirectSignInUser.isAdmin
+        ? 'Welcome, Super Admin'
+        : `Welcome, ${redirectSignInUser.displayName?.split(' ')[0] || 'back'}`,
+      `Signed in with Google as ${redirectSignInUser.email}`,
+      'success'
+    );
+    clearRedirectSignIn();
+  }, [redirectSignInUser, clearRedirectSignIn, updateState, pushToast]);
 
   const activeWorkspace = useMemo(
     () => state.workspaces.find((w) => w.id === state.activeWorkspaceId) || state.workspaces[0],
@@ -86,20 +141,97 @@ export default function App() {
     [state.posts, state.activeWorkspaceId]
   );
 
+  const handleEmailSignIn = async (email: string, password: string) => {
+    const signedInUser = await signInWithEmailPassword(email, password);
+    if (signedInUser) {
+      const targetView = signedInUser.isAdmin ? 'admin' : 'app';
+      updateState((prev) => ({ ...prev, viewMode: targetView }));
+      pushToast(
+        signedInUser.isAdmin
+          ? 'Welcome, Super Admin'
+          : `Welcome back, ${signedInUser.displayName.split(' ')[0]}`,
+        signedInUser.isAdmin
+          ? `Signed in to Super Admin Control Panel (${signedInUser.email}).`
+          : `Opened your customer workspace (${signedInUser.email}).`,
+        'success'
+      );
+    }
+  };
+
+  const handleEmailSignUp = async (params: {
+    displayName: string;
+    email: string;
+    password: string;
+    companyName?: string;
+  }) => {
+    const signedInUser = await signUpWithEmailPassword(params);
+    if (signedInUser) {
+      const brandName = params.companyName?.trim();
+      updateState((prev) => ({
+        ...prev,
+        viewMode: 'app',
+        workspaces: brandName
+          ? prev.workspaces.map((w, idx) => (idx === 0 ? { ...w, name: brandName } : w))
+          : prev.workspaces,
+      }));
+      pushToast(
+        'Account Created',
+        `Welcome to socialifyai.com, ${signedInUser.displayName.split(' ')[0]}! Your workspace is ready.`,
+        'success'
+      );
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const signedInUser = await signInWithGoogle();
+    if (signedInUser) {
+      const targetView = signedInUser.isAdmin ? 'admin' : 'app';
+      updateState((prev) => ({ ...prev, viewMode: targetView }));
+      pushToast(
+        signedInUser.isAdmin
+          ? 'Welcome, Super Admin'
+          : `Welcome, ${signedInUser.displayName?.split(' ')[0] || 'back'}`,
+        `Signed in as ${signedInUser.email}`,
+        'success'
+      );
+    }
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    setIsCommandPaletteOpen(false);
+    setIsSettingsOpen(false);
+    setMobileDrawerOpen(false);
+    setAuthInitialMode('login');
+    updateState((prev) => ({ ...prev, viewMode: 'landing' }));
+    pushToast('Signed Out', 'Your session has been closed securely.', 'info');
+  };
+
   const handleLaunchFromLanding = (plan?: PlanTier, workspaceName?: string) => {
+    if (!user) {
+      setAuthInitialMode('signup');
+    }
+    const targetView = user ? (user.isAdmin ? 'admin' : 'app') : 'app';
     updateState((prev) => ({
       ...prev,
-      viewMode: 'app',
+      viewMode: targetView,
       selectedPlan: plan || prev.selectedPlan,
       workspaces: workspaceName
         ? prev.workspaces.map((w, idx) => (idx === 0 ? { ...w, name: workspaceName } : w))
         : prev.workspaces,
     }));
-    pushToast(
-      'Workspace Launched',
-      workspaceName ? `Welcome to "${workspaceName}" dashboard.` : 'Loaded active brand workspace.',
-      'success'
-    );
+    if (user && plan) {
+      updateProfilePrefs({ selectedPlan: plan }).catch(() => {});
+    }
+    if (user) {
+      pushToast(
+        user.isAdmin ? 'Super Admin Panel Ready' : 'Workspace Launched',
+        workspaceName ? `Welcome to "${workspaceName}" dashboard.` : 'Loaded your active dashboard.',
+        'success'
+      );
+    } else {
+      pushToast('Create Account or Sign In', 'Sign up or log in to access your workspace.', 'info');
+    }
   };
 
   const handleCreateWorkspace = (name: string, industry: string, handle: string) => {
@@ -231,42 +363,80 @@ export default function App() {
     setActiveTab(tab);
   };
 
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] flex flex-col items-center justify-center gap-3 text-slate-600 dark:text-slate-300">
+        <Loader2 size={28} className="animate-spin text-[#4F46E5]" />
+        <p className="text-xs font-semibold tracking-wide">Connecting to socialifyai.com...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] dark:bg-[#090D16] text-slate-900 dark:text-slate-100 overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      {/* Persistent Top Mode Switcher: [1] Public Site | [2] User Workspace | [3] Super Admin */}
-      <TopModeSwitcher
-        viewMode={state.viewMode}
-        onChangeViewMode={(viewMode) => {
-          updateState({ viewMode });
-          setMobileDrawerOpen(false);
-          const labels = {
-            landing: 'Public Marketing Website',
-            app: 'User Workspace Dashboard',
-            admin: 'Super Admin Control Panel',
-          };
-          pushToast('Switched View Mode', labels[viewMode], 'info');
-        }}
-        darkMode={state.darkMode}
-        onToggleDarkMode={() => {
-          const nextDark = !state.darkMode;
-          updateState((prev) => ({ ...prev, darkMode: !prev.darkMode }));
-          pushToast(nextDark ? 'Dark Mode Enabled' : 'Light Mode Enabled');
-        }}
-        selectedPlan={state.selectedPlan}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-      />
-
       {state.viewMode === 'landing' && (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <LandingPage
             selectedPlan={state.selectedPlan}
             onLaunch={handleLaunchFromLanding}
             onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
+            isSignedIn={Boolean(user)}
+            userDisplayName={currentUserProfile?.displayName}
+            onSignInClick={() => {
+              setAuthInitialMode('login');
+              updateState({ viewMode: 'app' });
+            }}
+            darkMode={state.darkMode}
+            onToggleDarkMode={() => {
+              const nextDark = !state.darkMode;
+              updateState((prev) => ({ ...prev, darkMode: !prev.darkMode }));
+              pushToast(nextDark ? 'Dark Mode Enabled' : 'Light Mode Enabled');
+            }}
           />
         </div>
       )}
 
-      {state.viewMode === 'admin' && (
+      {state.viewMode !== 'landing' && !user && (
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <AuthScreen
+            key={authInitialMode}
+            initialMode={authInitialMode}
+            onSignInEmail={handleEmailSignIn}
+            onSignUpEmail={handleEmailSignUp}
+            onSignInWithGoogle={handleGoogleSignIn}
+            signingIn={signingIn}
+            authError={authError}
+            onClearError={clearAuthError}
+            onBackToLanding={() => updateState({ viewMode: 'landing' })}
+          />
+        </div>
+      )}
+
+      {state.viewMode === 'admin' && user && !isAdmin && (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-8 text-center shadow-xl space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <ShieldAlert size={24} />
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-extrabold text-slate-900 dark:text-white">
+                Super Admin Access Required
+              </h2>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Signed in as <strong className="text-slate-800 dark:text-slate-200">{currentUserProfile?.email}</strong>. Platform governance and billing controls are restricted to verified Super Admin accounts.
+              </p>
+            </div>
+            <button
+              onClick={() => updateState({ viewMode: 'app' })}
+              className="w-full py-2.5 px-4 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+            >
+              Open User Workspace Dashboard <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {state.viewMode === 'admin' && user && isAdmin && (
         <SuperAdminPanel
           state={state}
           onUpdateTenant={(tenant: TenantAccount) =>
@@ -276,7 +446,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Updated Tenant Account',
                   target: `${tenant.orgName} (${tenant.plan} · ${tenant.status})`,
                   timestamp: new Date().toISOString(),
@@ -292,7 +462,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Provisioned Account',
                   target: `${tenant.orgName} (${tenant.plan})`,
                   timestamp: new Date().toISOString(),
@@ -310,7 +480,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Reset AI Credits',
                   target: `${tenant.orgName} (0 / ${tenant.aiCreditsLimit.toLocaleString()})`,
                   timestamp: new Date().toISOString(),
@@ -330,7 +500,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: nextEnabled ? 'Enabled Feature Flag' : 'Disabled Feature Flag',
                   target: flag.label,
                   timestamp: new Date().toISOString(),
@@ -351,7 +521,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'API Health Action',
                   target: actionLabel,
                   timestamp: new Date().toISOString(),
@@ -373,7 +543,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Pinged All Social APIs',
                   target: '6/6 gateways verified healthy',
                   timestamp: new Date().toISOString(),
@@ -390,7 +560,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Updated AI Governance',
                   target: `Default model: ${config.defaultModel}`,
                   timestamp: new Date().toISOString(),
@@ -407,7 +577,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Created Promo Code',
                   target: `${promo.code} (${promo.discountPct}% off)`,
                   timestamp: new Date().toISOString(),
@@ -442,7 +612,7 @@ export default function App() {
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
-                  actor: 'syedasgharkazmii@gmail.com',
+                  actor: actorEmail,
                   action: 'Retried Stripe Charge',
                   target: `${invoice.stripeId} ($${invoice.amount.toFixed(2)}) succeeded`,
                   timestamp: new Date().toISOString(),
@@ -462,11 +632,26 @@ export default function App() {
             pushToast('Impersonating Tenant Dashboard', `Opened ${targetWs?.name || 'tenant'} workspace.`);
           }}
           onToast={(title, desc) => pushToast(title, desc, 'success')}
+          onBackToWorkspace={() => updateState({ viewMode: 'app' })}
+          onBackToLanding={() => updateState({ viewMode: 'landing' })}
+          darkMode={state.darkMode}
+          onToggleDarkMode={() => {
+            const nextDark = !state.darkMode;
+            updateState((prev) => ({ ...prev, darkMode: !prev.darkMode }));
+            pushToast(nextDark ? 'Dark Mode Enabled' : 'Light Mode Enabled');
+          }}
+          onSignOut={handleSignOut}
         />
       )}
 
-      {state.viewMode === 'app' && (
-        <div className="flex-1 flex min-h-0 overflow-hidden">
+      {state.viewMode === 'app' && user && currentUserProfile && (
+        <div className="flex-1 flex min-h-0 overflow-hidden relative">
+          {cloudLoading && (
+            <div className="absolute top-3 right-5 z-50 px-3 py-1.5 rounded-lg bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 shadow-md flex items-center gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+              <Loader2 size={12} className="animate-spin text-[#4F46E5]" />
+              <span>Syncing workspace...</span>
+            </div>
+          )}
           <Sidebar
             state={state}
             activeTab={activeTab}
@@ -488,11 +673,15 @@ export default function App() {
             onCreateWorkspace={handleCreateWorkspace}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onBackToLanding={() => updateState({ viewMode: 'landing' })}
+            isAdmin={isAdmin}
+            onOpenAdmin={() => updateState({ viewMode: 'admin' })}
           />
 
           <div className="flex-1 flex flex-col min-w-0 relative">
             <CommandBar
               state={state}
+              userProfile={currentUserProfile}
+              onSignOut={handleSignOut}
               onQuickCreatePost={() => {
                 setEditingPost(null);
                 setComposerPreset(null);
@@ -500,6 +689,7 @@ export default function App() {
               }}
               onSwitchRole={(role) => {
                 updateState({ activeRole: role });
+                updateProfilePrefs({ activeRole: role }).catch(() => {});
                 pushToast('Active Role Updated', `Permissions set to ${role}.`);
               }}
               onToggleDarkMode={() => {
@@ -521,7 +711,7 @@ export default function App() {
               onOpenSettings={() => setIsSettingsOpen(true)}
               onResetDemo={() => {
                 resetDemoData();
-                pushToast('Demo Workspace Restored', 'All seed records have been reset.', 'info');
+                pushToast('Workspace Restored', 'All default workspace records have been reset.', 'info');
               }}
               onOpenMobileMenu={() => setMobileDrawerOpen(true)}
               onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
@@ -671,6 +861,8 @@ export default function App() {
                   contacts={state.contacts}
                   deals={state.deals}
                   selectedThreadId={focusedThreadId}
+                  currentUserName={currentUserProfile.displayName}
+                  currentUserAvatar={currentUserProfile.photoURL}
                   onUpdateThread={(thread: Thread) =>
                     updateState((prev) => ({
                       ...prev,
@@ -789,6 +981,20 @@ export default function App() {
                   onAddContact={(contact: Contact) =>
                     updateState((prev) => ({ ...prev, contacts: [contact, ...prev.contacts] }))
                   }
+                  onDeleteContact={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      contacts: prev.contacts.filter((c) => c.id !== id),
+                      deals: prev.deals.filter((d) => d.contactId !== id),
+                      threads: prev.threads.filter((t) => t.contactId !== id),
+                    }))
+                  }
+                  onBulkUpdateContacts={(updatedIds: string[], updater: (c: Contact) => Contact) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      contacts: prev.contacts.map((c) => (updatedIds.includes(c.id) ? updater(c) : c)),
+                    }))
+                  }
                   onUpdateDeal={(deal: Deal) =>
                     updateState((prev) => ({
                       ...prev,
@@ -797,6 +1003,12 @@ export default function App() {
                   }
                   onAddDeal={(deal: Deal) =>
                     updateState((prev) => ({ ...prev, deals: [deal, ...prev.deals] }))
+                  }
+                  onDeleteDeal={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      deals: prev.deals.filter((d) => d.id !== id),
+                    }))
                   }
                   onOpenInboxForContact={handleOpenInboxForContact}
                   onToast={(title, desc) => pushToast(title, desc, 'success')}
@@ -834,10 +1046,12 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         state={state}
+        userProfile={currentUserProfile || undefined}
+        onSignOut={handleSignOut}
         onUpdateState={updateState}
         onResetDemo={() => {
           resetDemoData();
-          pushToast('Demo Workspace Restored', 'All seed records have been reset.', 'info');
+          pushToast('Workspace Data Restored', 'All seed records have been reset.', 'info');
         }}
         onToast={(title, desc) => pushToast(title, desc, 'success')}
       />
@@ -846,6 +1060,7 @@ export default function App() {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         state={state}
+        isAdmin={isAdmin}
         onNavigateTab={(tab, itemId) => {
           if (state.viewMode !== 'app') {
             updateState({ viewMode: 'app' });

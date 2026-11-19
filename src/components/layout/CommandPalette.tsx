@@ -38,6 +38,7 @@ interface CommandPaletteProps {
   onToggleDarkMode: () => void;
   onOpenSettings: () => void;
   onTriggerTrendSpike: () => void;
+  isAdmin?: boolean;
 }
 
 interface PaletteItem {
@@ -80,6 +81,7 @@ export function CommandPalette({
   onToggleDarkMode,
   onOpenSettings,
   onTriggerTrendSpike,
+  isAdmin = false,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -143,14 +145,18 @@ export function CommandPalette({
         icon: LayoutDashboard,
         onSelect: () => onChangeViewMode('app'),
       },
-      {
-        id: 'act-mode-admin',
-        group: 'Quick Actions',
-        label: 'Open Super Admin Control Panel',
-        subtitle: 'Switch to founder operations & API health [3]',
-        icon: ShieldAlert,
-        onSelect: () => onChangeViewMode('admin'),
-      },
+      ...(isAdmin
+        ? [
+            {
+              id: 'act-mode-admin',
+              group: 'Quick Actions' as const,
+              label: 'Open Super Admin Control Panel',
+              subtitle: 'Founder operations, API health & billing governance',
+              icon: ShieldAlert,
+              onSelect: () => onChangeViewMode('admin'),
+            },
+          ]
+        : []),
       {
         id: 'act-mode-landing',
         group: 'Quick Actions',
