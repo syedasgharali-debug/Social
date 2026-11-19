@@ -8,17 +8,26 @@ import {
   Users,
   ArrowRight,
   Repeat,
+  Radar,
+  Repeat2,
+  Flame,
+  TrendingUp,
+  Link2,
+  Calculator,
+  Rocket,
 } from 'lucide-react';
 import { AppState } from '../../types';
 import { NavTabId } from '../layout/Shell';
 import { PlatformTag } from '../common/PlatformMeta';
+import { GrowthToolTab } from '../tools/GrowthToolsSuite';
 
 interface WorkspaceOverviewProps {
   state: AppState;
   onNavigate: (tab: NavTabId) => void;
+  onOpenGrowthTool?: (tool: GrowthToolTab) => void;
 }
 
-export function WorkspaceOverview({ state, onNavigate }: WorkspaceOverviewProps) {
+export function WorkspaceOverview({ state, onNavigate, onOpenGrowthTool }: WorkspaceOverviewProps) {
   const wsId = state.activeWorkspaceId;
   const activeWs = state.workspaces.find((w) => w.id === wsId) || state.workspaces[0];
 
@@ -61,14 +70,20 @@ export function WorkspaceOverview({ state, onNavigate }: WorkspaceOverviewProps)
 
         <div className="flex flex-wrap gap-2.5">
           <button
+            onClick={() => (onOpenGrowthTool ? onOpenGrowthTool('competitor') : onNavigate('tools'))}
+            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <Rocket size={14} className="text-[#4F46E5] dark:text-indigo-400" /> Growth Tools
+          </button>
+          <button
             onClick={() => onNavigate('copilot')}
-            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1.5"
+            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1.5 whitespace-nowrap"
           >
             <Sparkles size={14} className="text-amber-500" /> AI Strategy Wizard
           </button>
           <button
             onClick={() => onNavigate('studio')}
-            className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+            className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm whitespace-nowrap"
           >
             <PenSquare size={14} /> Open Content Studio
           </button>
@@ -197,6 +212,86 @@ export function WorkspaceOverview({ state, onNavigate }: WorkspaceOverviewProps)
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Competitive Growth Toolkit Quick Launch */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-sm font-bold text-slate-900 dark:text-white">
+              Competitive Growth Tools
+            </h2>
+            <p className="text-xs text-slate-500">
+              Live research, multi-channel repurposing, hook auditing, QR UTM attribution, and ROI modeling.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => (onOpenGrowthTool ? onOpenGrowthTool('competitor') : onNavigate('tools'))}
+            className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline flex items-center gap-1 whitespace-nowrap"
+          >
+            Open Full Suite <ArrowRight size={13} />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800">
+          {[
+            {
+              id: 'competitor' as GrowthToolTab,
+              title: 'Competitor Spy & Gap Analyzer',
+              desc: 'Scrape rival websites + Google Search to uncover messaging gaps & counter-posts.',
+              icon: Radar,
+            },
+            {
+              id: 'repurposer' as GrowthToolTab,
+              title: 'URL to 5-Channel Repurposer',
+              desc: 'Convert any live article link into LinkedIn, X Thread, IG Carousel & TikTok script.',
+              icon: Repeat2,
+            },
+            {
+              id: 'hooks' as GrowthToolTab,
+              title: 'Viral Hook Lab & Copy Grader',
+              desc: 'Score draft captions and test 5 proven A/B hook frameworks before publishing.',
+              icon: Flame,
+            },
+            {
+              id: 'trends' as GrowthToolTab,
+              title: 'Live Trend & Newsjack Radar',
+              desc: 'Pull real-time niche developments with cited web links and ready hot-take posts.',
+              icon: TrendingUp,
+            },
+            {
+              id: 'utm' as GrowthToolTab,
+              title: 'UTM Link Builder & QR Studio',
+              desc: 'Build standardized UTM links, save to CSV library, and download PNG/SVG QR codes.',
+              icon: Link2,
+            },
+            {
+              id: 'roi' as GrowthToolTab,
+              title: 'Paid ROAS & Creator Rate Calc',
+              desc: 'Model break-even CPA, engagement rate health, and fair influencer flat fees.',
+              icon: Calculator,
+            },
+          ].map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <button
+                key={tool.id}
+                type="button"
+                onClick={() => (onOpenGrowthTool ? onOpenGrowthTool(tool.id) : onNavigate('tools'))}
+                className="p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Icon size={14} className="text-[#4F46E5] dark:text-indigo-400 shrink-0" />
+                    {tool.title}
+                  </span>
+                  <ArrowRight size={13} className="text-slate-400 shrink-0" />
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">{tool.desc}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

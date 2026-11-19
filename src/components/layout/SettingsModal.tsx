@@ -137,12 +137,10 @@ export function SettingsModal({
                 }}
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none focus:border-[#4F46E5]"
               >
-                <option value="bootstrap">Bootstrap ($29/mo · 5 profiles)</option>
-                <option value="accelerate">Accelerate ($49/mo · 10 profiles)</option>
-                <option value="pro_agency">Pro Agency ($99/mo · 25 profiles)</option>
-                <option value="pro50">Pro50 Scale ($179/mo · 50 profiles)</option>
-                <option value="pro100">Pro100 Scale ($329/mo · 100 profiles)</option>
-                <option value="pro150">Pro150 Scale ($449/mo · 150 profiles)</option>
+                <option value="bootstrap">Starter ($99/mo · 10 profiles)</option>
+                <option value="accelerate">Growth ($199/mo · 25 profiles)</option>
+                <option value="pro_agency">Agency Scale ($349/mo · 75 profiles)</option>
+                <option value="lifetime">Lifetime Enterprise ($799 one-time · Unlimited)</option>
               </select>
             </div>
           </div>

@@ -20,6 +20,7 @@ export type PlanTier =
   | 'bootstrap'
   | 'accelerate'
   | 'pro_agency'
+  | 'lifetime'
   | 'pro50'
   | 'pro100'
   | 'pro150';

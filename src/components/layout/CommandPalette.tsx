@@ -23,6 +23,9 @@ import {
   ArrowRight,
   Command,
   X,
+  Rocket,
+  Radar,
+  Repeat2,
 } from 'lucide-react';
 import { AppState, ViewMode } from '../../types';
 import { NavTabId } from './Shell';
@@ -58,6 +61,7 @@ const PAGE_ITEMS: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }[] = [
   { id: 'overview', label: 'Overview', subtitle: 'Workspace KPIs & upcoming queue', icon: LayoutDashboard },
+  { id: 'tools', label: 'Growth Tools', subtitle: 'Competitor Spy, URL Repurposer, Hook Lab, Trends, UTM/QR & ROI', icon: Rocket },
   { id: 'copilot', label: 'AI Copilot', subtitle: '7-day strategy & caption generator', icon: Sparkles },
   { id: 'studio', label: 'Content Studio', subtitle: 'Split-screen multi-network composer', icon: PenSquare },
   { id: 'scheduler', label: 'Visual Scheduler', subtitle: 'Calendar, 3×3 IG Grid & weekly matrix', icon: Calendar },
@@ -106,6 +110,22 @@ export function CommandPalette({
         onSelect: onNewPost,
       },
       {
+        id: 'act-competitor-spy',
+        group: 'Quick Actions',
+        label: 'Run Competitor Spy & Gap Analyzer',
+        subtitle: 'Scrape competitor URL & uncover counter-positioning content gaps',
+        icon: Radar,
+        onSelect: () => onNavigateTab('tools', 'competitor'),
+      },
+      {
+        id: 'act-url-repurpose',
+        group: 'Quick Actions',
+        label: 'Repurpose Article URL to 5 Channels',
+        subtitle: 'Turn any live webpage into LinkedIn, X Thread, IG Carousel & TikTok',
+        icon: Repeat2,
+        onSelect: () => onNavigateTab('tools', 'repurposer'),
+      },
+      {
         id: 'act-ai-strategy',
         group: 'Quick Actions',
         label: 'Generate 7-Day AI Strategy',
@@ -140,8 +160,8 @@ export function CommandPalette({
       {
         id: 'act-mode-app',
         group: 'Quick Actions',
-        label: 'Open User Workspace Dashboard',
-        subtitle: 'Switch to environment view [2]',
+        label: 'Open Workspace Dashboard',
+        subtitle: 'Jump to your active customer workspace',
         icon: LayoutDashboard,
         onSelect: () => onChangeViewMode('app'),
       },
@@ -161,7 +181,7 @@ export function CommandPalette({
         id: 'act-mode-landing',
         group: 'Quick Actions',
         label: 'View Public Marketing Website',
-        subtitle: 'Switch to public SaaS landing page [1]',
+        subtitle: 'Open socialifyai.com home page',
         icon: Globe,
         onSelect: () => onChangeViewMode('landing'),
       },
@@ -242,6 +262,7 @@ export function CommandPalette({
   }, [
     query,
     state,
+    isAdmin,
     onNavigateTab,
     onNewPost,
     onSwitchWorkspace,

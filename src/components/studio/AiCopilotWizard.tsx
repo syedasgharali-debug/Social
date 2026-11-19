@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { Sparkles, Check, Calendar, ArrowRight, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Check, Calendar, ArrowRight, RefreshCw, PenSquare } from 'lucide-react';
 import { ContentCategory, Platform, SocialPost } from '../../types';
 import { MEDIA_LIBRARY } from '../../data/seedData';
 import { PLATFORM_META, PlatformTag } from '../common/PlatformMeta';
 import { aiService } from '../../services/aiService';
+import { ComposerPreset } from './ContentStudio';
 
 interface AiCopilotWizardProps {
   workspaceId: string;
+  workspaceName?: string;
+  workspaceIndustry?: string;
   categories: ContentCategory[];
   onPopulatePosts: (newPosts: SocialPost[]) => void;
+  onOpenInStudio?: (preset: ComposerPreset) => void;
   onGoToScheduler: () => void;
   onToast: (title: string, description?: string) => void;
 }
@@ -24,19 +28,26 @@ interface GeneratedDayPost {
 
 export function AiCopilotWizard({
   workspaceId,
+  workspaceName = 'Your Brand',
+  workspaceIndustry = 'B2B Digital Growth',
   categories,
   onPopulatePosts,
+  onOpenInStudio,
   onGoToScheduler,
   onToast,
 }: AiCopilotWizardProps) {
   const wsCategories = categories.filter((c) => c.workspaceId === workspaceId);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [brandInput, setBrandInput] = useState('https://digixy.io — B2B Social Growth Agency');
+  const [brandInput, setBrandInput] = useState(`${workspaceName} — ${workspaceIndustry}`);
   const [goal, setGoal] = useState('Inbound Lead Generation');
   const [audience, setAudience] = useState('Founders, CMOs & RevOps Leaders');
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['linkedin', 'instagram', 'x']);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setBrandInput(`${workspaceName} — ${workspaceIndustry}`);
+  }, [workspaceName, workspaceIndustry]);
 
   const [ratios, setRatios] = useState([
     { label: 'Evergreen Tips', pct: 40, color: '#4F46E5' },
@@ -82,8 +93,11 @@ export function AiCopilotWizard({
         ]);
       }
 
-      const dayNames = ['Day 1 (Mon)', 'Day 2 (Tue)', 'Day 3 (Wed)', 'Day 4 (Thu)', 'Day 5 (Fri)', 'Day 6 (Sat)', 'Day 7 (Sun)'];
-      const generatedDays: GeneratedDayPost[] = dayNames.map((dayLabel, idx) => {
+      const tomorrow = new Date(Date.now() + 86400000);
+      tomorrow.setHours(9, 0, 0, 0);
+      const generatedDays: GeneratedDayPost[] = Array.from({ length: 7 }).map((_, idx) => {
+        const slotDate = new Date(tomorrow.getTime() + idx * 86400000);
+        const dayLabel = `Day ${idx + 1} (${slotDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })})`;
         const cat = wsCategories[idx % Math.max(1, wsCategories.length)];
         const draftSource = bulk.drafts?.[idx % Math.max(1, bulk.drafts.length)];
         return {
@@ -106,7 +120,9 @@ export function AiCopilotWizard({
   };
 
   const handlePopulateCalendar = () => {
-    const baseDate = new Date('2026-11-16T09:00:00Z').getTime();
+    const startTomorrow = new Date(Date.now() + 86400000);
+    startTomorrow.setHours(9, 30, 0, 0);
+    const baseDate = startTomorrow.getTime();
     const createdPosts: SocialPost[] = weekPlan.map((item, idx) => ({
       id: `p-ai-${Date.now()}-${idx}`,
       workspaceId,
@@ -124,7 +140,7 @@ export function AiCopilotWizard({
     onPopulatePosts(createdPosts);
     setPopulated(true);
     setStep(3);
-    onToast('7-Day Strategy Populated', `Added ${createdPosts.length} posts to your Visual Scheduler.`);
+    onToast('7-Day Strategy Populated', `Added ${createdPosts.length} posts starting tomorrow to your Visual Scheduler.`);
   };
 
   return (
@@ -315,7 +331,7 @@ export function AiCopilotWizard({
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {weekPlan.map((day, idx) => (
                   <div key={day.dayLabel} className="p-5 flex flex-col md:flex-row gap-4">
-                    <div className="w-44 shrink-0 space-y-1.5">
+                    <div className="w-48 shrink-0 space-y-1.5">
                       <p className="text-xs font-bold text-slate-900 dark:text-white">{day.dayLabel}</p>
                       <p className="text-[11px] font-semibold text-[#4F46E5] dark:text-indigo-400">{day.categoryName}</p>
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -323,9 +339,25 @@ export function AiCopilotWizard({
                           <PlatformTag key={pl} platform={pl} showFull={false} />
                         ))}
                       </div>
+                      {onOpenInStudio && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenInStudio({
+                              topic: day.content,
+                              platforms: day.platforms,
+                              categoryId: day.categoryId,
+                              evergreen: true,
+                            })
+                          }
+                          className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-[#4F46E5] dark:hover:text-indigo-400"
+                        >
+                          <PenSquare size={11} /> Edit in Studio
+                        </button>
+                      )}
                     </div>
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={day.content}
                       onChange={(e) =>
                         setWeekPlan((prev) =>

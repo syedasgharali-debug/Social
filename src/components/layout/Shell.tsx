@@ -30,12 +30,15 @@ import {
   Menu,
   Command,
   LogOut,
+  Rocket,
 } from 'lucide-react';
 import { AppState, TeamRole, DiscoveryAlert } from '../../types';
 import { ContactAvatar } from '../common/PlatformMeta';
+import { BrandLogo } from '../BrandLogo';
 
 export type NavTabId =
   | 'overview'
+  | 'tools'
   | 'copilot'
   | 'studio'
   | 'scheduler'
@@ -96,6 +99,7 @@ export function Sidebar({
     badge?: number;
   }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'tools', label: 'Growth Tools', icon: Rocket },
     { id: 'copilot', label: 'AI Copilot', icon: Sparkles },
     { id: 'studio', label: 'Content Studio', icon: PenSquare },
     { id: 'scheduler', label: 'Visual Scheduler', icon: Calendar },
@@ -145,21 +149,17 @@ export function Sidebar({
         <div className="flex flex-col min-h-0 flex-1">
           {/* Brand Header */}
           <div className="h-16 px-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#4F46E5] flex items-center justify-center text-white shrink-0 shadow-sm shadow-indigo-600/25">
-                <Zap size={16} className="fill-current" />
-              </div>
-              {!effectiveCollapsed && (
-                <div className="min-w-0">
-                  <p className="font-display text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                    socialifyai<span className="text-[#4F46E5] dark:text-indigo-400">.com</span>
-                  </p>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
-                    {state.selectedPlan.replace('_', ' ')}
-                  </p>
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('overview');
+                onCloseMobile();
+              }}
+              aria-label="Go to Dashboard Overview"
+              className="flex items-center min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] rounded-lg"
+            >
+              <BrandLogo size="md" surface="auto" markOnly={effectiveCollapsed} />
+            </button>
             {mobileOpen ? (
               <button
                 onClick={onCloseMobile}
@@ -448,7 +448,7 @@ export function CommandBar({
   return (
     <header className="h-16 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 md:px-6 flex items-center justify-between gap-3 md:gap-4 shrink-0 relative z-30">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
-        {/* Mobile Navigation Drawer Trigger */}
+        {/* Mobile Navigation Drawer Trigger & Mobile Brand Logo */}
         <button
           type="button"
           onClick={onOpenMobileMenu}
@@ -456,6 +456,15 @@ export function CommandBar({
           className="md:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-[#4F46E5] shrink-0"
         >
           <Menu size={18} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigateResult('overview')}
+          aria-label="Go to Dashboard Overview"
+          className="md:hidden flex items-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] rounded-lg"
+        >
+          <BrandLogo size="sm" surface="auto" />
         </button>
 
         {/* Global Search + ⌘K Command Palette Trigger */}

@@ -39,6 +39,8 @@ export interface ComposerPreset {
   categoryId?: string;
   evergreen?: boolean;
   topic?: string;
+  platforms?: Platform[];
+  firstComment?: string;
 }
 
 interface ContentStudioProps {
@@ -155,6 +157,17 @@ export function ContentStudio({
       if (initialPreset.categoryId) setCategoryId(initialPreset.categoryId);
       if (typeof initialPreset.evergreen === 'boolean') setIsEvergreen(initialPreset.evergreen);
       if (initialPreset.topic) setMasterCaption(initialPreset.topic);
+      if (initialPreset.platforms && initialPreset.platforms.length > 0) {
+        setSelectedPlatforms(initialPreset.platforms);
+        const firstPreviewable = initialPreset.platforms.find(
+          (p): p is 'instagram' | 'linkedin' | 'x' => p === 'instagram' || p === 'linkedin' || p === 'x'
+        );
+        if (firstPreviewable) setPreviewPlatform(firstPreviewable);
+      }
+      if (typeof initialPreset.firstComment === 'string') {
+        setFirstComment(initialPreset.firstComment);
+        setFirstCommentEnabled(initialPreset.firstComment.trim().length > 0);
+      }
     }
   }, [initialPreset]);
 

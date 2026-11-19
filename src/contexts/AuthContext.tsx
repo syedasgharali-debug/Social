@@ -12,7 +12,7 @@ import {
   auth,
   db,
   googleProvider,
-  SUPER_ADMIN_EMAILS,
+  SUPER_ADMIN_EMAIL,
   OperationType,
   handleFirestoreError,
 } from '../firebase';
@@ -157,15 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkFirebaseAdminRole = useCallback(async (fbUser: User): Promise<boolean> => {
     const emailLower = fbUser.email?.toLowerCase() || '';
-    if (fbUser.emailVerified && SUPER_ADMIN_EMAILS.includes(emailLower)) {
-      return true;
-    }
-    try {
-      const adminSnap = await getDoc(doc(db, 'admins', fbUser.uid));
-      return adminSnap.exists();
-    } catch {
-      return false;
-    }
+    return Boolean(fbUser.emailVerified && emailLower === SUPER_ADMIN_EMAIL);
   }, []);
 
   // 1. Restore server-verified Email/Password session on mount
@@ -190,7 +182,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: u.email,
             displayName: u.displayName,
             companyName: u.companyName || '',
-            isAdmin: Boolean(u.isAdmin || u.role === 'super_admin'),
+            isAdmin:
+              String(u.email || '').toLowerCase() === SUPER_ADMIN_EMAIL &&
+              Boolean(u.isAdmin || u.role === 'super_admin'),
             provider: 'password',
             token: storedToken,
           };
@@ -218,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(SESSION_TOKEN_KEY);
         setPasswordSession(null);
         const emailLower = fbUser.email?.toLowerCase() || '';
-        const adminFlag = Boolean(fbUser.emailVerified && SUPER_ADMIN_EMAILS.includes(emailLower));
+        const adminFlag = Boolean(fbUser.emailVerified && emailLower === SUPER_ADMIN_EMAIL);
         const session: AuthSessionUser = {
           uid: fbUser.uid,
           email: fbUser.email || '',
@@ -268,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Failed to sync Google profile:', err);
         const emailLower = fbUser.email?.toLowerCase() || '';
-        const fallbackAdmin = Boolean(fbUser.emailVerified && SUPER_ADMIN_EMAILS.includes(emailLower));
+        const fallbackAdmin = Boolean(fbUser.emailVerified && emailLower === SUPER_ADMIN_EMAIL);
         setProfile({
           uid: fbUser.uid,
           displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
@@ -295,7 +289,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const activeUser = passwordSession || googleSession;
   const authReady = firebaseReady && tokenReady;
-  const isAdmin = Boolean(activeUser?.isAdmin);
+  const isAdmin = Boolean(
+    activeUser &&
+      activeUser.email.toLowerCase() === SUPER_ADMIN_EMAIL &&
+      activeUser.isAdmin
+  );
 
   const signInWithEmailPassword = useCallback(
     async (email: string, password: string): Promise<AuthSessionUser | null> => {
@@ -318,7 +316,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: json.user.email,
           displayName: json.user.displayName,
           companyName: json.user.companyName || '',
-          isAdmin: Boolean(json.user.isAdmin || json.user.role === 'super_admin'),
+          isAdmin:
+            String(json.user.email || '').toLowerCase() === SUPER_ADMIN_EMAIL &&
+            Boolean(json.user.isAdmin || json.user.role === 'super_admin'),
           provider: 'password',
           token: json.token,
         };
@@ -385,7 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setPasswordSession(null);
       const fbUser = result.user;
       const emailLower = fbUser.email?.toLowerCase() || '';
-      const adminFlag = Boolean(fbUser.emailVerified && SUPER_ADMIN_EMAILS.includes(emailLower));
+      const adminFlag = Boolean(fbUser.emailVerified && emailLower === SUPER_ADMIN_EMAIL);
       const session: AuthSessionUser = {
         uid: fbUser.uid,
         email: fbUser.email || '',

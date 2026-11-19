@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckCircle2, TrendingUp, Loader2, ShieldAlert, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, TrendingUp, Loader2 } from 'lucide-react';
 import { Sidebar, CommandBar, NavTabId } from './components/layout/Shell';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -17,6 +17,7 @@ import { AdManager } from './components/ads/AdManager';
 import { LandingPage } from './components/layout/LandingPage';
 import { SettingsModal } from './components/layout/SettingsModal';
 import { SuperAdminPanel } from './components/admin/SuperAdminPanel';
+import { GrowthToolsSuite, GrowthToolTab } from './components/tools/GrowthToolsSuite';
 import { useAuth } from './contexts/AuthContext';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -75,6 +76,7 @@ export default function App() {
   const [focusedContactId, setFocusedContactId] = useState<string | undefined>(undefined);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [composerPreset, setComposerPreset] = useState<ComposerPreset | null>(null);
+  const [activeGrowthTool, setActiveGrowthTool] = useState<GrowthToolTab>('competitor');
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'signup'>('login');
 
   const currentUserProfile = useMemo(
@@ -89,7 +91,7 @@ export default function App() {
     [user, profile]
   );
 
-  const actorEmail = currentUserProfile?.email || 'admin@socialifyai.com';
+  const actorEmail = currentUserProfile?.email || 'essadhiif@gmail.com';
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -119,6 +121,13 @@ export default function App() {
     );
     clearRedirectSignIn();
   }, [redirectSignInUser, clearRedirectSignIn, updateState, pushToast]);
+
+  // Strictly enforce that any non-Super-Admin customer can never enter admin viewMode
+  useEffect(() => {
+    if (user && !isAdmin && state.viewMode === 'admin') {
+      updateState({ viewMode: 'app' });
+    }
+  }, [user, isAdmin, state.viewMode, updateState]);
 
   const activeWorkspace = useMemo(
     () => state.workspaces.find((w) => w.id === state.activeWorkspaceId) || state.workspaces[0],
@@ -360,6 +369,12 @@ export default function App() {
   const handleNavigateSearchResult = (tab: NavTabId, itemId?: string) => {
     if (tab === 'inbox' && itemId) setFocusedThreadId(itemId);
     if (tab === 'crm' && itemId) setFocusedContactId(itemId);
+    if (tab === 'tools' && itemId) {
+      const validTools: GrowthToolTab[] = ['competitor', 'repurposer', 'hooks', 'trends', 'utm', 'roi'];
+      if (validTools.includes(itemId as GrowthToolTab)) {
+        setActiveGrowthTool(itemId as GrowthToolTab);
+      }
+    }
     setActiveTab(tab);
   };
 
@@ -409,30 +424,6 @@ export default function App() {
             onClearError={clearAuthError}
             onBackToLanding={() => updateState({ viewMode: 'landing' })}
           />
-        </div>
-      )}
-
-      {state.viewMode === 'admin' && user && !isAdmin && (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-8 text-center shadow-xl space-y-4">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <ShieldAlert size={24} />
-            </div>
-            <div>
-              <h2 className="font-display text-xl font-extrabold text-slate-900 dark:text-white">
-                Super Admin Access Required
-              </h2>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Signed in as <strong className="text-slate-800 dark:text-slate-200">{currentUserProfile?.email}</strong>. Platform governance and billing controls are restricted to verified Super Admin accounts.
-              </p>
-            </div>
-            <button
-              onClick={() => updateState({ viewMode: 'app' })}
-              className="w-full py-2.5 px-4 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-            >
-              Open User Workspace Dashboard <ArrowRight size={14} />
-            </button>
-          </div>
         </div>
       )}
 
@@ -644,7 +635,7 @@ export default function App() {
         />
       )}
 
-      {state.viewMode === 'app' && user && currentUserProfile && (
+      {(state.viewMode === 'app' || (state.viewMode === 'admin' && !isAdmin)) && user && currentUserProfile && (
         <div className="flex-1 flex min-h-0 overflow-hidden relative">
           {cloudLoading && (
             <div className="absolute top-3 right-5 z-50 px-3 py-1.5 rounded-lg bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 shadow-md flex items-center gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
@@ -674,7 +665,7 @@ export default function App() {
             onOpenSettings={() => setIsSettingsOpen(true)}
             onBackToLanding={() => updateState({ viewMode: 'landing' })}
             isAdmin={isAdmin}
-            onOpenAdmin={() => updateState({ viewMode: 'admin' })}
+            onOpenAdmin={isAdmin ? () => updateState({ viewMode: 'admin' }) : undefined}
           />
 
           <div className="flex-1 flex flex-col min-w-0 relative">
@@ -719,16 +710,53 @@ export default function App() {
 
             <main className="flex-1 min-h-0 relative">
               {activeTab === 'overview' && (
-                <WorkspaceOverview state={state} onNavigate={(tab) => setActiveTab(tab)} />
+                <WorkspaceOverview
+                  state={state}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onOpenGrowthTool={(tool) => {
+                    setActiveGrowthTool(tool);
+                    setActiveTab('tools');
+                  }}
+                />
+              )}
+
+              {activeTab === 'tools' && (
+                <GrowthToolsSuite
+                  workspaceId={state.activeWorkspaceId}
+                  workspaceName={activeWorkspace.name}
+                  workspaceIndustry={activeWorkspace.industry}
+                  initialTool={activeGrowthTool}
+                  defaultCategoryId={
+                    state.categories.find((c) => c.workspaceId === state.activeWorkspaceId)?.id
+                  }
+                  onOpenInStudio={(preset) => {
+                    setEditingPost(null);
+                    setComposerPreset(preset);
+                    setActiveTab('studio');
+                    pushToast('Loaded into Content Studio', 'Customize copy, preview per channel, or schedule.');
+                  }}
+                  onSchedulePosts={(newPosts) => {
+                    updateState((prev) => ({ ...prev, posts: [...newPosts, ...prev.posts] }));
+                    setActiveTab('scheduler');
+                  }}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
+                />
               )}
 
               {activeTab === 'copilot' && (
                 <AiCopilotWizard
                   workspaceId={state.activeWorkspaceId}
+                  workspaceName={activeWorkspace.name}
+                  workspaceIndustry={activeWorkspace.industry}
                   categories={state.categories}
                   onPopulatePosts={(newPosts) =>
                     updateState((prev) => ({ ...prev, posts: [...newPosts, ...prev.posts] }))
                   }
+                  onOpenInStudio={(preset) => {
+                    setEditingPost(null);
+                    setComposerPreset(preset);
+                    setActiveTab('studio');
+                  }}
                   onGoToScheduler={() => setActiveTab('scheduler')}
                   onToast={(title, desc) => pushToast(title, desc, 'success')}
                 />
@@ -1087,13 +1115,14 @@ export default function App() {
           pushToast('Workspace Switched', `Scoped all modules to ${ws?.name || 'workspace'}.`);
         }}
         onChangeViewMode={(viewMode) => {
-          updateState({ viewMode });
+          const safeViewMode = viewMode === 'admin' && !isAdmin ? 'app' : viewMode;
+          updateState({ viewMode: safeViewMode });
           const labels = {
             landing: 'Public Marketing Website',
             app: 'User Workspace Dashboard',
             admin: 'Super Admin Control Panel',
           };
-          pushToast('Switched View Mode', labels[viewMode], 'info');
+          pushToast('Switched View Mode', labels[safeViewMode], 'info');
         }}
         onToggleDarkMode={() => {
           const nextDark = !state.darkMode;

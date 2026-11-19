@@ -14,8 +14,9 @@ googleProvider.addScope('email');
 googleProvider.addScope('profile');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-export const SUPER_ADMIN_EMAILS = ['essadhiif@gmail.com', 'syedasgharkazmii@gmail.com'];
-export const BOOTSTRAP_ADMIN_EMAIL = 'essadhiif@gmail.com';
+export const SUPER_ADMIN_EMAIL = 'essadhiif@gmail.com';
+export const SUPER_ADMIN_EMAILS = [SUPER_ADMIN_EMAIL];
+export const BOOTSTRAP_ADMIN_EMAIL = SUPER_ADMIN_EMAIL;
 
 export enum OperationType {
   CREATE = 'create',

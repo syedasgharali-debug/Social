@@ -15,6 +15,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { SocialLogo } from '../common/SocialIcons';
+import { BrandLogo } from '../BrandLogo';
 import { Platform } from '../../types';
 
 interface AuthScreenProps {
@@ -154,18 +155,18 @@ export function AuthScreen({
       <div className="max-w-5xl w-full mx-auto my-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
         {/* Left Value Panel */}
         <div className="lg:col-span-6 space-y-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#4F46E5] flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
-              <Zap size={20} className="fill-current" />
-            </div>
-            <div>
-              <p className="font-display text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                socialifyai<span className="text-[#4F46E5] dark:text-indigo-400">.com</span>
-              </p>
-              <p className="text-[11px] font-medium text-slate-500">
-                AI Social Media Suite & Social CRM
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={onBackToLanding}
+              aria-label="Socialify AI Home"
+              className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] rounded-lg"
+            >
+              <BrandLogo size="lg" surface="auto" />
+            </button>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              AI Social Media Suite &amp; Social CRM
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -184,7 +185,7 @@ export function AuthScreen({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {[
               '14-day full-access workspace included',
-              'Role-aware dashboard & admin routing',
+              'Multi-workspace team & client approvals',
               '10 native social network integrations',
               'Persistent cloud-saved workspaces',
             ].map((item) => (

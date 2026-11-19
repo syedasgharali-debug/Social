@@ -153,6 +153,8 @@ export const aiService = {
       `Unpopular opinion for ${audience}: why consistency in ${topic} beats viral one-offs every quarter.`,
       `Step-by-step checklist: How top teams structure ${topic} in under 30 minutes per week.`,
       `Customer lesson: What changed when our team paired ${topic} with unified Social CRM tracking.`,
+      `Behind the scenes: The exact 3-step template we use for ${topic} every Monday morning.`,
+      `Myth vs. Reality for ${audience}: Stop overcomplicating ${topic} and focus on this 1 metric instead.`,
       `Quick question for ${audience}: Which part of ${topic} takes your team the longest today?`,
     ];
 
@@ -237,4 +239,159 @@ export const aiService = {
     }
     return `Your workspace generated ${totalReach.toLocaleString()} organic impressions and ${totalEngagement.toLocaleString()} engagements across ${wsPosts.filter((p) => p.status === 'published').length} published posts, feeding $${pipelineValue.toLocaleString()} in attributed CRM pipeline with ${avgRoas}x blended Ad ROAS.`;
   },
+
+  async analyzeCompetitor(params: { yourBrand: string; competitor: string; niche: string }): Promise<{
+    isLive: boolean;
+    data: CompetitorIntelResult;
+  }> {
+    const res = await fetch('/api/tools/competitor-intel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Competitor analysis failed.');
+    }
+    return { isLive: !json.fallback, data: json.data };
+  },
+
+  async repurposeFromUrlOrText(params: {
+    url?: string;
+    rawText?: string;
+    tone: string;
+    ctaGoal: string;
+  }): Promise<{ isLive: boolean; data: RepurposeUrlResult }> {
+    const res = await fetch('/api/tools/repurpose-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Could not repurpose this source.');
+    }
+    return { isLive: !json.fallback, data: json.data };
+  },
+
+  async auditPostVirality(params: {
+    content: string;
+    platform: Platform;
+    audience: string;
+  }): Promise<{ isLive: boolean; data: ViralityAuditResult }> {
+    const res = await fetch('/api/tools/virality-audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Could not audit draft copy.');
+    }
+    return { isLive: !json.fallback, data: json.data };
+  },
+
+  async discoverLiveTrends(params: {
+    niche: string;
+    region: string;
+    audience: string;
+  }): Promise<{ isLive: boolean; data: LiveTrendsResult }> {
+    const res = await fetch('/api/tools/live-trends', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Trend radar scan failed.');
+    }
+    return { isLive: !json.fallback, data: json.data };
+  },
 };
+
+export interface CompetitorIntelResult {
+  competitorName: string;
+  positioningSummary: string;
+  strengths: string[];
+  weaknesses: string[];
+  contentGaps: {
+    topic: string;
+    whyItWins: string;
+    recommendedFormat: string;
+  }[];
+  counterPosts: {
+    platform: 'linkedin' | 'x' | 'instagram';
+    angle: string;
+    content: string;
+  }[];
+  scrapedPage?: {
+    url: string;
+    title: string;
+    description: string;
+  } | null;
+  sources: { title: string; url: string }[];
+}
+
+export interface RepurposeUrlResult {
+  sourceTitle: string;
+  sourceUrl?: string;
+  wordCount: number;
+  keyTakeaways: string[];
+  linkedinPost: string;
+  xThread: string[];
+  instagramCarousel: {
+    slides: { slideNumber: number; headline: string; body: string }[];
+    caption: string;
+  };
+  tiktokScript: {
+    hook: string;
+    body: string;
+    cta: string;
+    estimatedSeconds: number;
+  };
+  newsletterBlurb: {
+    subject: string;
+    body: string;
+  };
+  hashtags: string[];
+}
+
+export interface ViralityAuditResult {
+  overallScore: number;
+  hookScore: number;
+  clarityScore: number;
+  ctaScore: number;
+  verdict: string;
+  strengths: string[];
+  fixes: string[];
+  hookVariants: {
+    framework: string;
+    hookLine: string;
+    fullPost: string;
+    whyItWorks: string;
+  }[];
+  diagnostics: {
+    charCount: number;
+    charLimit: number;
+    wordCount: number;
+    lineCount: number;
+    hasQuestion: boolean;
+    hasNumbers: boolean;
+    hookLength: number;
+  };
+}
+
+export interface LiveTrendsResult {
+  niche: string;
+  scannedAt: string;
+  sources: { title: string; url: string }[];
+  trends: {
+    headline: string;
+    whyNow: string;
+    momentum: string;
+    suggestedPlatform: 'linkedin' | 'x' | 'instagram' | 'tiktok';
+    newsjackAngle: string;
+    draftPost: string;
+  }[];
+}
+

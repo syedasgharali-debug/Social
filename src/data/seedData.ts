@@ -833,14 +833,14 @@ export const SEED_DISCOVERY_ALERTS: DiscoveryAlert[] = [
 ];
 
 export const SEED_TENANTS: TenantAccount[] = [
-  { id: 'ten-1', orgName: 'The DigiXy Agency', ownerName: 'Alex Rivera', ownerEmail: 'alex@digixy.io', plan: 'pro_agency', mrr: 99, profilesUsed: 8, profilesLimit: 25, workspacesCount: 3, aiCreditsUsed: 4120, aiCreditsLimit: 10000, status: 'active', joinedAt: '2026-06-14', linkedWorkspaceId: 'ws-digixy' },
-  { id: 'ten-2', orgName: 'PixelPerfect Agency', ownerName: 'Elena Rodriguez', ownerEmail: 'elena@pixelperfect.com', plan: 'pro50', mrr: 179, profilesUsed: 44, profilesLimit: 50, workspacesCount: 10, aiCreditsUsed: 8650, aiCreditsLimit: 15000, status: 'active', joinedAt: '2026-04-02', linkedWorkspaceId: 'ws-digixy' },
-  { id: 'ten-3', orgName: 'Vanguard Portfolio Ops', ownerName: 'James Wilson', ownerEmail: 'james@vanguard.vc', plan: 'pro100', mrr: 329, profilesUsed: 82, profilesLimit: 100, workspacesCount: 18, aiCreditsUsed: 14200, aiCreditsLimit: 25000, status: 'active', joinedAt: '2026-07-21', linkedWorkspaceId: 'ws-digixy' },
-  { id: 'ten-4', orgName: 'Urban Roasters DTC', ownerName: 'Hannah Brooks', ownerEmail: 'hannah@urbanroasters.co', plan: 'accelerate', mrr: 49, profilesUsed: 5, profilesLimit: 10, workspacesCount: 1, aiCreditsUsed: 1840, aiCreditsLimit: 3500, status: 'active', joinedAt: '2026-08-09', linkedWorkspaceId: 'ws-roasters' },
-  { id: 'ten-5', orgName: 'Founder Personal HQ', ownerName: 'Alex Rivera', ownerEmail: 'alex.rivera@studio.fm', plan: 'bootstrap', mrr: 29, profilesUsed: 5, profilesLimit: 5, workspacesCount: 1, aiCreditsUsed: 920, aiCreditsLimit: 1000, status: 'trial', joinedAt: '2026-11-04', linkedWorkspaceId: 'ws-personal' },
-  { id: 'ten-6', orgName: 'Northstar Commerce', ownerName: 'Daniel Park', ownerEmail: 'daniel@northstar.shop', plan: 'pro150', mrr: 449, profilesUsed: 128, profilesLimit: 150, workspacesCount: 29, aiCreditsUsed: 22900, aiCreditsLimit: 40000, status: 'active', joinedAt: '2026-03-19', linkedWorkspaceId: 'ws-digixy' },
-  { id: 'ten-7', orgName: 'Lumina Health Media', ownerName: 'Priya Nair', ownerEmail: 'priya@luminahealth.io', plan: 'pro_agency', mrr: 99, profilesUsed: 19, profilesLimit: 25, workspacesCount: 4, aiCreditsUsed: 6340, aiCreditsLimit: 10000, status: 'past_due', joinedAt: '2026-05-12', linkedWorkspaceId: 'ws-digixy' },
-  { id: 'ten-8', orgName: 'ScaleGrid RevOps', ownerName: 'Marcus Wright', ownerEmail: 'marcus@scalegrid.co', plan: 'accelerate', mrr: 49, profilesUsed: 7, profilesLimit: 10, workspacesCount: 2, aiCreditsUsed: 1290, aiCreditsLimit: 3500, status: 'active', joinedAt: '2026-09-02', linkedWorkspaceId: 'ws-digixy' },
+  { id: 'ten-1', orgName: 'The DigiXy Agency', ownerName: 'Alex Rivera', ownerEmail: 'alex@digixy.io', plan: 'pro_agency', mrr: 349, profilesUsed: 38, profilesLimit: 75, workspacesCount: 8, aiCreditsUsed: 14120, aiCreditsLimit: 40000, status: 'active', joinedAt: '2026-06-14', linkedWorkspaceId: 'ws-digixy' },
+  { id: 'ten-2', orgName: 'PixelPerfect Agency', ownerName: 'Elena Rodriguez', ownerEmail: 'elena@pixelperfect.com', plan: 'pro_agency', mrr: 349, profilesUsed: 44, profilesLimit: 75, workspacesCount: 10, aiCreditsUsed: 18650, aiCreditsLimit: 40000, status: 'active', joinedAt: '2026-04-02', linkedWorkspaceId: 'ws-digixy' },
+  { id: 'ten-3', orgName: 'Vanguard Portfolio Ops', ownerName: 'James Wilson', ownerEmail: 'james@vanguard.vc', plan: 'lifetime', mrr: 799, profilesUsed: 82, profilesLimit: 999, workspacesCount: 18, aiCreditsUsed: 34200, aiCreditsLimit: 100000, status: 'active', joinedAt: '2026-07-21', linkedWorkspaceId: 'ws-digixy' },
+  { id: 'ten-4', orgName: 'Urban Roasters DTC', ownerName: 'Hannah Brooks', ownerEmail: 'hannah@urbanroasters.co', plan: 'accelerate', mrr: 199, profilesUsed: 14, profilesLimit: 25, workspacesCount: 2, aiCreditsUsed: 4840, aiCreditsLimit: 15000, status: 'active', joinedAt: '2026-08-09', linkedWorkspaceId: 'ws-roasters' },
+  { id: 'ten-5', orgName: 'Founder Personal HQ', ownerName: 'Alex Rivera', ownerEmail: 'alex.rivera@studio.fm', plan: 'bootstrap', mrr: 99, profilesUsed: 6, profilesLimit: 10, workspacesCount: 1, aiCreditsUsed: 1920, aiCreditsLimit: 5000, status: 'trial', joinedAt: '2026-11-04', linkedWorkspaceId: 'ws-personal' },
+  { id: 'ten-6', orgName: 'Northstar Commerce', ownerName: 'Daniel Park', ownerEmail: 'daniel@northstar.shop', plan: 'lifetime', mrr: 799, profilesUsed: 128, profilesLimit: 999, workspacesCount: 29, aiCreditsUsed: 42900, aiCreditsLimit: 100000, status: 'active', joinedAt: '2026-03-19', linkedWorkspaceId: 'ws-digixy' },
+  { id: 'ten-7', orgName: 'Lumina Health Media', ownerName: 'Priya Nair', ownerEmail: 'priya@luminahealth.io', plan: 'accelerate', mrr: 199, profilesUsed: 19, profilesLimit: 25, workspacesCount: 4, aiCreditsUsed: 6340, aiCreditsLimit: 15000, status: 'past_due', joinedAt: '2026-05-12', linkedWorkspaceId: 'ws-digixy' },
+  { id: 'ten-8', orgName: 'ScaleGrid RevOps', ownerName: 'Marcus Wright', ownerEmail: 'marcus@scalegrid.co', plan: 'bootstrap', mrr: 99, profilesUsed: 7, profilesLimit: 10, workspacesCount: 1, aiCreditsUsed: 1290, aiCreditsLimit: 5000, status: 'active', joinedAt: '2026-09-02', linkedWorkspaceId: 'ws-digixy' },
 ];
 
 export const SEED_FEATURE_FLAGS: FeatureFlag[] = [
@@ -866,9 +866,9 @@ export const SEED_AI_GOVERNANCE: AiGovernanceConfig = {
   temperature: 0.65,
   costPer1kCreditsUsd: 0.42,
   tierLimits: {
-    bootstrap: 1000,
-    accelerate: 3500,
-    pro_agency: 10000,
+    bootstrap: 5000,
+    accelerate: 15000,
+    pro_agency: 40000,
   },
   systemPromptTemplate:
     'You are a principal B2B & creator social strategist. Write concise, high-retention native posts tailored to each network constraint, avoiding clickbait filler and preserving brand voice.',
@@ -881,17 +881,17 @@ export const SEED_PROMO_CODES: PromoCode[] = [
 ];
 
 export const SEED_INVOICES: InvoiceRecord[] = [
-  { id: 'inv-1', stripeId: 'in_1Q9xK2LkdIwHu7ix', customerOrg: 'Northstar Commerce', customerEmail: 'daniel@northstar.shop', planLabel: 'Pro150 ($449/mo)', amount: 449, status: 'paid', issuedAt: '2026-11-13 11:04' },
-  { id: 'inv-2', stripeId: 'in_1Q9wP8LkdIwHu7ax', customerOrg: 'Lumina Health Media', customerEmail: 'priya@luminahealth.io', planLabel: 'Pro Agency ($99/mo)', amount: 99, promoApplied: 'LAUNCH20', status: 'past_due', issuedAt: '2026-11-12 18:22' },
-  { id: 'inv-3', stripeId: 'in_1Q9vR4LkdIwHu7pm', customerOrg: 'Vanguard Portfolio Ops', customerEmail: 'james@vanguard.vc', planLabel: 'Pro100 ($329/mo)', amount: 329, status: 'paid', issuedAt: '2026-11-12 09:15' },
-  { id: 'inv-4', stripeId: 'in_1Q9uM1LkdIwHu7bc', customerOrg: 'PixelPerfect Agency', customerEmail: 'elena@pixelperfect.com', planLabel: 'Pro50 ($179/mo)', amount: 125.3, promoApplied: 'AGENCY30', status: 'paid', issuedAt: '2026-11-11 14:40' },
-  { id: 'inv-5', stripeId: 'in_1Q9tA9LkdIwHu7qz', customerOrg: 'The DigiXy Agency', customerEmail: 'alex@digixy.io', planLabel: 'Pro Agency ($99/mo)', amount: 79.2, promoApplied: 'LAUNCH20', status: 'paid', issuedAt: '2026-11-10 08:05' },
+  { id: 'inv-1', stripeId: 'in_1Q9xK2LkdIwHu7ix', customerOrg: 'Northstar Commerce', customerEmail: 'daniel@northstar.shop', planLabel: 'Lifetime Enterprise ($799)', amount: 799, status: 'paid', issuedAt: '2026-11-13 11:04' },
+  { id: 'inv-2', stripeId: 'in_1Q9wP8LkdIwHu7ax', customerOrg: 'Lumina Health Media', customerEmail: 'priya@luminahealth.io', planLabel: 'Growth ($199/mo)', amount: 199, promoApplied: 'LAUNCH20', status: 'past_due', issuedAt: '2026-11-12 18:22' },
+  { id: 'inv-3', stripeId: 'in_1Q9vR4LkdIwHu7pm', customerOrg: 'Vanguard Portfolio Ops', customerEmail: 'james@vanguard.vc', planLabel: 'Lifetime Enterprise ($799)', amount: 799, status: 'paid', issuedAt: '2026-11-12 09:15' },
+  { id: 'inv-4', stripeId: 'in_1Q9uM1LkdIwHu7bc', customerOrg: 'PixelPerfect Agency', customerEmail: 'elena@pixelperfect.com', planLabel: 'Agency Scale ($349/mo)', amount: 244.3, promoApplied: 'AGENCY30', status: 'paid', issuedAt: '2026-11-11 14:40' },
+  { id: 'inv-5', stripeId: 'in_1Q9tA9LkdIwHu7qz', customerOrg: 'The DigiXy Agency', customerEmail: 'alex@digixy.io', planLabel: 'Starter ($99/mo)', amount: 79.2, promoApplied: 'LAUNCH20', status: 'paid', issuedAt: '2026-11-10 08:05' },
 ];
 
 export const SEED_AUDIT_LOGS: AdminAuditEntry[] = [
-  { id: 'log-1', actor: 'syedasgharkazmii@gmail.com', action: 'Enabled Integration Flag', target: 'Enable Bluesky Integration (100% GA)', timestamp: '2026-11-13T14:20:00Z' },
-  { id: 'log-2', actor: 'syedasgharkazmii@gmail.com', action: 'Upgraded Tenant Plan', target: 'Northstar Commerce → Pro150 ($449/mo)', timestamp: '2026-11-13T11:10:00Z' },
-  { id: 'log-3', actor: 'syedasgharkazmii@gmail.com', action: 'Created Promo Code', target: 'LAUNCH20 (20% off forever)', timestamp: '2026-11-12T16:45:00Z' },
+  { id: 'log-1', actor: 'essadhiif@gmail.com', action: 'Enabled Integration Flag', target: 'Enable Bluesky Integration (100% GA)', timestamp: '2026-11-13T14:20:00Z' },
+  { id: 'log-2', actor: 'essadhiif@gmail.com', action: 'Upgraded Tenant Plan', target: 'Northstar Commerce → Lifetime Enterprise ($799)', timestamp: '2026-11-13T11:10:00Z' },
+  { id: 'log-3', actor: 'essadhiif@gmail.com', action: 'Created Promo Code', target: 'LAUNCH20 (20% off forever)', timestamp: '2026-11-12T16:45:00Z' },
 ];
 
 export const INITIAL_STATE: AppState = {

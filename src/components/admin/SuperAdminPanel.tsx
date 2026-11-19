@@ -50,6 +50,7 @@ import {
 } from '../../types';
 import { SEED_AI_GOVERNANCE } from '../../data/seedData';
 import { SocialLogo, SocialBrandKey } from '../common/SocialIcons';
+import { BrandLogo } from '../BrandLogo';
 
 function resolveApiBrand(nodeName: string): SocialBrandKey {
   const lower = nodeName.toLowerCase();
@@ -86,13 +87,16 @@ interface SuperAdminPanelProps {
   onSignOut?: () => void;
 }
 
+const ACTIVE_PLAN_TIERS: PlanTier[] = ['bootstrap', 'accelerate', 'pro_agency', 'lifetime'];
+
 const PLAN_PRICING: Record<PlanTier, { mrr: number; profiles: number; aiLimit: number; label: string }> = {
-  bootstrap: { mrr: 29, profiles: 5, aiLimit: 1000, label: 'Bootstrap ($29)' },
-  accelerate: { mrr: 49, profiles: 10, aiLimit: 3500, label: 'Accelerate ($49)' },
-  pro_agency: { mrr: 99, profiles: 25, aiLimit: 10000, label: 'Pro Agency ($99)' },
-  pro50: { mrr: 179, profiles: 50, aiLimit: 15000, label: 'Pro50 ($179)' },
-  pro100: { mrr: 329, profiles: 100, aiLimit: 25000, label: 'Pro100 ($329)' },
-  pro150: { mrr: 449, profiles: 150, aiLimit: 40000, label: 'Pro150 ($449)' },
+  bootstrap: { mrr: 99, profiles: 10, aiLimit: 5000, label: 'Starter ($99/mo)' },
+  accelerate: { mrr: 199, profiles: 25, aiLimit: 15000, label: 'Growth ($199/mo)' },
+  pro_agency: { mrr: 349, profiles: 75, aiLimit: 40000, label: 'Agency Scale ($349/mo)' },
+  lifetime: { mrr: 799, profiles: 999, aiLimit: 100000, label: 'Lifetime ($799 one-time)' },
+  pro50: { mrr: 349, profiles: 75, aiLimit: 40000, label: 'Agency Scale ($349/mo)' },
+  pro100: { mrr: 349, profiles: 75, aiLimit: 40000, label: 'Agency Scale ($349/mo)' },
+  pro150: { mrr: 799, profiles: 999, aiLimit: 100000, label: 'Lifetime ($799 one-time)' },
 };
 
 const MRR_GROWTH_SERIES = [
@@ -215,7 +219,7 @@ export function SuperAdminPanel({
     const proAgencyCount =
       424 +
       state.tenants.filter((t) =>
-        ['pro_agency', 'pro50', 'pro100', 'pro150'].includes(t.plan)
+        ['pro_agency', 'lifetime', 'pro50', 'pro100', 'pro150'].includes(t.plan)
       ).length;
 
     return {
@@ -225,9 +229,9 @@ export function SuperAdminPanel({
       totalAiCredits,
       churnRate,
       planDistribution: [
-        { name: 'Bootstrap ($29)', value: bootstrapCount },
-        { name: 'Accelerate ($49)', value: accelerateCount },
-        { name: 'Pro Agency & Scale', value: proAgencyCount },
+        { name: 'Starter ($99/mo)', value: bootstrapCount },
+        { name: 'Growth ($199/mo)', value: accelerateCount },
+        { name: 'Agency ($349) & Lifetime ($799)', value: proAgencyCount },
       ],
     };
   }, [state.tenants, state.posts.length]);
@@ -314,9 +318,12 @@ export function SuperAdminPanel({
               <ArrowLeft size={13} /> Workspace Dashboard
             </button>
           )}
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#4F46E5] dark:text-indigo-400">
-            <ShieldCheck size={14} /> socialifyai.com Super Admin
-          </span>
+          <div className="flex items-center gap-3">
+            <BrandLogo size="sm" surface="auto" />
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 border-l border-slate-200 dark:border-slate-800 pl-3">
+              <ShieldCheck size={14} /> Super Admin
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {onBackToLanding && (
@@ -600,7 +607,7 @@ export function SuperAdminPanel({
                   className="px-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
                 >
                   <option value="all">All Plans</option>
-                  {(Object.keys(PLAN_PRICING) as PlanTier[]).map((tier) => (
+                  {ACTIVE_PLAN_TIERS.map((tier) => (
                     <option key={tier} value={tier}>
                       {PLAN_PRICING[tier].label}
                     </option>
@@ -647,7 +654,7 @@ export function SuperAdminPanel({
                             onChange={(e) => handlePlanChange(tenant, e.target.value as PlanTier)}
                             className="px-2.5 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none focus:border-[#4F46E5]"
                           >
-                            {(Object.keys(PLAN_PRICING) as PlanTier[]).map((tier) => (
+                            {ACTIVE_PLAN_TIERS.map((tier) => (
                               <option key={tier} value={tier}>
                                 {PLAN_PRICING[tier].label}
                               </option>
@@ -934,7 +941,7 @@ export function SuperAdminPanel({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Bootstrap Monthly Limit
+                    Starter ($99) Monthly Limit
                   </label>
                   <input
                     type="number"
@@ -943,7 +950,7 @@ export function SuperAdminPanel({
                     onChange={(e) =>
                       setAiDraft({
                         ...aiDraft,
-                        tierLimits: { ...aiDraft.tierLimits, bootstrap: Number(e.target.value) || 1000 },
+                        tierLimits: { ...aiDraft.tierLimits, bootstrap: Number(e.target.value) || 5000 },
                       })
                     }
                     className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
@@ -951,7 +958,7 @@ export function SuperAdminPanel({
                 </div>
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Accelerate Monthly Limit
+                    Growth ($199) Monthly Limit
                   </label>
                   <input
                     type="number"
@@ -960,7 +967,7 @@ export function SuperAdminPanel({
                     onChange={(e) =>
                       setAiDraft({
                         ...aiDraft,
-                        tierLimits: { ...aiDraft.tierLimits, accelerate: Number(e.target.value) || 3500 },
+                        tierLimits: { ...aiDraft.tierLimits, accelerate: Number(e.target.value) || 15000 },
                       })
                     }
                     className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
@@ -968,7 +975,7 @@ export function SuperAdminPanel({
                 </div>
                 <div>
                   <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Pro Agency Monthly Limit
+                    Agency ($349) &amp; Lifetime Limit
                   </label>
                   <input
                     type="number"
@@ -977,7 +984,7 @@ export function SuperAdminPanel({
                     onChange={(e) =>
                       setAiDraft({
                         ...aiDraft,
-                        tierLimits: { ...aiDraft.tierLimits, pro_agency: Number(e.target.value) || 10000 },
+                        tierLimits: { ...aiDraft.tierLimits, pro_agency: Number(e.target.value) || 40000 },
                       })
                     }
                     className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
@@ -1352,7 +1359,7 @@ export function SuperAdminPanel({
                   onChange={(e) => setTenantForm({ ...tenantForm, plan: e.target.value as PlanTier })}
                   className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
                 >
-                  {(Object.keys(PLAN_PRICING) as PlanTier[]).map((tier) => (
+                  {ACTIVE_PLAN_TIERS.map((tier) => (
                     <option key={tier} value={tier}>
                       {PLAN_PRICING[tier].label}
                     </option>

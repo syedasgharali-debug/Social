@@ -10,7 +10,6 @@ import {
   Calendar,
   Inbox,
   BarChart3,
-  Zap,
   Award,
   ShieldCheck,
   Layers,
@@ -19,11 +18,14 @@ import {
   FileDown,
   Copy,
   X,
-  SlidersHorizontal,
   Mail,
   Grid3X3,
   Sun,
   Moon,
+  Infinity as InfinityIcon,
+  SlidersHorizontal,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import avatarSarah from '../../assets/images/avatar_sarah_1794611198086.jpg';
 import avatarMarcus from '../../assets/images/avatar_marcus_1794611199143.jpg';
@@ -34,6 +36,7 @@ import mediaTeamCollab from '../../assets/images/media_team_collab_1794611200467
 import { PlanTier, Platform } from '../../types';
 import { aiService } from '../../services/aiService';
 import { SocialLogo } from '../common/SocialIcons';
+import { BrandLogo } from '../BrandLogo';
 
 interface LandingPageProps {
   selectedPlan: PlanTier;
@@ -70,7 +73,7 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      'Switching from legacy tools to Pro50 gave our 10 client workspaces White-Label PDF reports and a unified inbox our account managers actually love using every morning.',
+      'Switching from legacy tools to Agency Scale gave our 10 client workspaces White-Label PDF reports and a unified inbox our account managers actually love using every morning.',
     name: 'Elena Rodriguez',
     role: 'Creative Director · PixelPerfect Agency',
     metric: '9.5 hrs saved weekly',
@@ -97,7 +100,11 @@ const TESTIMONIALS = [
 const FAQS = [
   {
     q: 'How does the 14-day free trial work—do I need a credit card?',
-    a: 'No credit card is required to start. Launch your live workspace immediately, test AI Copilot, Category Queues, and the Unified Inbox across all 10 networks, and upgrade only when ready.',
+    a: 'No credit card is required to start. Launch your live workspace immediately, test AI Copilot, Category Queues, Growth Tools, and the Unified Inbox across all 10 networks, and upgrade only when ready.',
+  },
+  {
+    q: 'How does the $799 Lifetime Plan work—are there any recurring fees?',
+    a: 'None at all. You pay $799 once for permanent Lifetime Enterprise access—including unlimited social profiles, unlimited workspaces, unlimited team seats, White-Label PDF reports, full CRM, and all future AI updates forever.',
   },
   {
     q: 'What makes Category-Based Scheduling better than a static calendar?',
@@ -108,27 +115,20 @@ const FAQS = [
     a: 'Yes. socialifyai.com supports native publishing, character validation, and inbox monitoring across Instagram, TikTok, LinkedIn, X, Facebook, YouTube Shorts, Pinterest, Threads, Bluesky, and Google Business Profile.',
   },
   {
-    q: 'How do White-Label PDF Client Reports work on Pro Agency & Scale plans?',
+    q: 'How do White-Label PDF Client Reports work on Agency Scale & Lifetime plans?',
     a: 'Agencies upload their own logo, accent color, and client workspace domain so exported monthly PDF performance summaries carry zero socialifyai.com branding.',
-  },
-  {
-    q: 'Can I scale above 25 social profiles cleanly?',
-    a: 'Yes—use the Agency Scale slider in the pricing section to step straight into Pro50 (50 profiles), Pro100 (100 profiles), or Pro150 (150 profiles) with instant team seat and workspace expansion.',
   },
 ];
 
-const AGENCY_SCALE_TIERS: {
-  id: PlanTier;
-  name: string;
-  monthly: number;
-  profiles: number;
-  workspaces: number;
-  users: string;
-}[] = [
-  { id: 'pro50', name: 'Pro50', monthly: 179, profiles: 50, workspaces: 10, users: '5 Team Users' },
-  { id: 'pro100', name: 'Pro100', monthly: 329, profiles: 100, workspaces: 20, users: '10 Team Users' },
-  { id: 'pro150', name: 'Pro150', monthly: 449, profiles: 150, workspaces: 35, users: 'Unlimited Users' },
-];
+const PLAN_LABELS: Record<PlanTier, { name: string; priceTag: string; isLifetime?: boolean }> = {
+  bootstrap: { name: 'Starter', priceTag: '$99/mo' },
+  accelerate: { name: 'Growth', priceTag: '$199/mo' },
+  pro_agency: { name: 'Agency Scale', priceTag: '$349/mo' },
+  lifetime: { name: 'Lifetime Enterprise', priceTag: '$799 One-Time (Lifetime)', isLifetime: true },
+  pro50: { name: 'Agency Scale', priceTag: '$349/mo' },
+  pro100: { name: 'Agency Scale', priceTag: '$349/mo' },
+  pro150: { name: 'Lifetime Enterprise', priceTag: '$799 One-Time (Lifetime)', isLifetime: true },
+};
 
 export function LandingPage({
   selectedPlan,
@@ -206,9 +206,11 @@ export function LandingPage({
   const [agencyBrand, setAgencyBrand] = useState('Apex Digital Studio');
   const [reportExported, setReportExported] = useState(false);
 
-  // Pricing Calculator & Scale Slider
-  const [billing, setBilling] = useState<'monthly' | 'annual'>('annual');
-  const [scaleIdx, setScaleIdx] = useState<number>(0);
+  // Pricing Calculator & Agency Scale Sliders
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
+  const [calcProfiles, setCalcProfiles] = useState<number>(50);
+  const [calcWorkspaces, setCalcWorkspaces] = useState<number>(8);
+  const [calcSeats, setCalcSeats] = useState<number>(6);
   const [planModalTier, setPlanModalTier] = useState<PlanTier | null>(null);
   const [workspaceInput, setWorkspaceInput] = useState('Acme Cloud');
 
@@ -219,7 +221,68 @@ export function LandingPage({
   const [newsletterSaved, setNewsletterSaved] = useState(false);
 
   const calcPrice = (monthly: number) => (billing === 'annual' ? Math.round(monthly * 0.84) : monthly);
-  const activeScaleTier = AGENCY_SCALE_TIERS[scaleIdx];
+
+  // Live Agency Scale Calculator computation ($99 Starter -> $199 Growth -> $349 Agency Scale -> $799 Lifetime)
+  const scaleRecommendation = (() => {
+    if (calcProfiles <= 10 && calcWorkspaces <= 1 && calcSeats <= 2) {
+      const unitMonthly = calcPrice(99);
+      const yearCost = unitMonthly * 12;
+      return {
+        id: 'bootstrap' as PlanTier,
+        name: 'Starter',
+        isLifetime: false,
+        displayPrice: unitMonthly,
+        priceLabel: `$${unitMonthly}/mo`,
+        limitsSummary: 'Up to 10 Social Profiles · 1 Workspace · 2 Team Users',
+        yearCost,
+        lifetimeSavings: Math.max(0, yearCost - 799),
+        breakEvenMonths: (799 / unitMonthly).toFixed(1),
+      };
+    }
+    if (calcProfiles <= 25 && calcWorkspaces <= 5 && calcSeats <= 5) {
+      const unitMonthly = calcPrice(199);
+      const yearCost = unitMonthly * 12;
+      return {
+        id: 'accelerate' as PlanTier,
+        name: 'Growth',
+        isLifetime: false,
+        displayPrice: unitMonthly,
+        priceLabel: `$${unitMonthly}/mo`,
+        limitsSummary: 'Up to 25 Social Profiles · 5 Workspaces · 5 Team Users',
+        yearCost,
+        lifetimeSavings: Math.max(0, yearCost - 799),
+        breakEvenMonths: (799 / unitMonthly).toFixed(1),
+      };
+    }
+    if (calcProfiles <= 75 && calcWorkspaces <= 15 && calcSeats <= 15) {
+      const unitMonthly = calcPrice(349);
+      const yearCost = unitMonthly * 12;
+      return {
+        id: 'pro_agency' as PlanTier,
+        name: 'Agency Scale',
+        isLifetime: false,
+        displayPrice: unitMonthly,
+        priceLabel: `$${unitMonthly}/mo`,
+        limitsSummary: 'Up to 75 Social Profiles · 15 Workspaces · 15 Team Users · White-Label PDFs',
+        yearCost,
+        lifetimeSavings: Math.max(0, yearCost - 799),
+        breakEvenMonths: (799 / unitMonthly).toFixed(1),
+      };
+    }
+    const equivAgencyMonthly = calcPrice(349);
+    const equivYearCost = equivAgencyMonthly * 12;
+    return {
+      id: 'lifetime' as PlanTier,
+      name: 'Lifetime Deal',
+      isLifetime: true,
+      displayPrice: 799,
+      priceLabel: '$799 one-time',
+      limitsSummary: 'Unlimited Social Profiles · Unlimited Workspaces · Unlimited Users · White-Label PDFs',
+      yearCost: 799,
+      lifetimeSavings: Math.max(0, equivYearCost - 799),
+      breakEvenMonths: (799 / equivAgencyMonthly).toFixed(1),
+    };
+  })();
 
   const handleRunLiveAi = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -276,17 +339,20 @@ export function LandingPage({
         className="sticky top-0 z-50 bg-white/80 dark:bg-[#090D16]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800"
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5 shrink-0"
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              if (window.location.pathname !== '/') {
+                window.history.pushState({}, '', '/');
+              }
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            aria-label="Socialify AI Home"
+            className="flex items-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] rounded-lg"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#4F46E5] flex items-center justify-center text-white shadow-sm shadow-indigo-500/30">
-              <Zap size={17} className="fill-current" />
-            </div>
-            <span className="font-display text-lg font-extrabold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
-              socialifyai<span className="text-[#4F46E5] dark:text-indigo-400">.com</span>
-            </span>
-          </button>
+            <BrandLogo size="lg" surface="auto" />
+          </a>
 
           {/* Nav Links & Mega Menus */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300 relative">
@@ -389,19 +455,19 @@ export function LandingPage({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[
                       {
-                        title: 'Solopreneurs',
-                        desc: 'Bootstrap ($29/mo) · Automate 5 social profiles with AI Copilot and evergreen loops.',
+                        title: 'Founders & Creators',
+                        desc: 'Starter ($99/mo) · Automate 10 social profiles with AI Copilot, Growth Tools & evergreen loops.',
                         tier: 'bootstrap' as PlanTier,
                       },
                       {
-                        title: 'Small Business',
-                        desc: 'Accelerate ($49/mo) · Connect 10 networks, unified CRM inbox & campaign approvals.',
+                        title: 'Growth Teams',
+                        desc: 'Growth ($199/mo) · Connect 25 profiles, full Social CRM pipeline, Competitor Spy & Trend Radar.',
                         tier: 'accelerate' as PlanTier,
                       },
                       {
-                        title: 'Agencies',
-                        desc: 'Pro Agency & Scale ($99–$449/mo) · Multi-client workspaces & White-Label PDF reports.',
-                        tier: 'pro_agency' as PlanTier,
+                        title: 'Agencies & Lifetime',
+                        desc: 'Agency Scale ($349/mo) or Lifetime ($799 one-time) · Unlimited workspaces & White-Label PDFs forever.',
+                        tier: 'lifetime' as PlanTier,
                       },
                     ].map((sol) => (
                       <button
@@ -960,18 +1026,21 @@ export function LandingPage({
         </div>
       </section>
 
-      {/* 5. Interactive Pricing Calculator & Agency Scale Slider */}
+      {/* 5. Pricing Plans ($99 Starter to $799 Lifetime) */}
       <section id="pricing" className="py-20 bg-white dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto">
             <p className="text-xs font-bold uppercase tracking-widest text-[#4F46E5] dark:text-indigo-400">
-              FLEXIBLE SAAS PRICING
+              TRANSPARENT PRICING · STARTING AT $99
             </p>
             <h2 className="mt-2 font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
-              Transparent plans from solo creators to 150-profile agencies.
+              Plans from $99/mo up to $799 Lifetime Access.
             </h2>
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+              Start on a flexible monthly plan or lock in unlimited agency &amp; AI features forever with a single $799 one-time payment.
+            </p>
 
-            {/* Monthly vs Annual (Save 16%) Animated Toggle */}
+            {/* Monthly vs Annual (Save 16%) Toggle */}
             <div className="mt-7 inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
               <button
                 onClick={() => setBilling('monthly')}
@@ -997,89 +1066,160 @@ export function LandingPage({
             </div>
           </div>
 
-          {/* 3 Core Cards */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* 4-Tier Pricing Grid: $99 -> $199 -> $349 -> $799 Lifetime */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {[
               {
                 id: 'bootstrap' as PlanTier,
-                name: 'Bootstrap',
-                desc: 'For solopreneurs & emerging creators.',
-                monthly: 29,
-                limits: '5 Social Profiles · 1 Workspace · 1 User',
+                name: 'Starter',
+                desc: 'For creators & lean brand teams launching omnichannel automation.',
+                monthly: 99,
+                isLifetime: false,
+                limits: '10 Social Profiles · 1 Workspace · 2 Users',
                 features: [
                   'Category-based Evergreen Scheduling',
-                  'AI Copilot Captions & Hashtag Sets',
+                  'AI Copilot Captions, Hooks & Hashtags',
                   'Visual Calendar + 3×3 IG Grid Planner',
                   'Unified Inbox across all 10 networks',
+                  'UTM Builder & ROI / ROAS Calculator',
                 ],
+                cta: 'Start 14-Day Trial',
               },
               {
                 id: 'accelerate' as PlanTier,
-                name: 'Accelerate',
-                desc: 'For growing brands & small businesses.',
-                monthly: 49,
+                name: 'Growth',
+                desc: 'For scaling businesses turning social conversations into revenue.',
+                monthly: 199,
                 popular: true,
-                limits: '10 Social Profiles · 1 Workspace · 1 User',
+                isLifetime: false,
+                limits: '25 Social Profiles · 5 Workspaces · 5 Users',
                 features: [
-                  'Everything in Bootstrap, plus:',
-                  'Unlimited Evergreen Queues & RSS Imports',
+                  'Everything in Starter, plus:',
                   'Full Social CRM Pipeline & Lead Scoring',
-                  'Content Discovery Trend Spike Alerts',
+                  'AI Competitor Spy & Live Trend Radar',
+                  '1→10 Content Repurposer & Hook Lab',
+                  'Unlimited Evergreen Queues & RSS Imports',
                 ],
+                cta: 'Start 14-Day Trial',
               },
               {
                 id: 'pro_agency' as PlanTier,
-                name: 'Pro Agency',
-                desc: 'For agencies managing multiple client brands.',
-                monthly: 99,
-                limits: '25 Social Profiles · 5 Workspaces · 3 Users',
+                name: 'Agency Scale',
+                desc: 'For agencies managing high-volume multi-client rosters.',
+                monthly: 349,
+                isLifetime: false,
+                limits: '75 Social Profiles · 15 Workspaces · 15 Users',
                 features: [
-                  'Everything in Accelerate, plus:',
+                  'Everything in Growth, plus:',
                   'White-Label PDF Client Reports',
-                  'Team Approval Workflows & Internal Notes',
+                  'Team Approval Workflows & Audit Logs',
                   'Cross-Platform Ad Manager (Meta, TikTok, Google)',
+                  'Priority API Quotas & Dedicated Support',
                 ],
+                cta: 'Start 14-Day Trial',
+              },
+              {
+                id: 'lifetime' as PlanTier,
+                name: 'Lifetime Deal',
+                desc: 'Pay once, own Socialify AI forever. Zero recurring subscriptions.',
+                monthly: 799,
+                isLifetime: true,
+                limits: 'Unlimited Profiles · Unlimited Workspaces · Unlimited Users',
+                features: [
+                  'Everything in Agency Scale — Forever',
+                  'Single $799 One-Time Payment (No Monthly Bills)',
+                  'Unlimited Team Seats & Client Portals',
+                  'Custom White-Label Domain & Branding',
+                  'All Future AI Tools & Upgrades Included',
+                ],
+                cta: 'Claim Lifetime — $799',
               },
             ].map((tier) => {
-              const price = calcPrice(tier.monthly);
+              const displayPrice = tier.isLifetime ? tier.monthly : calcPrice(tier.monthly);
               return (
                 <div
                   key={tier.id}
-                  className={`rounded-2xl p-7 flex flex-col justify-between bg-[#F8FAFC] dark:bg-slate-900 ${
-                    tier.popular
-                      ? 'border-2 border-[#4F46E5] shadow-xl shadow-indigo-600/10'
-                      : 'border border-slate-200 dark:border-slate-800'
+                  className={`rounded-2xl p-6 flex flex-col justify-between transition-all ${
+                    tier.isLifetime
+                      ? 'bg-slate-950 text-white border-2 border-amber-400/90 shadow-2xl shadow-amber-500/15'
+                      : tier.popular
+                      ? 'bg-[#F8FAFC] dark:bg-slate-900 border-2 border-[#4F46E5] shadow-xl shadow-indigo-600/10'
+                      : 'bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">{tier.name}</h3>
+                      <h3
+                        className={`font-display text-xl font-bold flex items-center gap-1.5 ${
+                          tier.isLifetime ? 'text-white' : 'text-slate-900 dark:text-white'
+                        }`}
+                      >
+                        {tier.isLifetime && <InfinityIcon size={18} className="text-amber-400 shrink-0" />}
+                        {tier.name}
+                      </h3>
                       {tier.popular && (
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
                           Most Popular
                         </span>
                       )}
+                      {tier.isLifetime && (
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                          Pay Once
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{tier.desc}</p>
-
-                    <div className="mt-6 flex items-baseline gap-1.5">
-                      <span className="font-display text-4xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-                        ${price}
-                      </span>
-                      <span className="text-xs text-slate-500">/ month</span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      {billing === 'annual' ? `Billed annually ($${price * 12}/yr)` : 'Billed monthly'}
+                    <p
+                      className={`mt-1.5 text-xs leading-relaxed ${
+                        tier.isLifetime ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {tier.desc}
                     </p>
 
-                    <div className="mt-4 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    <div className="mt-6 flex items-baseline gap-1.5">
+                      <span
+                        className={`font-display text-4xl font-extrabold tabular-nums ${
+                          tier.isLifetime ? 'text-white' : 'text-slate-900 dark:text-white'
+                        }`}
+                      >
+                        ${displayPrice}
+                      </span>
+                      <span className={`text-xs font-medium ${tier.isLifetime ? 'text-amber-400' : 'text-slate-500'}`}>
+                        {tier.isLifetime ? '/ lifetime' : '/ month'}
+                      </span>
+                    </div>
+                    <p className={`mt-1 text-[11px] ${tier.isLifetime ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {tier.isLifetime
+                        ? 'One-time payment · Never pay again'
+                        : billing === 'annual'
+                        ? `Billed annually ($${displayPrice * 12}/yr)`
+                        : 'Billed monthly · Cancel anytime'}
+                    </p>
+
+                    <div
+                      className={`mt-4 p-2.5 rounded-lg text-[11px] font-semibold leading-snug ${
+                        tier.isLifetime
+                          ? 'bg-slate-900 border border-slate-800 text-amber-300'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
                       {tier.limits}
                     </div>
 
                     <ul className="mt-5 space-y-2.5">
                       {tier.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
-                          <Check size={14} className="text-[#4F46E5] dark:text-indigo-400 shrink-0 mt-0.5" />
+                        <li
+                          key={f}
+                          className={`flex items-start gap-2 text-xs ${
+                            tier.isLifetime ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <Check
+                            size={14}
+                            className={`shrink-0 mt-0.5 ${
+                              tier.isLifetime ? 'text-amber-400' : 'text-[#4F46E5] dark:text-indigo-400'
+                            }`}
+                          />
                           <span>{f}</span>
                         </li>
                       ))}
@@ -1089,76 +1229,299 @@ export function LandingPage({
                   <button
                     onClick={() => setPlanModalTier(tier.id)}
                     className={`mt-8 w-full py-3 rounded-xl text-sm font-semibold transition-colors ${
-                      tier.popular
-                        ? 'bg-[#4F46E5] hover:bg-indigo-700 text-white'
+                      tier.isLifetime
+                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold shadow-lg shadow-amber-400/20'
+                        : tier.popular
+                        ? 'bg-[#4F46E5] hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20'
                         : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white'
                     }`}
                   >
-                    Start 14-Day Trial
+                    {tier.cta}
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* Agency Scale Interactive Slider (Pro50 $179 / Pro100 $329 / Pro150 $449) */}
-          <div className="mt-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-              <div className="lg:col-span-7 space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  <SlidersHorizontal size={14} /> Agency Scale Calculator
+          {/* Interactive Agency Scale & Lifetime Savings Calculator */}
+          <div className="mt-10 bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-7 space-y-5">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    <SlidersHorizontal size={14} /> Agency Scale Calculator
+                  </div>
+                  <h3 className="mt-1.5 font-display text-2xl font-bold text-slate-900 dark:text-white">
+                    Need more than 25 profiles? Slide to scale.
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                    Drag any slider or click a preset below to match your exact profile, workspace, and team size.
+                  </p>
                 </div>
-                <h3 className="font-display text-2xl font-bold text-slate-900 dark:text-white">
-                  Need more than 25 profiles? Slide to scale.
-                </h3>
 
-                <div className="pt-2">
+                {/* Quick Presets */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: '10 Profiles (Starter)', p: 10, w: 1, s: 2 },
+                    { label: '25 Profiles (Growth)', p: 25, w: 5, s: 5 },
+                    { label: '75 Profiles (Agency)', p: 75, w: 15, s: 12 },
+                    { label: '150+ Profiles (Lifetime)', p: 150, w: 25, s: 25 },
+                  ].map((preset) => {
+                    const isSelected =
+                      calcProfiles === preset.p && calcWorkspaces === preset.w && calcSeats === preset.s;
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          setCalcProfiles(preset.p);
+                          setCalcWorkspaces(preset.w);
+                          setCalcSeats(preset.s);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                          isSelected
+                            ? 'bg-[#4F46E5] border-[#4F46E5] text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-[#4F46E5]'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Slider 1: Social Profiles */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">Social Profiles</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        aria-label="Decrease social profiles"
+                        onClick={() => setCalcProfiles((v) => Math.max(5, v - 5))}
+                        className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <span className="min-w-[68px] text-center font-mono font-bold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
+                        {calcProfiles >= 250 ? '250+' : calcProfiles}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Increase social profiles"
+                        onClick={() => setCalcProfiles((v) => Math.min(250, v + 5))}
+                        className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                  </div>
                   <input
                     type="range"
-                    min={0}
-                    max={2}
-                    step={1}
-                    value={scaleIdx}
-                    onChange={(e) => setScaleIdx(Number(e.target.value))}
-                    aria-label="Agency Scale Tier Slider"
-                    className="w-full accent-[#4F46E5] cursor-pointer"
+                    min={5}
+                    max={250}
+                    step={5}
+                    value={calcProfiles}
+                    onChange={(e) => setCalcProfiles(Number(e.target.value))}
+                    onInput={(e) => setCalcProfiles(Number((e.target as HTMLInputElement).value))}
+                    aria-label="Social profiles slider"
+                    className="w-full h-2 rounded-lg accent-[#4F46E5] cursor-pointer"
                   />
-                  <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
-                    {AGENCY_SCALE_TIERS.map((t, idx) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setScaleIdx(idx)}
-                        className={scaleIdx === idx ? 'text-[#4F46E5] dark:text-indigo-400 font-bold' : ''}
-                      >
-                        {t.name} ({t.profiles} profiles)
-                      </button>
-                    ))}
+                  <div className="flex justify-between text-[11px] font-medium text-slate-500 tabular-nums">
+                    <span>5</span>
+                    <span>25</span>
+                    <span>75</span>
+                    <span>150</span>
+                    <span>250+</span>
+                  </div>
+                </div>
+
+                {/* Slider 2 & 3: Workspaces & Team Seats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">Client Workspaces</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          aria-label="Decrease client workspaces"
+                          onClick={() => setCalcWorkspaces((v) => Math.max(1, v - 1))}
+                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="min-w-[36px] text-center font-mono font-bold text-slate-900 dark:text-white tabular-nums">
+                          {calcWorkspaces >= 30 ? '30+' : calcWorkspaces}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Increase client workspaces"
+                          onClick={() => setCalcWorkspaces((v) => Math.min(30, v + 1))}
+                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={30}
+                      step={1}
+                      value={calcWorkspaces}
+                      onChange={(e) => setCalcWorkspaces(Number(e.target.value))}
+                      onInput={(e) => setCalcWorkspaces(Number((e.target as HTMLInputElement).value))}
+                      aria-label="Client workspaces slider"
+                      className="w-full h-2 rounded-lg accent-[#4F46E5] cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">Team Seats</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          aria-label="Decrease team seats"
+                          onClick={() => setCalcSeats((v) => Math.max(1, v - 1))}
+                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="min-w-[36px] text-center font-mono font-bold text-slate-900 dark:text-white tabular-nums">
+                          {calcSeats >= 30 ? '30+' : calcSeats}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Increase team seats"
+                          onClick={() => setCalcSeats((v) => Math.min(30, v + 1))}
+                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={30}
+                      step={1}
+                      value={calcSeats}
+                      onChange={(e) => setCalcSeats(Number(e.target.value))}
+                      onInput={(e) => setCalcSeats(Number((e.target as HTMLInputElement).value))}
+                      aria-label="Team seats slider"
+                      className="w-full h-2 rounded-lg accent-[#4F46E5] cursor-pointer"
+                    />
                   </div>
                 </div>
               </div>
 
-              <div className="lg:col-span-5 bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col sm:flex-row lg:flex-col justify-between gap-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
-                      {activeScaleTier.name} Agency Scale
+              {/* Calculated Result Card */}
+              <div
+                className={`lg:col-span-5 rounded-2xl p-6 space-y-4 border ${
+                  scaleRecommendation.isLifetime
+                    ? 'bg-slate-950 text-white border-amber-400/90 shadow-xl shadow-amber-500/10'
+                    : 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-sm'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p
+                      className={`text-[11px] font-bold uppercase tracking-wider ${
+                        scaleRecommendation.isLifetime ? 'text-amber-400' : 'text-[#4F46E5] dark:text-indigo-400'
+                      }`}
+                    >
+                      Recommended Plan
+                    </p>
+                    <h4
+                      className={`font-display text-xl font-extrabold flex items-center gap-1.5 mt-0.5 ${
+                        scaleRecommendation.isLifetime ? 'text-white' : 'text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      {scaleRecommendation.isLifetime && <InfinityIcon size={18} className="text-amber-400" />}
+                      {scaleRecommendation.name}
+                    </h4>
+                  </div>
+                  <div className="text-right tabular-nums">
+                    <span
+                      className={`font-display text-3xl font-extrabold ${
+                        scaleRecommendation.isLifetime ? 'text-amber-400' : 'text-[#4F46E5] dark:text-indigo-400'
+                      }`}
+                    >
+                      ${scaleRecommendation.displayPrice}
                     </span>
-                    <span className="font-display text-3xl font-extrabold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
-                      ${calcPrice(activeScaleTier.monthly)}
-                      <span className="text-xs font-normal text-slate-500">/mo</span>
+                    <span
+                      className={`text-xs block ${
+                        scaleRecommendation.isLifetime ? 'text-slate-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {scaleRecommendation.isLifetime ? 'one-time lifetime' : `/ month (${billing})`}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 tabular-nums">
-                    {activeScaleTier.profiles} Social Profiles · {activeScaleTier.workspaces} Workspaces · {activeScaleTier.users} · White-Label PDFs
-                  </p>
                 </div>
-                <button
-                  onClick={() => setPlanModalTier(activeScaleTier.id)}
-                  className="w-full py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-colors"
+
+                <p
+                  className={`text-xs leading-relaxed ${
+                    scaleRecommendation.isLifetime ? 'text-slate-300' : 'text-slate-600 dark:text-slate-300'
+                  }`}
                 >
-                  Select {activeScaleTier.name} Plan
-                </button>
+                  {scaleRecommendation.limitsSummary}
+                </p>
+
+                {/* Live Savings Breakdown */}
+                <div
+                  className={`p-3.5 rounded-xl text-xs space-y-1.5 tabular-nums ${
+                    scaleRecommendation.isLifetime
+                      ? 'bg-slate-900 border border-slate-800'
+                      : 'bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <div className="flex justify-between">
+                    <span className={scaleRecommendation.isLifetime ? 'text-slate-400' : 'text-slate-500'}>
+                      Your Configuration
+                    </span>
+                    <span className="font-semibold">
+                      {calcProfiles} profiles · {calcWorkspaces} ws · {calcSeats} seats
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={scaleRecommendation.isLifetime ? 'text-slate-400' : 'text-slate-500'}>
+                      {scaleRecommendation.isLifetime ? 'Lifetime Payment (Year 1+)' : '12-Month Subscription Total'}
+                    </span>
+                    <span className="font-bold">${scaleRecommendation.yearCost.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between pt-1.5 border-t border-slate-200/70 dark:border-slate-800">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                      $799 Lifetime Break-Even
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      {scaleRecommendation.breakEvenMonths} mo · Save ${scaleRecommendation.lifetimeSavings.toLocaleString()}/yr
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setPlanModalTier(scaleRecommendation.id)}
+                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors ${
+                      scaleRecommendation.isLifetime
+                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                        : 'bg-[#4F46E5] hover:bg-indigo-700 text-white'
+                    }`}
+                  >
+                    Select {scaleRecommendation.name} ({scaleRecommendation.priceLabel})
+                  </button>
+                  {!scaleRecommendation.isLifetime && (
+                    <button
+                      type="button"
+                      onClick={() => setPlanModalTier('lifetime')}
+                      className="w-full py-2 rounded-xl border border-amber-400/70 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-semibold transition-colors"
+                    >
+                      Or Lock In $799 Lifetime Deal (Save ${scaleRecommendation.lifetimeSavings.toLocaleString()} in Year 1)
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1271,14 +1634,20 @@ export function LandingPage({
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 pb-12 border-b border-slate-800">
             <div className="lg:col-span-4 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#4F46E5] flex items-center justify-center text-white">
-                  <Zap size={17} className="fill-current" />
-                </div>
-                <span className="font-display text-lg font-extrabold text-white">
-                  socialifyai<span className="text-indigo-400">.com</span>
-                </span>
-              </div>
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (window.location.pathname !== '/') {
+                    window.history.pushState({}, '', '/');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                aria-label="Socialify AI Home"
+                className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded-lg"
+              >
+                <BrandLogo size="md" surface="dark" />
+              </a>
               <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
                 Luminous AI social media scheduling, evergreen category queues, unified CRM inbox, and agency reporting across 10 networks.
               </p>
@@ -1324,9 +1693,9 @@ export function LandingPage({
               <div>
                 <h4 className="font-display font-bold text-white uppercase tracking-wider mb-3">Solutions</h4>
                 <ul className="space-y-2 text-slate-400">
-                  <li><a href="#pricing" className="hover:text-white transition-colors">Solopreneurs</a></li>
-                  <li><a href="#pricing" className="hover:text-white transition-colors">Small Business</a></li>
-                  <li><a href="#pricing" className="hover:text-white transition-colors">Agencies (Pro50–150)</a></li>
+                  <li><a href="#pricing" className="hover:text-white transition-colors">Starter ($99/mo)</a></li>
+                  <li><a href="#pricing" className="hover:text-white transition-colors">Growth ($199/mo)</a></li>
+                  <li><a href="#pricing" className="hover:text-white transition-colors">Agency &amp; Lifetime ($799)</a></li>
                   <li><a href="#showcase" className="hover:text-white transition-colors">White-Label PDF</a></li>
                 </ul>
               </div>
@@ -1365,10 +1734,12 @@ export function LandingPage({
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
-                  14-DAY FREE TRIAL · NO CARD REQUIRED
+                  {PLAN_LABELS[planModalTier]?.isLifetime
+                    ? 'ONE-TIME LIFETIME LICENSE · $799 FOREVER'
+                    : `14-DAY FREE TRIAL · ${PLAN_LABELS[planModalTier]?.priceTag || '$99/mo'}`}
                 </p>
                 <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
-                  Launch {planModalTier.replace('_', ' ').toUpperCase()} Workspace
+                  Launch {PLAN_LABELS[planModalTier]?.name || planModalTier} Workspace
                 </h3>
               </div>
               <button onClick={() => setPlanModalTier(null)} className="text-slate-400 hover:text-slate-700">
