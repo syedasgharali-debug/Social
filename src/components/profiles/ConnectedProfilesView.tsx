@@ -42,7 +42,7 @@ export function ConnectedProfilesView({
     platform: 'instagram' as Platform,
     accountName: '',
     handle: '@',
-    followers: '12400',
+    followers: '0',
   });
 
   const stats = useMemo(() => {
@@ -61,14 +61,14 @@ export function ConnectedProfilesView({
       platform: form.platform,
       accountName: form.accountName.trim(),
       handle: form.handle.trim() || `@${form.accountName.trim().toLowerCase().replace(/\s+/g, '')}`,
-      followers: Number(form.followers) || 1000,
+      followers: Math.max(0, Number(form.followers) || 0),
       status: 'connected',
       lastSynced: 'Just now',
     };
     onAddProfile(profile);
     onToast('Social Profile Connected', `${PLATFORM_META[profile.platform].label} (${profile.handle}) linked.`);
     setShowConnectModal(false);
-    setForm({ platform: 'instagram', accountName: '', handle: '@', followers: '12400' });
+    setForm({ platform: 'instagram', accountName: '', handle: '@', followers: '0' });
   };
 
   return (
@@ -114,6 +114,23 @@ export function ConnectedProfilesView({
       </div>
 
       {/* Profiles Grid */}
+      {wsProfiles.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center flex flex-col items-center justify-center">
+          <Share2 size={28} className="text-slate-300 dark:text-slate-600 mb-3" />
+          <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">
+            No social profiles connected yet
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm">
+            Connect your brand&apos;s social accounts to publish posts, sync inbox messages, and track live audience totals.
+          </p>
+          <button
+            onClick={() => setShowConnectModal(true)}
+            className="mt-4 px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
+          >
+            <Plus size={14} /> Connect First Profile
+          </button>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {wsProfiles.map((profile) => {
           const meta = PLATFORM_META[profile.platform];
@@ -171,7 +188,6 @@ export function ConnectedProfilesView({
                       ...profile,
                       status: 'connected',
                       lastSynced: 'Just now',
-                      followers: profile.followers + 12,
                     });
                     onToast('Token Refreshed & Synced', `${meta.label} (${profile.handle}) is active.`);
                   }}
@@ -208,6 +224,7 @@ export function ConnectedProfilesView({
           );
         })}
       </div>
+      )}
 
       {/* Connect Profile Modal */}
       {showConnectModal && (

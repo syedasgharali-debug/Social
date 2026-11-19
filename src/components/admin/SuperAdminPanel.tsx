@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   ShieldCheck,
   Search,
@@ -48,7 +48,7 @@ import {
   PromoCode,
   InvoiceRecord,
 } from '../../types';
-import { SEED_AI_GOVERNANCE } from '../../data/seedData';
+import { DEFAULT_AI_GOVERNANCE } from '../../data/defaultState';
 import { SocialLogo, SocialBrandKey } from '../common/SocialIcons';
 import { BrandLogo } from '../BrandLogo';
 
@@ -85,6 +85,19 @@ interface SuperAdminPanelProps {
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
   onSignOut?: () => void;
+  authToken?: string;
+}
+
+interface RegisteredUserRecord {
+  uid: string;
+  email: string;
+  displayName: string;
+  companyName?: string;
+  createdAt: string;
+  plan?: string;
+  workspacesCount?: number;
+  profilesUsed?: number;
+  scheduledPostsCount?: number;
 }
 
 const ACTIVE_PLAN_TIERS: PlanTier[] = ['bootstrap', 'accelerate', 'pro_agency', 'lifetime'];
@@ -99,44 +112,9 @@ const PLAN_PRICING: Record<PlanTier, { mrr: number; profiles: number; aiLimit: n
   pro150: { mrr: 799, profiles: 999, aiLimit: 100000, label: 'Lifetime ($799 one-time)' },
 };
 
-const MRR_GROWTH_SERIES = [
-  { month: 'Jun', mrr: 31400, subscriptions: 980 },
-  { month: 'Jul', mrr: 34800, subscriptions: 1090 },
-  { month: 'Aug', mrr: 38250, subscriptions: 1185 },
-  { month: 'Sep', mrr: 41600, subscriptions: 1270 },
-  { month: 'Oct', mrr: 42840, subscriptions: 1345 },
-  { month: 'Nov', mrr: 48920, subscriptions: 1420 },
-];
-
-const PLAN_COLORS = ['#94A3B8', '#F59E0B', '#4F46E5'];
+const PLAN_COLORS = ['#64748B', '#F59E0B', '#4F46E5', '#10B981'];
 
 type AdminSection = 'all' | 'overview' | 'users' | 'apis' | 'ai' | 'billing';
-
-function MiniSparkline({ points, color }: { points: number[]; color: string }) {
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const span = Math.max(1, max - min);
-  const coords = points
-    .map((val, idx) => {
-      const x = (idx / Math.max(1, points.length - 1)) * 72;
-      const y = 22 - ((val - min) / span) * 18;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-
-  return (
-    <svg width="74" height="24" viewBox="0 0 74 24" className="shrink-0 overflow-visible" aria-hidden="true">
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={coords}
-      />
-    </svg>
-  );
-}
 
 export function SuperAdminPanel({
   state,
@@ -158,8 +136,74 @@ export function SuperAdminPanel({
   darkMode = false,
   onToggleDarkMode,
   onSignOut,
+  authToken,
 }: SuperAdminPanelProps) {
   const [activeSection, setActiveSection] = useState<AdminSection>('all');
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUserRecord[]>([]);
+  const [testingNodeId, setTestingNodeId] = useState<string | null>(null);
+
+  const loadRegisteredUsers = useCallback(async () => {
+    const collected: RegisteredUserRecord[] = [];
+    const seen = new Set<string>();
+
+    if (authToken && !authToken.startsWith('local_sess_')) {
+      try {
+        const res = await fetch('/api/admin/users', {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const isJson = (res.headers.get('content-type') || '').includes('application/json');
+        if (res.ok && isJson) {
+          const data = await res.json();
+          if (Array.isArray(data.users)) {
+            for (const u of data.users as RegisteredUserRecord[]) {
+              const key = u.email.toLowerCase();
+              if (!seen.has(key)) {
+                seen.add(key);
+                collected.push(u);
+              }
+            }
+          }
+        }
+      } catch {
+        // Fallback to local registry below
+      }
+    }
+
+    try {
+      const raw = localStorage.getItem('socialifyai_local_users_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const u of parsed) {
+            if (!u?.email || u.role === 'super_admin') continue;
+            const key = String(u.email).toLowerCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              collected.push({
+                uid: u.uid || `local-${key}`,
+                email: u.email,
+                displayName: u.displayName || u.email.split('@')[0],
+                companyName: u.companyName || `${u.displayName || 'Customer'}'s Workspace`,
+                createdAt: u.createdAt || new Date().toISOString(),
+                plan: 'bootstrap',
+                workspacesCount: 1,
+                profilesUsed: 0,
+                scheduledPostsCount: 0,
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+
+    setRegisteredUsers(collected);
+  }, [authToken]);
+
+  useEffect(() => {
+    loadRegisteredUsers();
+  }, [loadRegisteredUsers]);
 
   // Module 2: Tenant Filters & Provision Modal
   const [search, setSearch] = useState('');
@@ -170,7 +214,7 @@ export function SuperAdminPanel({
     orgName: '',
     ownerName: '',
     ownerEmail: '',
-    plan: 'accelerate' as PlanTier,
+    plan: 'bootstrap' as PlanTier,
   });
 
   // Module 4: AI Governance Draft Form
@@ -184,9 +228,38 @@ export function SuperAdminPanel({
     maxRedemptions: '250',
   });
 
+  // Merge manually managed tenants with real signed-up users (deduped by email)
+  const allTenants = useMemo<TenantAccount[]>(() => {
+    const byEmail = new Set(state.tenants.map((t) => t.ownerEmail.toLowerCase()));
+    const synced: TenantAccount[] = [];
+    for (const u of registeredUsers) {
+      if (byEmail.has(u.email.toLowerCase())) continue;
+      const planKey: PlanTier =
+        u.plan && u.plan in PLAN_PRICING ? (u.plan as PlanTier) : 'bootstrap';
+      const meta = PLAN_PRICING[planKey];
+      synced.push({
+        id: `reg-${u.uid}`,
+        orgName: u.companyName || `${u.displayName}'s Workspace`,
+        ownerName: u.displayName,
+        ownerEmail: u.email,
+        plan: planKey,
+        mrr: meta.mrr,
+        profilesUsed: u.profilesUsed || 0,
+        profilesLimit: meta.profiles,
+        workspacesCount: u.workspacesCount || 1,
+        aiCreditsUsed: 0,
+        aiCreditsLimit: meta.aiLimit,
+        status: 'active',
+        joinedAt: (u.createdAt || new Date().toISOString()).slice(0, 10),
+        linkedWorkspaceId: state.workspaces[0]?.id,
+      });
+    }
+    return [...state.tenants, ...synced];
+  }, [state.tenants, registeredUsers, state.workspaces]);
+
   const filteredTenants = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return state.tenants.filter((t) => {
+    return allTenants.filter((t) => {
       const matchesQ =
         !q ||
         t.orgName.toLowerCase().includes(q) ||
@@ -196,49 +269,90 @@ export function SuperAdminPanel({
       const matchesPlan = planFilter === 'all' || t.plan === planFilter;
       return matchesQ && matchesSt && matchesPlan;
     });
-  }, [state.tenants, search, statusFilter, planFilter]);
+  }, [allTenants, search, statusFilter, planFilter]);
 
   const executiveMetrics = useMemo(() => {
-    // Baseline 47,639 + live tenant MRRs (seed tenants active MRR = 1,281 -> totals $48,920)
-    const activeTenants = state.tenants.filter((t) => t.status !== 'suspended');
-    const tenantMrrSum = activeTenants.reduce((s, t) => s + t.mrr, 0);
-    const totalMrr = 47639 + tenantMrrSum;
+    const activeTenants = allTenants.filter((t) => t.status !== 'suspended');
+    const totalMrr = activeTenants.reduce((s, t) => s + t.mrr, 0);
+    const activeWorkspaces = activeTenants.reduce((s, t) => s + t.workspacesCount, 0);
 
-    // Baseline 1,352 + live workspaces across active tenants (seed = 68 -> totals 1,420)
-    const tenantWorkspaces = activeTenants.reduce((s, t) => s + t.workspacesCount, 0);
-    const activeWorkspaces = 1352 + tenantWorkspaces;
+    const regScheduled = registeredUsers.reduce((s, u) => s + (u.scheduledPostsCount || 0), 0);
+    const localScheduled = state.posts.filter(
+      (p) => p.status === 'scheduled' || p.status === 'approved'
+    ).length;
+    const scheduledPosts = localScheduled + regScheduled;
+    const publishedPosts = state.posts.filter((p) => p.status === 'published').length;
 
-    const scheduledToday = 18437 + state.posts.length;
-    const totalTenantCredits = state.tenants.reduce((s, t) => s + t.aiCreditsUsed, 0);
-    const totalAiCredits = 2779740 + totalTenantCredits;
-    const suspendedCount = state.tenants.filter((t) => t.status === 'suspended').length;
-    const churnRate = (1.8 + suspendedCount * 0.2).toFixed(1);
+    const totalAiCredits = allTenants.reduce((s, t) => s + t.aiCreditsUsed, 0);
+    const totalAiLimit = allTenants.reduce((s, t) => s + t.aiCreditsLimit, 0);
+    const suspendedCount = allTenants.filter((t) => t.status === 'suspended').length;
+    const churnRate =
+      allTenants.length > 0 ? ((suspendedCount / allTenants.length) * 100).toFixed(1) : '0.0';
 
-    const bootstrapCount = 412 + state.tenants.filter((t) => t.plan === 'bootstrap').length;
-    const accelerateCount = 584 + state.tenants.filter((t) => t.plan === 'accelerate').length;
-    const proAgencyCount =
-      424 +
-      state.tenants.filter((t) =>
-        ['pro_agency', 'lifetime', 'pro50', 'pro100', 'pro150'].includes(t.plan)
-      ).length;
+    const starterCount = allTenants.filter((t) => t.plan === 'bootstrap').length;
+    const growthCount = allTenants.filter((t) => t.plan === 'accelerate').length;
+    const agencyCount = allTenants.filter((t) =>
+      ['pro_agency', 'pro50', 'pro100'].includes(t.plan)
+    ).length;
+    const lifetimeCount = allTenants.filter((t) =>
+      ['lifetime', 'pro150'].includes(t.plan)
+    ).length;
+
+    // Build chronological MRR series strictly from real tenant joinedAt months
+    const monthBuckets = new Map<string, { mrr: number; subscriptions: number }>();
+    for (const t of activeTenants) {
+      const ym = (t.joinedAt || '').slice(0, 7) || new Date().toISOString().slice(0, 7);
+      const prev = monthBuckets.get(ym) || { mrr: 0, subscriptions: 0 };
+      monthBuckets.set(ym, { mrr: prev.mrr + t.mrr, subscriptions: prev.subscriptions + 1 });
+    }
+    const sortedMonths = Array.from(monthBuckets.keys()).sort();
+    let cumulativeMrr = 0;
+    let cumulativeSubs = 0;
+    const revenueSeries = sortedMonths.map((ym) => {
+      const entry = monthBuckets.get(ym)!;
+      cumulativeMrr += entry.mrr;
+      cumulativeSubs += entry.subscriptions;
+      const [year, month] = ym.split('-');
+      const label = new Date(Number(year), Math.max(0, Number(month) - 1), 1).toLocaleDateString(
+        'en-US',
+        { month: 'short', year: '2-digit' }
+      );
+      return { month: label, mrr: cumulativeMrr, subscriptions: cumulativeSubs };
+    });
 
     return {
       totalMrr,
       activeWorkspaces,
-      scheduledToday,
+      activeAccounts: activeTenants.length,
+      totalAccounts: allTenants.length,
+      scheduledPosts,
+      publishedPosts,
       totalAiCredits,
+      totalAiLimit,
+      suspendedCount,
       churnRate,
+      revenueSeries,
       planDistribution: [
-        { name: 'Starter ($99/mo)', value: bootstrapCount },
-        { name: 'Growth ($199/mo)', value: accelerateCount },
-        { name: 'Agency ($349) & Lifetime ($799)', value: proAgencyCount },
+        { name: 'Starter ($99/mo)', value: starterCount },
+        { name: 'Growth ($199/mo)', value: growthCount },
+        { name: 'Agency Scale ($349/mo)', value: agencyCount },
+        { name: 'Lifetime ($799)', value: lifetimeCount },
       ],
     };
-  }, [state.tenants, state.posts.length]);
+  }, [allTenants, registeredUsers, state.posts]);
+
+  const upsertTenant = (updated: TenantAccount) => {
+    const existsInState = state.tenants.some((t) => t.id === updated.id);
+    if (existsInState) {
+      onUpdateTenant(updated);
+    } else {
+      onAddTenant(updated);
+    }
+  };
 
   const handlePlanChange = (tenant: TenantAccount, plan: PlanTier) => {
     const meta = PLAN_PRICING[plan];
-    onUpdateTenant({
+    upsertTenant({
       ...tenant,
       plan,
       mrr: meta.mrr,
@@ -250,7 +364,7 @@ export function SuperAdminPanel({
 
   const handleStatusToggle = (tenant: TenantAccount) => {
     const nextStatus = tenant.status === 'suspended' ? 'active' : 'suspended';
-    onUpdateTenant({ ...tenant, status: nextStatus });
+    upsertTenant({ ...tenant, status: nextStatus });
     onToast(
       nextStatus === 'suspended' ? 'Account Suspended' : 'Account Reactivated',
       `${tenant.orgName} is now ${nextStatus}.`
@@ -268,19 +382,19 @@ export function SuperAdminPanel({
       ownerEmail: tenantForm.ownerEmail.trim(),
       plan: tenantForm.plan,
       mrr: meta.mrr,
-      profilesUsed: 2,
+      profilesUsed: 0,
       profilesLimit: meta.profiles,
       workspacesCount: 1,
       aiCreditsUsed: 0,
       aiCreditsLimit: meta.aiLimit,
       status: 'active',
-      joinedAt: '2026-11-13',
+      joinedAt: new Date().toISOString().slice(0, 10),
       linkedWorkspaceId: state.workspaces[0]?.id,
     };
     onAddTenant(newTenant);
     onToast('Account Provisioned', `${newTenant.orgName} added on ${meta.label}.`);
     setShowNewTenant(false);
-    setTenantForm({ orgName: '', ownerName: '', ownerEmail: '', plan: 'accelerate' });
+    setTenantForm({ orgName: '', ownerName: '', ownerEmail: '', plan: 'bootstrap' });
   };
 
   const handleCreatePromo = (e: React.FormEvent) => {
@@ -295,11 +409,34 @@ export function SuperAdminPanel({
       redemptions: 0,
       maxRedemptions: Math.max(1, Number(promoForm.maxRedemptions) || 250),
       active: true,
-      createdAt: '2026-11-13',
+      createdAt: new Date().toISOString().slice(0, 10),
     };
     onAddPromoCode(promo);
     setPromoForm({ code: '', discountPct: '20', duration: 'forever', maxRedemptions: '250' });
     onToast('Promo Code Created', `${promo.code} (${promo.discountPct}% off) is live.`);
+  };
+
+  const handleTestSingleApiNode = async (node: ApiHealthNode) => {
+    setTestingNodeId(node.id);
+    const start = performance.now();
+    let healthy = true;
+    try {
+      const res = await fetch('/api/health', { cache: 'no-store' });
+      healthy = res.ok;
+    } catch {
+      healthy = false;
+    }
+    const elapsedMs = Math.max(1, Math.round(performance.now() - start));
+    setTestingNodeId(null);
+    onUpdateApiNode(
+      {
+        ...node,
+        status: healthy ? 'operational' : 'degraded',
+        latencyMs: elapsedMs,
+        lastTestedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+      `Tested ${node.name} (${elapsedMs}ms · ${healthy ? 'OK' : 'Degraded'})`
+    );
   };
 
   const showBlock = (section: Exclude<AdminSection, 'all'>) =>
@@ -405,48 +542,37 @@ export function SuperAdminPanel({
         {/* MODULE 1: EXECUTIVE SAAS OVERVIEW */}
         {showBlock('overview') && (
           <section className="space-y-5">
-            {/* 5 Sparkline KPI Cards */}
+            {/* 5 Real-Data KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[
                 {
                   label: 'Monthly Recurring Revenue',
                   value: `$${executiveMetrics.totalMrr.toLocaleString()}`,
-                  delta: '+14.2% MoM',
-                  deltaColor: 'text-emerald-600 dark:text-emerald-400',
-                  spark: [31, 34, 38, 41, 43, 49],
-                  sparkHex: '#4F46E5',
+                  sub: `${executiveMetrics.activeAccounts} active account${executiveMetrics.activeAccounts === 1 ? '' : 's'}`,
                 },
                 {
                   label: 'Active Workspaces',
                   value: executiveMetrics.activeWorkspaces.toLocaleString(),
-                  delta: '+75 this month',
-                  deltaColor: 'text-emerald-600 dark:text-emerald-400',
-                  spark: [980, 1090, 1185, 1270, 1345, 1420],
-                  sparkHex: '#10B981',
+                  sub: `${executiveMetrics.totalAccounts} registered org${executiveMetrics.totalAccounts === 1 ? '' : 's'}`,
                 },
                 {
-                  label: 'Scheduled Posts Today',
-                  value: executiveMetrics.scheduledToday.toLocaleString(),
-                  delta: '99.94% delivery',
-                  deltaColor: 'text-[#4F46E5] dark:text-indigo-400',
-                  spark: [12400, 13900, 15100, 16200, 17400, 18450],
-                  sparkHex: '#4F46E5',
+                  label: 'Scheduled Posts',
+                  value: executiveMetrics.scheduledPosts.toLocaleString(),
+                  sub: `${executiveMetrics.publishedPosts} published total`,
                 },
                 {
-                  label: 'AI Copilot Credits Used',
-                  value: `${(executiveMetrics.totalAiCredits / 1000000).toFixed(2)}M`,
-                  delta: '71% of monthly pool',
-                  deltaColor: 'text-amber-600 dark:text-amber-400',
-                  spark: [1.4, 1.7, 2.0, 2.3, 2.6, 2.84],
-                  sparkHex: '#F59E0B',
+                  label: 'AI Credits Used',
+                  value: executiveMetrics.totalAiCredits.toLocaleString(),
+                  sub: `${
+                    executiveMetrics.totalAiLimit > 0
+                      ? Math.round((executiveMetrics.totalAiCredits / executiveMetrics.totalAiLimit) * 100)
+                      : 0
+                  }% of allocated quota`,
                 },
                 {
-                  label: 'Logo Churn Rate',
+                  label: 'Suspended Rate',
                   value: `${executiveMetrics.churnRate}%`,
-                  delta: '-0.4% vs Oct',
-                  deltaColor: 'text-emerald-600 dark:text-emerald-400',
-                  spark: [2.9, 2.6, 2.4, 2.2, 2.0, 1.8],
-                  sparkHex: '#10B981',
+                  sub: `${executiveMetrics.suspendedCount} suspended of ${executiveMetrics.totalAccounts}`,
                 },
               ].map((kpi) => (
                 <div
@@ -454,16 +580,13 @@ export function SuperAdminPanel({
                   className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                 >
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{kpi.label}</p>
-                  <div className="mt-2.5 flex items-end justify-between gap-2">
-                    <div>
-                      <p className="font-display text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-                        {kpi.value}
-                      </p>
-                      <p className={`mt-1 text-[11px] font-semibold tabular-nums ${kpi.deltaColor}`}>
-                        {kpi.delta}
-                      </p>
-                    </div>
-                    <MiniSparkline points={kpi.spark} color={kpi.sparkHex} />
+                  <div className="mt-2.5">
+                    <p className="font-display text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums">
+                      {kpi.value}
+                    </p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+                      {kpi.sub}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -478,83 +601,119 @@ export function SuperAdminPanel({
                       Revenue & Subscription Growth
                     </h2>
                     <p className="text-xs text-slate-500">
-                      6-month MRR trajectory ($48,920 current) and active subscriber expansion
+                      Cumulative MRR computed from registered active customer accounts
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    +14.2% MoM MRR
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 tabular-nums">
+                    Current: ${executiveMetrics.totalMrr.toLocaleString()}
                   </span>
                 </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={MRR_GROWTH_SERIES}>
-                      <defs>
-                        <linearGradient id="adminMrrGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.28} />
-                          <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                      <Tooltip />
-                      <Area
-                        type="monotone"
-                        dataKey="mrr"
-                        stroke="#4F46E5"
-                        strokeWidth={2.5}
-                        fill="url(#adminMrrGrad)"
-                        name="MRR ($)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                {executiveMetrics.revenueSeries.length === 0 ? (
+                  <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                    <CreditCard size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      No subscription revenue data yet
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500 max-w-sm">
+                      Monthly revenue charts populate automatically as customers sign up or accounts are provisioned.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={executiveMetrics.revenueSeries}>
+                        <defs>
+                          <linearGradient id="adminMrrGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.28} />
+                            <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="mrr"
+                          stroke="#4F46E5"
+                          strokeWidth={2.5}
+                          fill="url(#adminMrrGrad)"
+                          name="Cumulative MRR ($)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
 
               <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col">
                 <h2 className="font-display text-sm font-bold text-slate-900 dark:text-white">
                   Plan Distribution
                 </h2>
-                <p className="text-xs text-slate-500 mb-2">Bootstrap vs. Accelerate vs. Pro Agency</p>
-                <div className="relative h-52 flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={executiveMetrics.planDistribution}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={52}
-                        outerRadius={78}
-                        paddingAngle={2}
-                      >
-                        {executiveMetrics.planDistribution.map((_entry, idx) => (
-                          <Cell key={idx} fill={PLAN_COLORS[idx % PLAN_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-[10px] font-semibold text-slate-400">Workspaces</span>
-                    <span className="font-display text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-                      {executiveMetrics.activeWorkspaces.toLocaleString()}
-                    </span>
+                <p className="text-xs text-slate-500 mb-2">Starter · Growth · Agency Scale · Lifetime</p>
+                {executiveMetrics.totalAccounts === 0 ? (
+                  <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                    <Users size={22} className="text-slate-300 dark:text-slate-600 mb-2" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      No active plans yet
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Plan breakdown appears once customer accounts exist.
+                    </p>
                   </div>
-                </div>
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5 text-xs tabular-nums">
-                  {executiveMetrics.planDistribution.map((tier, idx) => (
-                    <div key={tier.name} className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <span
-                          className="w-2.5 h-2.5 rounded-xs shrink-0"
-                          style={{ backgroundColor: PLAN_COLORS[idx % PLAN_COLORS.length] }}
-                        />
-                        {tier.name}
-                      </span>
-                      <span className="font-bold text-slate-900 dark:text-white">{tier.value}</span>
+                ) : (
+                  <>
+                    <div className="relative h-52 flex-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={executiveMetrics.planDistribution.filter((d) => d.value > 0)}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={52}
+                            outerRadius={78}
+                            paddingAngle={2}
+                          >
+                            {executiveMetrics.planDistribution
+                              .filter((d) => d.value > 0)
+                              .map((entry) => {
+                                const origIdx = executiveMetrics.planDistribution.findIndex(
+                                  (p) => p.name === entry.name
+                                );
+                                return (
+                                  <Cell
+                                    key={entry.name}
+                                    fill={PLAN_COLORS[origIdx % PLAN_COLORS.length]}
+                                  />
+                                );
+                              })}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[10px] font-semibold text-slate-400">Accounts</span>
+                        <span className="font-display text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">
+                          {executiveMetrics.totalAccounts.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5 text-xs tabular-nums">
+                      {executiveMetrics.planDistribution.map((tier, idx) => (
+                        <div key={tier.name} className="flex items-center justify-between">
+                          <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                            <span
+                              className="w-2.5 h-2.5 rounded-xs shrink-0"
+                              style={{ backgroundColor: PLAN_COLORS[idx % PLAN_COLORS.length] }}
+                            />
+                            {tier.name}
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-white">{tier.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -632,8 +791,10 @@ export function SuperAdminPanel({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
                   {filteredTenants.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 px-5 text-center text-slate-500">
-                        No registered agencies match your current search or filter.
+                      <td colSpan={7} className="py-10 px-5 text-center text-slate-500">
+                        {allTenants.length === 0
+                          ? 'No customer accounts registered yet. New signups and provisioned accounts will appear here.'
+                          : 'No accounts match your current search or filter.'}
                       </td>
                     </tr>
                   ) : (
@@ -785,7 +946,7 @@ export function SuperAdminPanel({
                             node.latencyMs > 300 ? 'text-amber-600' : 'text-slate-900 dark:text-white'
                           }`}
                         >
-                          {node.latencyMs} ms
+                          {node.latencyMs > 0 ? `${node.latencyMs} ms` : '—'}
                         </span>
                       </div>
 
@@ -818,21 +979,11 @@ export function SuperAdminPanel({
 
                     <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          const freshLatency = 95 + Math.floor(Math.random() * 75);
-                          onUpdateApiNode(
-                            {
-                              ...node,
-                              status: 'operational',
-                              latencyMs: freshLatency,
-                              lastTestedAt: 'Just now',
-                            },
-                            `Tested ${node.name} (${freshLatency}ms)`
-                          );
-                        }}
-                        className="flex-1 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1"
+                        disabled={testingNodeId === node.id}
+                        onClick={() => handleTestSingleApiNode(node)}
+                        className="flex-1 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 disabled:opacity-60"
                       >
-                        <Activity size={12} /> Test Connection
+                        <Activity size={12} /> {testingNodeId === node.id ? 'Testing...' : 'Test Connection'}
                       </button>
                       <button
                         onClick={() =>
@@ -841,8 +992,7 @@ export function SuperAdminPanel({
                               ...node,
                               status: 'operational',
                               webhookQueueDepth: 0,
-                              rateLimitUsedPct: Math.max(12, node.rateLimitUsedPct - 25),
-                              lastTestedAt: 'Just now',
+                              lastTestedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                             },
                             `Flushed webhook queue for ${node.name}`
                           )
@@ -881,8 +1031,8 @@ export function SuperAdminPanel({
                 <button
                   type="button"
                   onClick={() => {
-                    setAiDraft(SEED_AI_GOVERNANCE);
-                    onSaveAiGovernance(SEED_AI_GOVERNANCE);
+                    setAiDraft(DEFAULT_AI_GOVERNANCE);
+                    onSaveAiGovernance(DEFAULT_AI_GOVERNANCE);
                   }}
                   className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 >
@@ -1027,36 +1177,42 @@ export function SuperAdminPanel({
                 </div>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-80">
-                {state.tenants
-                  .slice()
-                  .sort((a, b) => b.aiCreditsUsed - a.aiCreditsUsed)
-                  .map((t) => {
-                    const estCost = ((t.aiCreditsUsed / 1000) * aiDraft.costPer1kCreditsUsd).toFixed(2);
-                    const pct = Math.min(100, Math.round((t.aiCreditsUsed / Math.max(1, t.aiCreditsLimit)) * 100));
-                    return (
-                      <div key={t.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-bold text-slate-900 dark:text-white truncate">{t.orgName}</p>
-                            <span className="font-mono font-bold text-slate-900 dark:text-white tabular-nums">
-                              ${estCost}
-                            </span>
-                          </div>
-                          <div className="mt-1.5 flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${pct >= 85 ? 'bg-amber-500' : 'bg-[#4F46E5]'}`}
-                                style={{ width: `${pct}%` }}
-                              />
+                {allTenants.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500">
+                    No customer organizations registered yet. AI credit consumption per organization will appear here.
+                  </div>
+                ) : (
+                  allTenants
+                    .slice()
+                    .sort((a, b) => b.aiCreditsUsed - a.aiCreditsUsed)
+                    .map((t) => {
+                      const estCost = ((t.aiCreditsUsed / 1000) * aiDraft.costPer1kCreditsUsd).toFixed(2);
+                      const pct = Math.min(100, Math.round((t.aiCreditsUsed / Math.max(1, t.aiCreditsLimit)) * 100));
+                      return (
+                        <div key={t.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-bold text-slate-900 dark:text-white truncate">{t.orgName}</p>
+                              <span className="font-mono font-bold text-slate-900 dark:text-white tabular-nums">
+                                ${estCost}
+                              </span>
                             </div>
-                            <span className="font-mono text-[10px] text-slate-500 tabular-nums shrink-0">
-                              {t.aiCreditsUsed.toLocaleString()} ({pct}%)
-                            </span>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${pct >= 85 ? 'bg-amber-500' : 'bg-[#4F46E5]'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="font-mono text-[10px] text-slate-500 tabular-nums shrink-0">
+                                {t.aiCreditsUsed.toLocaleString()} ({pct}%)
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                )}
               </div>
             </div>
           </section>
@@ -1112,39 +1268,45 @@ export function SuperAdminPanel({
                 </form>
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                  {state.promoCodes.map((promo) => (
-                    <div key={promo.id} className="py-3 flex items-center justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-900 dark:text-white">{promo.code}</span>
-                          <span className="text-slate-400">·</span>
-                          <span className="font-semibold text-[#4F46E5] dark:text-indigo-400">
-                            {promo.discountPct}% off ({promo.duration.replace('_', ' ')})
-                          </span>
+                  {state.promoCodes.length === 0 ? (
+                    <p className="py-6 text-center text-slate-500">
+                      No promo codes created yet. Use the form above to add a discount code.
+                    </p>
+                  ) : (
+                    state.promoCodes.map((promo) => (
+                      <div key={promo.id} className="py-3 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-900 dark:text-white">{promo.code}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="font-semibold text-[#4F46E5] dark:text-indigo-400">
+                              {promo.discountPct}% off ({promo.duration.replace('_', ' ')})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 tabular-nums">
+                            {promo.redemptions} / {promo.maxRedemptions} redeemed · Created {promo.createdAt}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-slate-500 tabular-nums">
-                          {promo.redemptions} / {promo.maxRedemptions} redeemed · Created {promo.createdAt}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => onTogglePromoCode(promo)}
+                            className={`text-xs font-semibold ${
+                              promo.active ? 'text-emerald-600' : 'text-slate-400'
+                            }`}
+                          >
+                            {promo.active ? 'Active' : 'Paused'}
+                          </button>
+                          <button
+                            onClick={() => onDeletePromoCode(promo.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600"
+                            title="Delete promo code"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => onTogglePromoCode(promo)}
-                          className={`text-xs font-semibold ${
-                            promo.active ? 'text-emerald-600' : 'text-slate-400'
-                          }`}
-                        >
-                          {promo.active ? 'Active' : 'Paused'}
-                        </button>
-                        <button
-                          onClick={() => onDeletePromoCode(promo.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600"
-                          title="Delete promo code"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -1219,64 +1381,72 @@ export function SuperAdminPanel({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
-                    {state.invoices.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="py-3 px-5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                          {inv.stripeId}
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="font-bold text-slate-900 dark:text-white">{inv.customerOrg}</p>
-                          <p className="text-[11px] text-slate-500">{inv.customerEmail}</p>
-                        </td>
-                        <td className="py-3 px-4 text-slate-700 dark:text-slate-300">{inv.planLabel}</td>
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
-                          {inv.promoApplied || '—'}
-                        </td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
-                          ${inv.amount.toFixed(2)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`text-xs font-bold ${
-                              inv.status === 'paid'
-                                ? 'text-emerald-600 dark:text-emerald-400'
-                                : inv.status === 'past_due'
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-slate-500'
-                            }`}
-                          >
-                            {inv.status === 'past_due' ? 'Past Due' : 'Paid'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-5 text-right">
-                          {inv.status === 'past_due' ? (
-                            <button
-                              onClick={() => onRetryInvoice(inv)}
-                              className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline"
-                            >
-                              Retry Charge
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const receipt = `Stripe Invoice Receipt\nID: ${inv.stripeId}\nOrganization: ${inv.customerOrg}\nPlan: ${inv.planLabel}\nAmount Paid: $${inv.amount.toFixed(2)}\nIssued: ${inv.issuedAt}`;
-                                const blob = new Blob([receipt], { type: 'text/plain;charset=utf-8;' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `${inv.stripeId}.txt`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-                                onToast('Receipt Downloaded', `${inv.stripeId}.txt saved.`);
-                              }}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1"
-                            >
-                              <Download size={12} /> Receipt
-                            </button>
-                          )}
+                    {state.invoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 px-5 text-center text-slate-500">
+                          No invoices recorded yet. Live billing events will appear here.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      state.invoices.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="py-3 px-5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                            {inv.stripeId}
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-slate-900 dark:text-white">{inv.customerOrg}</p>
+                            <p className="text-[11px] text-slate-500">{inv.customerEmail}</p>
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 dark:text-slate-300">{inv.planLabel}</td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
+                            {inv.promoApplied || '—'}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                            ${inv.amount.toFixed(2)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`text-xs font-bold ${
+                                inv.status === 'paid'
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : inv.status === 'past_due'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-slate-500'
+                              }`}
+                            >
+                              {inv.status === 'past_due' ? 'Past Due' : 'Paid'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-5 text-right">
+                            {inv.status === 'past_due' ? (
+                              <button
+                                onClick={() => onRetryInvoice(inv)}
+                                className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline"
+                              >
+                                Retry Charge
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  const receipt = `Stripe Invoice Receipt\nID: ${inv.stripeId}\nOrganization: ${inv.customerOrg}\nPlan: ${inv.planLabel}\nAmount Paid: $${inv.amount.toFixed(2)}\nIssued: ${inv.issuedAt}`;
+                                  const blob = new Blob([receipt], { type: 'text/plain;charset=utf-8;' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${inv.stripeId}.txt`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                  onToast('Receipt Downloaded', `${inv.stripeId}.txt saved.`);
+                                }}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1"
+                              >
+                                <Download size={12} /> Receipt
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1290,17 +1460,23 @@ export function SuperAdminPanel({
             <CreditCard size={14} className="text-[#4F46E5]" /> Super Admin Audit Ledger
           </h2>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-            {state.auditLogs.slice(0, 8).map((log) => (
-              <div key={log.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 dark:text-white">{log.action}</span>
-                  <span className="text-slate-500">· {log.target}</span>
+            {state.auditLogs.length === 0 ? (
+              <p className="py-5 text-center text-slate-500">
+                No admin actions recorded yet. Actions taken in this control plane are logged automatically.
+              </p>
+            ) : (
+              state.auditLogs.slice(0, 8).map((log) => (
+                <div key={log.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 dark:text-white">{log.action}</span>
+                    <span className="text-slate-500">· {log.target}</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-slate-400 tabular-nums">
+                    {log.actor} · {new Date(log.timestamp).toLocaleString()}
+                  </span>
                 </div>
-                <span className="font-mono text-[11px] text-slate-400 tabular-nums">
-                  {log.actor} · {new Date(log.timestamp).toLocaleString()}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

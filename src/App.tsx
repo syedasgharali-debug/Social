@@ -251,67 +251,25 @@ export default function App() {
       industry,
       handle,
       plan: state.selectedPlan,
-      connectedPlatforms: ['instagram', 'linkedin', 'x', 'tiktok'],
-    };
-    const starterCat: ContentCategory = {
-      id: `cat-${Date.now()}`,
-      workspaceId: newId,
-      name: 'Evergreen Tips',
-      description: 'Core educational frameworks & evergreen social posts.',
-      color: '#4F46E5',
-      isActive: true,
-      evergreenEnabled: true,
-      postsPerWeek: 3,
-      timeSlots: [
-        { day: 'Mon', time: '09:00' },
-        { day: 'Wed', time: '11:30' },
-      ],
-    };
-    const starterProfile: ConnectedProfile = {
-      id: `prof-${Date.now()}`,
-      workspaceId: newId,
-      platform: 'instagram',
-      accountName: name,
-      handle,
-      followers: 1200,
-      status: 'connected',
-      lastSynced: 'Just now',
+      connectedPlatforms: [],
     };
 
     updateState((prev) => ({
       ...prev,
       workspaces: [...prev.workspaces, newWs],
       activeWorkspaceId: newId,
-      categories: [...prev.categories, starterCat],
-      connectedProfiles: [...prev.connectedProfiles, starterProfile],
     }));
     setFocusedThreadId(undefined);
     setFocusedContactId(undefined);
     setEditingPost(null);
     setActiveTab('overview');
-    pushToast('Workspace Created', `Switched to "${name}" with starter queue & profile.`);
+    pushToast('Workspace Created', `Switched to "${name}". Connect your social profiles to begin.`);
   };
 
   const handleTriggerSpikeAlert = () => {
-    const newAlert: DiscoveryAlert = {
-      id: `al-${Date.now()}`,
-      workspaceId: state.activeWorkspaceId,
-      keyword: 'AI Video Repurposing',
-      niche: 'Growth Marketing',
-      source: 'LinkedIn & ProductHunt Trend Feed',
-      title: 'Topic Spike (+194%): Short-form AI Repurposing workflows surge across B2B SaaS',
-      summary: 'High-growth teams are turning single product demos into 10-channel evergreen series.',
-      velocity: '+194%',
-      trendScore: 97,
-      isSpike: true,
-      acknowledged: false,
-      publishedAt: new Date().toISOString(),
-    };
-    updateState((prev) => ({
-      ...prev,
-      discoveryAlerts: [newAlert, ...prev.discoveryAlerts],
-    }));
-    pushToast('Trend Spike Detected (+194%)', newAlert.title, 'warning');
+    setActiveGrowthTool('trends');
+    setActiveTab('tools');
+    pushToast('Live Trend Radar Opened', 'Scan real-time news in your niche to generate fresh ideas.');
   };
 
   const handleCreateDraftFromAlert = (alert: DiscoveryAlert) => {
@@ -522,27 +480,41 @@ export default function App() {
             }));
             pushToast('API Gateway Updated', actionLabel, 'success');
           }}
-          onTestAllApis={() => {
+          onTestAllApis={async () => {
+            const start = performance.now();
+            let healthy = true;
+            try {
+              const res = await fetch('/api/health', { cache: 'no-store' });
+              healthy = res.ok;
+            } catch {
+              healthy = false;
+            }
+            const elapsedMs = Math.max(1, Math.round(performance.now() - start));
+            const testedLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             updateState((prev) => ({
               ...prev,
               apiHealthNodes: prev.apiHealthNodes.map((n) => ({
                 ...n,
-                status: 'operational',
-                latencyMs: 92 + Math.floor(Math.random() * 68),
-                lastTestedAt: 'Just now',
+                status: healthy ? 'operational' : 'degraded',
+                latencyMs: elapsedMs,
+                lastTestedAt: testedLabel,
               })),
               auditLogs: [
                 {
                   id: `log-${Date.now()}`,
                   actor: actorEmail,
-                  action: 'Pinged All Social APIs',
-                  target: '6/6 gateways verified healthy',
+                  action: 'Pinged API Gateways',
+                  target: `${healthy ? 'Operational' : 'Degraded'} (${elapsedMs}ms round-trip)`,
                   timestamp: new Date().toISOString(),
                 },
                 ...prev.auditLogs,
               ],
             }));
-            pushToast('All 6 API Gateways Healthy', 'Latency and rate limits verified.', 'success');
+            pushToast(
+              healthy ? 'API Health Check Passed' : 'API Health Check Degraded',
+              `Measured ${elapsedMs}ms server round-trip.`,
+              healthy ? 'success' : 'warning'
+            );
           }}
           onSaveAiGovernance={(config: AiGovernanceConfig) => {
             updateState((prev) => ({
@@ -632,6 +604,7 @@ export default function App() {
             pushToast(nextDark ? 'Dark Mode Enabled' : 'Light Mode Enabled');
           }}
           onSignOut={handleSignOut}
+          authToken={user.token}
         />
       )}
 

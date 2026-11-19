@@ -87,6 +87,23 @@ export function CategoryQueuesView({
         </button>
       </div>
 
+      {wsCategories.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center flex flex-col items-center justify-center">
+          <Layers size={28} className="text-slate-300 dark:text-slate-600 mb-3" />
+          <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">
+            No content categories yet
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm">
+            Create your first category queue (such as Educational Tips, Case Studies, or Promotions) to schedule rotating weekly slots.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="mt-4 px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
+          >
+            <Plus size={14} /> New Category Queue
+          </button>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {wsCategories.map((cat) => {
           const catPosts = wsPosts.filter((p) => p.categoryId === cat.id);
@@ -198,6 +215,7 @@ export function CategoryQueuesView({
           );
         })}
       </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

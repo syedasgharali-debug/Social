@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Check, Calendar, ArrowRight, RefreshCw, PenSquare } from 'lucide-react';
 import { ContentCategory, Platform, SocialPost } from '../../types';
-import { MEDIA_LIBRARY } from '../../data/seedData';
+import { MEDIA_LIBRARY } from '../../data/defaultState';
 import { PLATFORM_META, PlatformTag } from '../common/PlatformMeta';
 import { aiService } from '../../services/aiService';
 import { ComposerPreset } from './ContentStudio';

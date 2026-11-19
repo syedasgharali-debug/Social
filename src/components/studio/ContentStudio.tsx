@@ -31,7 +31,7 @@ import {
   TeamRole,
 } from '../../types';
 import { ALL_PLATFORMS, PLATFORM_META, PlatformTag, SocialLogo } from '../common/PlatformMeta';
-import { CANVA_TEMPLATES, MEDIA_LIBRARY } from '../../data/seedData';
+import { CANVA_TEMPLATES, MEDIA_LIBRARY } from '../../data/defaultState';
 import { aiService } from '../../services/aiService';
 import { DraftsWorkspace } from './DraftsWorkspace';
 

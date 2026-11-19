@@ -232,12 +232,22 @@ export const aiService = {
 
     const q = query.toLowerCase();
     if (q.includes('roas') || q.includes('ad') || q.includes('spend')) {
-      return `Across ${wsAds.length} tracked campaigns ($${totalAdSpend.toLocaleString()} total spend), blended ROAS stands at ${avgRoas}x. Google Search and Meta Retargeting drive the highest conversion efficiency—consider shifting 15% of paused budget into your highest-ROAS active campaign.`;
+      if (wsAds.length === 0) {
+        return 'No ad campaigns have been created in this workspace yet. Launch a campaign in Ad Manager to track real spend, clicks, and ROAS.';
+      }
+      return `Across ${wsAds.length} tracked campaign${wsAds.length === 1 ? '' : 's'} ($${totalAdSpend.toLocaleString()} total spend), blended ROAS is ${avgRoas}x.`;
     }
     if (q.includes('pipeline') || q.includes('deal') || q.includes('revenue') || q.includes('crm')) {
-      return `Active workspace pipeline totals $${pipelineValue.toLocaleString()} across ${wsDeals.length} deals, with $${wonValue.toLocaleString()} already Closed-Won. ${wsThreads.filter((t) => t.status === 'open').length} open social inbox threads currently represent active follow-up opportunities.`;
+      if (wsDeals.length === 0) {
+        return 'No CRM deals are recorded in this workspace yet. Add contacts and deals in Social CRM to track pipeline value and closed revenue.';
+      }
+      return `Active workspace pipeline totals $${pipelineValue.toLocaleString()} across ${wsDeals.length} deal${wsDeals.length === 1 ? '' : 's'}, with $${wonValue.toLocaleString()} Closed-Won and ${wsThreads.filter((t) => t.status === 'open').length} open inbox thread${wsThreads.filter((t) => t.status === 'open').length === 1 ? '' : 's'}.`;
     }
-    return `Your workspace generated ${totalReach.toLocaleString()} organic impressions and ${totalEngagement.toLocaleString()} engagements across ${wsPosts.filter((p) => p.status === 'published').length} published posts, feeding $${pipelineValue.toLocaleString()} in attributed CRM pipeline with ${avgRoas}x blended Ad ROAS.`;
+    const publishedCount = wsPosts.filter((p) => p.status === 'published').length;
+    if (publishedCount === 0 && wsDeals.length === 0 && wsAds.length === 0) {
+      return 'No published posts, ad campaigns, or CRM deals exist in this workspace yet. Connect a profile and publish content to see live performance insights.';
+    }
+    return `This workspace has ${publishedCount} published post${publishedCount === 1 ? '' : 's'} (${totalReach.toLocaleString()} impressions, ${totalEngagement.toLocaleString()} engagements), $${pipelineValue.toLocaleString()} in CRM pipeline, and ${avgRoas}x blended Ad ROAS.`;
   },
 
   async analyzeCompetitor(params: { yourBrand: string; competitor: string; niche: string }): Promise<{

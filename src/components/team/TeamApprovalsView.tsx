@@ -247,59 +247,67 @@ export function TeamApprovalsView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {wsMembers.map((member) => (
-                <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="py-3.5 px-5">
-                    <div className="flex items-center gap-3">
-                      <ContactAvatar name={member.name} src={member.avatar} size="sm" />
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white">{member.name}</p>
-                        <p className="text-[11px] text-slate-500">{member.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-5">
-                    <select
-                      aria-label={`Role for ${member.name}`}
-                      value={member.role}
-                      onChange={(e) => {
-                        onUpdateTeamMember({ ...member, role: e.target.value as TeamRole });
-                        onToast('Role Updated', `${member.name} is now ${e.target.value}.`);
-                      }}
-                      className="px-2.5 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
-                    >
-                      {(['Owner', 'Manager', 'Publisher', 'Contributor'] as TeamRole[]).map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-3.5 px-5">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                        member.status === 'active'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
-                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                      }`}
-                    >
-                      {member.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-5 text-right">
-                    {member.role !== 'Owner' && (
-                      <button
-                        onClick={() => {
-                          onRemoveTeamMember(member.id);
-                          onToast('Member Removed');
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded"
-                        title="Remove member"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+              {wsMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-10 px-5 text-center text-slate-500">
+                    No team members invited yet. Invite collaborators to review posts and manage approval workflows.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                wsMembers.map((member) => (
+                  <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-3.5 px-5">
+                      <div className="flex items-center gap-3">
+                        <ContactAvatar name={member.name} src={member.avatar} size="sm" />
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">{member.name}</p>
+                          <p className="text-[11px] text-slate-500">{member.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <select
+                        aria-label={`Role for ${member.name}`}
+                        value={member.role}
+                        onChange={(e) => {
+                          onUpdateTeamMember({ ...member, role: e.target.value as TeamRole });
+                          onToast('Role Updated', `${member.name} is now ${e.target.value}.`);
+                        }}
+                        className="px-2.5 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                      >
+                        {(['Owner', 'Manager', 'Publisher', 'Contributor'] as TeamRole[]).map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                          member.status === 'active'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                        }`}
+                      >
+                        {member.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-5 text-right">
+                      {member.role !== 'Owner' && (
+                        <button
+                          onClick={() => {
+                            onRemoveTeamMember(member.id);
+                            onToast('Member Removed');
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded"
+                          title="Remove member"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

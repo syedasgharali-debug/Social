@@ -158,7 +158,18 @@ export function WorkspaceOverview({ state, onNavigate, onOpenGrowthTool }: Works
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {metrics.upcomingPosts.length === 0 ? (
-              <p className="p-5 text-xs text-slate-500">No upcoming posts yet—launch AI Copilot to generate 7 days in seconds.</p>
+              <div className="p-8 text-center">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No posts scheduled yet</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Create your first post in Content Studio or build a 7-day calendar with AI Strategy Wizard.
+                </p>
+                <button
+                  onClick={() => onNavigate('studio')}
+                  className="mt-3 px-3.5 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
+                >
+                  <PenSquare size={12} /> Schedule First Post
+                </button>
+              </div>
             ) : (
               metrics.upcomingPosts.map((post) => (
                 <div key={post.id} className="p-4 flex items-start justify-between gap-4">
@@ -195,22 +206,37 @@ export function WorkspaceOverview({ state, onNavigate, onOpenGrowthTool }: Works
             </button>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {metrics.categories.map((cat) => (
-              <div key={cat.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ backgroundColor: cat.color }} />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{cat.name}</p>
-                    <p className="text-[11px] text-slate-500 tabular-nums">{cat.postsPerWeek} weekly slots</p>
-                  </div>
-                </div>
-                {cat.evergreenEnabled && (
-                  <span className="text-[11px] font-semibold text-[#4F46E5] dark:text-indigo-400 flex items-center gap-1 shrink-0">
-                    <Repeat size={12} /> Evergreen
-                  </span>
-                )}
+            {metrics.categories.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No categories created yet</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Organize evergreen posts into rotating weekly queues.
+                </p>
+                <button
+                  onClick={() => onNavigate('categories')}
+                  className="mt-3 px-3.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                >
+                  Create Category Queue
+                </button>
               </div>
-            ))}
+            ) : (
+              metrics.categories.map((cat) => (
+                <div key={cat.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ backgroundColor: cat.color }} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{cat.name}</p>
+                      <p className="text-[11px] text-slate-500 tabular-nums">{cat.postsPerWeek} weekly slots</p>
+                    </div>
+                  </div>
+                  {cat.evergreenEnabled && (
+                    <span className="text-[11px] font-semibold text-[#4F46E5] dark:text-indigo-400 flex items-center gap-1 shrink-0">
+                      <Repeat size={12} /> Evergreen
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

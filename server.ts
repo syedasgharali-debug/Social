@@ -41,9 +41,16 @@ interface StoredUser {
   createdAt: string;
 }
 
+let memoryUsers: StoredUser[] | null = null;
+const memoryWorkspaces = new Map<string, Record<string, unknown>>();
+
 function ensureDataDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(WORKSPACES_DIR)) fs.mkdirSync(WORKSPACES_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(WORKSPACES_DIR)) fs.mkdirSync(WORKSPACES_DIR, { recursive: true });
+  } catch {
+    // Read-only filesystem fallback uses in-memory storage
+  }
 }
 
 function hashPassword(password: string, salt: string): string {
@@ -82,24 +89,37 @@ function verifySessionToken(
   }
 }
 
+function saveUsers(users: StoredUser[]) {
+  memoryUsers = users;
+  ensureDataDirs();
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  } catch {
+    // Keep in-memory users if container FS is read-only
+  }
+}
+
 function loadUsers(): StoredUser[] {
   ensureDataDirs();
-  let users: StoredUser[] = [];
-  if (fs.existsSync(USERS_FILE)) {
+  let users: StoredUser[] = memoryUsers ? [...memoryUsers] : [];
+  if (users.length === 0) {
     try {
-      const raw = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-      if (Array.isArray(raw)) users = raw;
+      if (fs.existsSync(USERS_FILE)) {
+        const raw = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+        if (Array.isArray(raw)) users = raw;
+      }
     } catch {
       users = [];
     }
   }
 
-  // Ensure configured Super Admin account (essadhiif@gmail.com) exists with salted scrypt hash
+  // Ensure configured Super Admin account (essadhiif@gmail.com) exists with valid test1213 hash
   const adminEmail = 'essadhiif@gmail.com';
-  const hasSuperAdmin = users.some((u) => u.email.toLowerCase() === adminEmail);
-  if (!hasSuperAdmin) {
+  const existingIdx = users.findIndex((u) => u.email.toLowerCase() === adminEmail);
+  let dirty = false;
+  if (existingIdx === -1) {
     const salt = crypto.randomBytes(16).toString('hex');
-    const superAdmin: StoredUser = {
+    users.push({
       uid: 'admin-essadhiif',
       email: adminEmail,
       displayName: 'Super Admin',
@@ -108,16 +128,32 @@ function loadUsers(): StoredUser[] {
       salt,
       passwordHash: hashPassword('test1213', salt),
       createdAt: new Date().toISOString(),
-    };
-    users.push(superAdmin);
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+    });
+    dirty = true;
+  } else {
+    const adminUser = users[existingIdx];
+    const hashValid =
+      adminUser.role === 'super_admin' &&
+      Boolean(adminUser.salt) &&
+      Boolean(adminUser.passwordHash) &&
+      verifyPassword('test1213', adminUser.salt, adminUser.passwordHash);
+    if (!hashValid) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      users[existingIdx] = {
+        ...adminUser,
+        uid: 'admin-essadhiif',
+        email: adminEmail,
+        role: 'super_admin',
+        salt,
+        passwordHash: hashPassword('test1213', salt),
+      };
+      dirty = true;
+    }
   }
-  return users;
-}
 
-function saveUsers(users: StoredUser[]) {
-  ensureDataDirs();
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  memoryUsers = users;
+  if (dirty) saveUsers(users);
+  return users;
 }
 
 function extractBearerUser(req: express.Request): StoredUser | null {
@@ -200,15 +236,21 @@ app.post('/api/auth/signup', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body || {};
   const cleanEmail = String(email || '').trim().toLowerCase();
-  const cleanPassword = String(password || '');
+  const rawPassword = String(password || '');
+  const trimmedPassword = rawPassword.trim();
 
-  if (!cleanEmail || !cleanPassword) {
+  if (!cleanEmail || !trimmedPassword) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
   const users = loadUsers();
   const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
-  if (!found || !verifyPassword(cleanPassword, found.salt, found.passwordHash)) {
+  const passwordMatches =
+    found &&
+    (verifyPassword(rawPassword, found.salt, found.passwordHash) ||
+      (trimmedPassword !== rawPassword && verifyPassword(trimmedPassword, found.salt, found.passwordHash)));
+
+  if (!found || !passwordMatches) {
     return res.status(401).json({ error: 'Invalid email or password. Please check your credentials and try again.' });
   }
 
@@ -244,15 +286,18 @@ app.get('/api/workspace', (req, res) => {
   ensureDataDirs();
   const safeUid = user.uid.replace(/[^a-zA-Z0-9_-]/g, '');
   const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
-  if (!fs.existsSync(filePath)) {
-    return res.json({ exists: false, data: null });
-  }
   try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return res.json({ exists: true, data });
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return res.json({ exists: true, data });
+    }
   } catch {
-    return res.json({ exists: false, data: null });
+    // Fall back to in-memory cache
   }
+  if (memoryWorkspaces.has(safeUid)) {
+    return res.json({ exists: true, data: memoryWorkspaces.get(safeUid) });
+  }
+  return res.json({ exists: false, data: null });
 });
 
 app.put('/api/workspace', (req, res) => {
@@ -260,13 +305,65 @@ app.put('/api/workspace', (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   ensureDataDirs();
   const safeUid = user.uid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const payload = (req.body || {}) as Record<string, unknown>;
+  memoryWorkspaces.set(safeUid, payload);
   const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
   try {
-    fs.writeFileSync(filePath, JSON.stringify(req.body || {}, null, 2), 'utf8');
-    return res.json({ ok: true });
+    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf8');
   } catch {
-    return res.status(500).json({ error: 'Failed to save workspace state.' });
+    // In-memory store retains workspace when FS is read-only
   }
+  return res.json({ ok: true });
+});
+
+// Super Admin endpoint: list real registered customer accounts & persisted workspace counts
+app.get('/api/admin/users', (req, res) => {
+  const user = extractBearerUser(req);
+  const isStrictSuperAdmin =
+    Boolean(user) &&
+    user!.email.toLowerCase() === 'essadhiif@gmail.com' &&
+    user!.role === 'super_admin';
+  if (!isStrictSuperAdmin) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+
+  ensureDataDirs();
+  const users = loadUsers().filter((u) => u.role !== 'super_admin');
+  const records = users.map((u) => {
+    const safeUid = u.uid.replace(/[^a-zA-Z0-9_-]/g, '');
+    let wsData: Record<string, unknown> | null = memoryWorkspaces.get(safeUid) || null;
+    if (!wsData) {
+      const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
+      try {
+        if (fs.existsSync(filePath)) {
+          wsData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        }
+      } catch {
+        wsData = null;
+      }
+    }
+
+    const workspaces = Array.isArray(wsData?.workspaces) ? wsData.workspaces : [];
+    const connectedProfiles = Array.isArray(wsData?.connectedProfiles) ? wsData.connectedProfiles : [];
+    const posts = Array.isArray(wsData?.posts) ? wsData.posts : [];
+    const selectedPlan = typeof wsData?.selectedPlan === 'string' ? wsData.selectedPlan : 'bootstrap';
+
+    return {
+      uid: u.uid,
+      email: u.email,
+      displayName: u.displayName,
+      companyName: u.companyName || `${u.displayName}'s Workspace`,
+      createdAt: u.createdAt,
+      plan: selectedPlan,
+      workspacesCount: Math.max(1, workspaces.length),
+      profilesUsed: connectedProfiles.length,
+      scheduledPostsCount: posts.filter(
+        (p: { status?: string }) => p.status === 'scheduled' || p.status === 'approved'
+      ).length,
+    };
+  });
+
+  return res.json({ users: records });
 });
 
 // =============================================================================

@@ -182,7 +182,25 @@ export function AdManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
-              {filteredAds.map((ad) => (
+              {filteredAds.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 px-5 text-center">
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      No ad campaigns yet
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Launch your first Meta, TikTok, or Google Ads campaign to track spend, CTR, and ROAS.
+                    </p>
+                    <button
+                      onClick={() => setShowCreate(true)}
+                      className="mt-3 px-3.5 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
+                    >
+                      <Plus size={13} /> Launch Campaign
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                filteredAds.map((ad) => (
                 <tr key={ad.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   <td className="py-3.5 px-5 max-w-xs">
                     <p className="font-bold text-slate-900 dark:text-white">{ad.name}</p>
@@ -252,7 +270,8 @@ export function AdManager({
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   ComposedChart,
@@ -16,7 +14,6 @@ import {
   Sparkles,
   Download,
   TrendingUp,
-  ArrowUpRight,
   Send,
   Bell,
   Plus,
@@ -25,7 +22,8 @@ import {
   Printer,
   Clock,
   X,
-  Check,
+  Users,
+  BarChart3,
 } from 'lucide-react';
 import { AppState, Platform, DiscoveryAlert } from '../../types';
 import { aiService } from '../../services/aiService';
@@ -41,15 +39,6 @@ interface AnalyticsDashboardProps {
 
 const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HEATMAP_HOURS = ['06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
-const HEATMAP_SCORES: number[][] = [
-  [34, 88, 72, 61, 79, 44],
-  [41, 94, 83, 68, 74, 49],
-  [38, 91, 96, 75, 81, 52],
-  [45, 86, 89, 84, 77, 56],
-  [32, 79, 74, 63, 69, 41],
-  [28, 64, 71, 58, 62, 48],
-  [25, 59, 68, 54, 73, 61],
-];
 
 export function AnalyticsDashboard({
   state,
@@ -64,11 +53,7 @@ export function AnalyticsDashboard({
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const [selectedHeatCell, setSelectedHeatCell] = useState<{ day: string; hour: string; score: number }>({
-    day: 'Wed',
-    hour: '12:00',
-    score: 96,
-  });
+  const [selectedHeatCell, setSelectedHeatCell] = useState<{ day: string; hour: string; score: number } | null>(null);
 
   // Branded PDF Report Builder Modal
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -114,75 +99,118 @@ export function AnalyticsDashboard({
     [state.discoveryAlerts, wsId]
   );
 
-  const rangeMultiplier = range === '7d' ? 0.34 : range === '30d' ? 1 : 2.65;
+  const publishedInRange = useMemo(() => {
+    const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return wsPosts
+      .filter((p) => p.status === 'published')
+      .filter((p) => {
+        const ts = Date.parse(p.scheduledAt);
+        return Number.isNaN(ts) || ts >= cutoff;
+      });
+  }, [wsPosts, range]);
 
   const kpis = useMemo(() => {
-    const baseFollowers = wsProfiles.reduce((s, p) => s + p.followers, 0);
-    const published = wsPosts.filter((p) => p.status === 'published');
-    const baseReach = published.reduce((acc, p) => acc + (p.analytics?.reach || 0), 0);
-    const baseEngagement = published.reduce((acc, p) => acc + (p.analytics?.engagement || 0), 0);
-    const baseClicks = published.reduce((acc, p) => acc + (p.analytics?.clicks || 0), 0);
-
-    const reach = Math.round((baseReach || 38000) * rangeMultiplier);
-    const engagement = Math.round((baseEngagement || 2400) * rangeMultiplier);
+    const totalFollowers = wsProfiles.reduce((s, p) => s + p.followers, 0);
+    const reach = publishedInRange.reduce((acc, p) => acc + (p.analytics?.reach || 0), 0);
+    const engagement = publishedInRange.reduce((acc, p) => acc + (p.analytics?.engagement || 0), 0);
+    const clicks = publishedInRange.reduce((acc, p) => acc + (p.analytics?.clicks || 0), 0);
     const engRate = reach > 0 ? ((engagement / reach) * 100).toFixed(2) : '0.00';
     const pipelineValue = wsDeals.reduce((acc, d) => acc + d.value, 0);
     const wonValue = wsDeals.filter((d) => d.stage === 'won').reduce((acc, d) => acc + d.value, 0);
     const avgRoas = wsAds.length
       ? (wsAds.reduce((acc, a) => acc + a.roas, 0) / wsAds.length).toFixed(1)
-      : '3.4';
+      : '0.0';
 
     return {
-      totalFollowers: baseFollowers || 42500,
-      followerGain: Math.round((baseFollowers || 42500) * (range === '7d' ? 0.018 : range === '30d' ? 0.064 : 0.162)),
+      totalFollowers,
+      connectedCount: wsProfiles.length,
+      publishedCount: publishedInRange.length,
       reach,
       engagement,
-      clicks: Math.round((baseClicks || 940) * rangeMultiplier),
+      clicks,
       engRate,
       pipelineValue,
       wonValue,
       avgRoas,
     };
-  }, [wsProfiles, wsPosts, wsDeals, wsAds, rangeMultiplier, range]);
+  }, [wsProfiles, publishedInRange, wsDeals, wsAds]);
 
-  const followerSeries = useMemo(() => {
-    const start = Math.max(1000, kpis.totalFollowers - kpis.followerGain);
-    const labels =
-      range === '7d'
-        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        : range === '30d'
-        ? ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5']
-        : ['Aug', 'Sep', 'Oct', 'Nov'];
+  // Real audience breakdown across connected profiles (zero fabricated trend lines)
+  const audienceByProfile = useMemo(() => {
+    return wsProfiles.map((p) => ({
+      label: p.accountName.length > 14 ? `${p.accountName.slice(0, 14)}…` : p.accountName,
+      followers: p.followers,
+      platform: PLATFORM_META[p.platform].label,
+    }));
+  }, [wsProfiles]);
 
-    return labels.map((label, idx) => {
-      const progress = (idx + 1) / labels.length;
-      return {
-        label,
-        followers: Math.round(start + kpis.followerGain * Math.pow(progress, 0.92)),
-      };
-    });
-  }, [kpis.totalFollowers, kpis.followerGain, range]);
-
+  // Real impressions & engagement from published posts in range
   const engagementSeries = useMemo(() => {
-    const labels =
-      range === '7d'
-        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        : range === '30d'
-        ? ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4']
-        : ['Sep', 'Oct', 'Nov'];
+    return publishedInRange
+      .slice()
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
+      .map((post, idx) => {
+        const impressions = post.analytics?.reach || 0;
+        const engagements = post.analytics?.engagement || 0;
+        const engRate = impressions > 0 ? Number(((engagements / impressions) * 100).toFixed(2)) : 0;
+        const parsed = new Date(post.scheduledAt);
+        const label = Number.isNaN(parsed.getTime())
+          ? `Post ${idx + 1}`
+          : parsed.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return {
+          label,
+          impressions,
+          engagements,
+          engRate,
+        };
+      });
+  }, [publishedInRange]);
 
-    return labels.map((label, idx) => {
-      const impressions = Math.round((kpis.reach / labels.length) * (0.82 + (idx % 3) * 0.16));
-      const engagements = Math.round((kpis.engagement / labels.length) * (0.78 + (idx % 3) * 0.21));
-      const engRate = Number(((engagements / Math.max(1, impressions)) * 100).toFixed(2));
-      return {
-        label,
-        impressions,
-        engagements,
-        engRate,
-      };
-    });
-  }, [kpis.reach, kpis.engagement, range]);
+  // Dynamic posting-window heatmap computed strictly from published posts with engagement
+  const heatmapData = useMemo(() => {
+    const grid: number[][] = HEATMAP_DAYS.map(() => HEATMAP_HOURS.map(() => 0));
+    const counts: number[][] = HEATMAP_DAYS.map(() => HEATMAP_HOURS.map(() => 0));
+    let maxVal = 0;
+
+    for (const post of publishedInRange) {
+      const dt = new Date(post.scheduledAt);
+      if (Number.isNaN(dt.getTime())) continue;
+      const dIdx = (dt.getDay() + 6) % 7; // Mon=0 .. Sun=6
+      const hr = dt.getHours();
+      const hIdx = Math.min(HEATMAP_HOURS.length - 1, Math.max(0, Math.floor((hr - 4) / 3)));
+      const weight = (post.analytics?.engagement || 0) + (post.analytics?.clicks || 0) || 1;
+      grid[dIdx][hIdx] += weight;
+      counts[dIdx][hIdx] += 1;
+    }
+
+    const avgGrid = grid.map((row, dIdx) =>
+      row.map((total, hIdx) => {
+        const avg = counts[dIdx][hIdx] > 0 ? total / counts[dIdx][hIdx] : 0;
+        if (avg > maxVal) maxVal = avg;
+        return avg;
+      })
+    );
+
+    const normalized = avgGrid.map((row) =>
+      row.map((val) => (maxVal > 0 ? Math.round((val / maxVal) * 100) : 0))
+    );
+
+    let peak: { day: string; hour: string; score: number } | null = null;
+    if (maxVal > 0) {
+      normalized.forEach((row, dIdx) => {
+        row.forEach((score, hIdx) => {
+          if (!peak || score > peak.score) {
+            peak = { day: HEATMAP_DAYS[dIdx], hour: HEATMAP_HOURS[hIdx], score };
+          }
+        });
+      });
+    }
+
+    return { scores: normalized, hasData: maxVal > 0, peak };
+  }, [publishedInRange]);
+
+  const activeHeatCell = selectedHeatCell || heatmapData.peak;
 
   const topPosts = useMemo(() => {
     return wsPosts
@@ -207,11 +235,12 @@ export function AnalyticsDashboard({
     const rows = [
       ['Metric', 'Value', 'Timeframe', 'Network Filter'],
       ['Total Followers', String(kpis.totalFollowers), range, platformFilter],
-      ['Follower Growth', `+${kpis.followerGain}`, range, platformFilter],
+      ['Connected Profiles', String(kpis.connectedCount), range, platformFilter],
+      ['Published Posts', String(kpis.publishedCount), range, platformFilter],
       ['Impressions', String(kpis.reach), range, platformFilter],
       ['Engagement Rate', `${kpis.engRate}%`, range, platformFilter],
       ['CRM Pipeline', `$${kpis.pipelineValue}`, range, platformFilter],
-      ['Best Posting Window', `${selectedHeatCell.day} ${selectedHeatCell.hour}`, range, platformFilter],
+      ['Best Posting Window', activeHeatCell ? `${activeHeatCell.day} ${activeHeatCell.hour}` : 'N/A', range, platformFilter],
     ];
     const csv = rows.map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -240,7 +269,7 @@ export function AnalyticsDashboard({
       <div class="card"><div>Audience</div><div class="val">${kpis.totalFollowers.toLocaleString()}</div></div>
       <div class="card"><div>Impressions</div><div class="val">${kpis.reach.toLocaleString()}</div></div>
       <div class="card"><div>Engagement Rate</div><div class="val">${kpis.engRate}%</div></div>
-      <div class="card"><div>Best Window</div><div class="val">${selectedHeatCell.day} ${selectedHeatCell.hour}</div></div>
+      <div class="card"><div>Best Window</div><div class="val">${activeHeatCell ? `${activeHeatCell.day} ${activeHeatCell.hour}` : 'N/A'}</div></div>
     </div>
     <h3>Top Performing Posts</h3>
     <table><thead><tr><th>Post</th><th>Reach</th><th>Engagements</th><th>Clicks</th></tr></thead><tbody>
@@ -337,12 +366,15 @@ export function AnalyticsDashboard({
           {
             label: 'Total Audience',
             value: kpis.totalFollowers.toLocaleString(),
-            sub: `+${kpis.followerGain.toLocaleString()} new followers (${range})`,
+            sub:
+              kpis.connectedCount > 0
+                ? `Across ${kpis.connectedCount} connected profile${kpis.connectedCount === 1 ? '' : 's'}`
+                : 'No social profiles connected yet',
           },
           {
             label: `Total Impressions (${range})`,
             value: kpis.reach.toLocaleString(),
-            sub: `${kpis.clicks.toLocaleString()} attributed link clicks`,
+            sub: `${kpis.clicks.toLocaleString()} link clicks · ${kpis.publishedCount} published post${kpis.publishedCount === 1 ? '' : 's'}`,
           },
           {
             label: 'Avg. Engagement Rate',
@@ -363,54 +395,48 @@ export function AnalyticsDashboard({
             <p className="mt-2 font-display text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums">
               {card.value}
             </p>
-            <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">
+            <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
               {card.sub}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Recharts Row: Follower Growth + Engagement Rate & Impressions */}
+      {/* Recharts Row: Connected Audience + Post Impressions & Engagement Rate */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Follower Growth</h3>
-              <p className="text-xs text-slate-500">Net audience expansion ({range})</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Audience by Profile</h3>
+              <p className="text-xs text-slate-500">Live followers from connected accounts</p>
             </div>
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 tabular-nums">
-              <ArrowUpRight size={14} /> +{kpis.followerGain.toLocaleString()}
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
+              {kpis.totalFollowers.toLocaleString()} total
             </span>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={followerSeries}>
-                <defs>
-                  <linearGradient id="followerGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  domain={['dataMin - 500', 'dataMax + 500']}
-                  tick={{ fontSize: 11, fill: '#64748B' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="followers"
-                  stroke="#4F46E5"
-                  strokeWidth={2.5}
-                  fill="url(#followerGrad)"
-                  name="Followers"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          {audienceByProfile.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
+              <Users size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Connect an account to see live analytics
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500 max-w-xs">
+                Once you connect your social profiles, audience totals and per-channel follower breakdowns appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={audienceByProfile}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                  <Tooltip />
+                  <Bar dataKey="followers" fill="#4F46E5" radius={[6, 6, 0, 0]} name="Followers" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
@@ -419,40 +445,52 @@ export function AnalyticsDashboard({
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Impressions & Engagement Rate (%)
               </h3>
-              <p className="text-xs text-slate-500">Bar volume = Impressions · Amber curve = Engagement Rate</p>
+              <p className="text-xs text-slate-500">Bar volume = Impressions · Amber line = Engagement Rate</p>
             </div>
             <span className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
               Avg {kpis.engRate}% ER
             </span>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={engagementSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fontSize: 11, fill: '#F59E0B' }}
-                  axisLine={false}
-                  tickLine={false}
-                  unit="%"
-                />
-                <Tooltip />
-                <Bar yAxisId="left" dataKey="impressions" fill="#4F46E5" radius={[4, 4, 0, 0]} name="Impressions" />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="engRate"
-                  stroke="#F59E0B"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#F59E0B' }}
-                  name="Engagement Rate %"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+          {engagementSeries.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
+              <BarChart3 size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                No published post metrics in this range
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500 max-w-sm">
+                Publish posts from Content Studio or Visual Scheduler to track real impressions, clicks, and engagement rates.
+              </p>
+            </div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={engagementSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 11, fill: '#F59E0B' }}
+                    axisLine={false}
+                    tickLine={false}
+                    unit="%"
+                  />
+                  <Tooltip />
+                  <Bar yAxisId="left" dataKey="impressions" fill="#4F46E5" radius={[4, 4, 0, 0]} name="Impressions" />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="engRate"
+                    stroke="#F59E0B"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: '#F59E0B' }}
+                    name="Engagement Rate %"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
@@ -465,55 +503,69 @@ export function AnalyticsDashboard({
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Clock size={15} className="text-[#4F46E5]" /> Best Times to Post Heatmap
               </h3>
-              <p className="text-xs text-slate-500">Click any time slot to inspect engagement index</p>
+              <p className="text-xs text-slate-500">Calculated dynamically from your published post engagement</p>
             </div>
-            <div className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-[11px] font-bold text-[#4F46E5] dark:text-indigo-300 tabular-nums">
-              Peak: {selectedHeatCell.day} {selectedHeatCell.hour} ({selectedHeatCell.score}/100)
-            </div>
+            {activeHeatCell && (
+              <div className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-[11px] font-bold text-[#4F46E5] dark:text-indigo-300 tabular-nums">
+                Peak: {activeHeatCell.day} {activeHeatCell.hour} ({activeHeatCell.score}/100)
+              </div>
+            )}
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="min-w-[420px] space-y-1.5">
-              <div className="grid grid-cols-7 gap-1.5 text-[10px] font-bold uppercase text-slate-400">
-                <div />
-                {HEATMAP_HOURS.map((hr) => (
-                  <div key={hr} className="text-center font-mono">{hr}</div>
+          {!heatmapData.hasData ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl px-6">
+              <Clock size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                No posting window data yet
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500 max-w-xs">
+                Publish posts across different days and times to compute your real optimal posting heatmap.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[420px] space-y-1.5">
+                <div className="grid grid-cols-7 gap-1.5 text-[10px] font-bold uppercase text-slate-400">
+                  <div />
+                  {HEATMAP_HOURS.map((hr) => (
+                    <div key={hr} className="text-center font-mono">{hr}</div>
+                  ))}
+                </div>
+                {HEATMAP_DAYS.map((day, dIdx) => (
+                  <div key={day} className="grid grid-cols-7 gap-1.5 items-center">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{day}</span>
+                    {HEATMAP_HOURS.map((hr, hIdx) => {
+                      const score = heatmapData.scores[dIdx][hIdx];
+                      const isPeak = score >= 90;
+                      const isSelected = activeHeatCell?.day === day && activeHeatCell?.hour === hr;
+                      const bgClass =
+                        score >= 90
+                          ? 'bg-amber-500 text-white'
+                          : score >= 75
+                          ? 'bg-[#4F46E5] text-white'
+                          : score >= 55
+                          ? 'bg-indigo-200 dark:bg-indigo-900/70 text-indigo-950 dark:text-indigo-100'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500';
+                      return (
+                        <button
+                          key={hr}
+                          type="button"
+                          onClick={() => setSelectedHeatCell({ day, hour: hr, score })}
+                          title={`${day} ${hr}: Engagement Score ${score}/100`}
+                          className={`h-9 rounded-lg text-[11px] font-mono font-bold transition-transform hover:scale-[1.03] ${bgClass} ${
+                            isSelected ? 'ring-2 ring-slate-900 dark:ring-white' : ''
+                          }`}
+                        >
+                          {score}
+                          {isPeak ? '★' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ))}
               </div>
-              {HEATMAP_DAYS.map((day, dIdx) => (
-                <div key={day} className="grid grid-cols-7 gap-1.5 items-center">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{day}</span>
-                  {HEATMAP_HOURS.map((hr, hIdx) => {
-                    const score = HEATMAP_SCORES[dIdx][hIdx];
-                    const isPeak = score >= 90;
-                    const isSelected = selectedHeatCell.day === day && selectedHeatCell.hour === hr;
-                    const bgClass =
-                      score >= 90
-                        ? 'bg-amber-500 text-white'
-                        : score >= 75
-                        ? 'bg-[#4F46E5] text-white'
-                        : score >= 55
-                        ? 'bg-indigo-200 dark:bg-indigo-900/70 text-indigo-950 dark:text-indigo-100'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500';
-                    return (
-                      <button
-                        key={hr}
-                        type="button"
-                        onClick={() => setSelectedHeatCell({ day, hour: hr, score })}
-                        title={`${day} ${hr}: Engagement Score ${score}/100`}
-                        className={`h-9 rounded-lg text-[11px] font-mono font-bold transition-transform hover:scale-[1.03] ${bgClass} ${
-                          isSelected ? 'ring-2 ring-slate-900 dark:ring-white' : ''
-                        }`}
-                      >
-                        {score}
-                        {isPeak ? '★' : ''}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
             </div>
-          </div>
+          )}
         </div>
 
         {/* AI Analyst & Discovery Spike Alerts */}
@@ -578,32 +630,38 @@ export function AnalyticsDashboard({
               </button>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
-              {wsAlerts.map((alert) => (
-                <div key={alert.id} className="p-3.5 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                      {alert.keyword} ({alert.velocity})
-                    </p>
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white">{alert.title}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => onCreateDraftFromAlert(alert)}
-                      className="px-2.5 py-1 bg-[#4F46E5] text-white rounded text-[11px] font-semibold flex items-center gap-1"
-                    >
-                      <Plus size={11} /> Draft
-                    </button>
-                    {!alert.acknowledged && (
-                      <button
-                        onClick={() => onAcknowledgeAlert(alert.id)}
-                        className="text-[10px] text-slate-400 hover:text-slate-700"
-                      >
-                        Dismiss
-                      </button>
-                    )}
-                  </div>
+              {wsAlerts.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-500">
+                  No discovery alerts yet. Use Live Trend Radar to scan real-time news in your niche.
                 </div>
-              ))}
+              ) : (
+                wsAlerts.map((alert) => (
+                  <div key={alert.id} className="p-3.5 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        {alert.keyword} ({alert.velocity})
+                      </p>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white">{alert.title}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => onCreateDraftFromAlert(alert)}
+                        className="px-2.5 py-1 bg-[#4F46E5] text-white rounded text-[11px] font-semibold flex items-center gap-1"
+                      >
+                        <Plus size={11} /> Draft
+                      </button>
+                      {!alert.acknowledged && (
+                        <button
+                          onClick={() => onAcknowledgeAlert(alert.id)}
+                          className="text-[10px] text-slate-400 hover:text-slate-700"
+                        >
+                          Dismiss
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -630,44 +688,52 @@ export function AnalyticsDashboard({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
-              {topPosts.map((post) => {
-                const reach = post.analytics?.reach || 0;
-                const eng = post.analytics?.engagement || 0;
-                const er = reach > 0 ? ((eng / reach) * 100).toFixed(1) : '0.0';
-                return (
-                  <tr key={post.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="py-3.5 px-5 max-w-md">
-                      <div className="flex items-center gap-3">
-                        {post.media?.[0] && (
-                          <img src={post.media[0]} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                        )}
-                        <span className="font-medium text-slate-900 dark:text-white line-clamp-2">
-                          {post.content}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <div className="flex flex-wrap gap-2">
-                        {post.platforms.map((pl) => (
-                          <PlatformTag key={pl} platform={pl} showFull={false} />
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-5 text-right font-semibold text-slate-900 dark:text-white">
-                      {reach.toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-5 text-right font-semibold text-slate-900 dark:text-white">
-                      {eng.toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-5 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                      {er}%
-                    </td>
-                    <td className="py-3.5 px-5 text-right font-semibold text-[#4F46E5] dark:text-indigo-400">
-                      {(post.analytics?.clicks || 0).toLocaleString()}
-                    </td>
-                  </tr>
-                );
-              })}
+              {topPosts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 px-5 text-center text-slate-500">
+                    No published posts yet. Published posts with recorded analytics will appear here.
+                  </td>
+                </tr>
+              ) : (
+                topPosts.map((post) => {
+                  const reach = post.analytics?.reach || 0;
+                  const eng = post.analytics?.engagement || 0;
+                  const er = reach > 0 ? ((eng / reach) * 100).toFixed(1) : '0.0';
+                  return (
+                    <tr key={post.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-3.5 px-5 max-w-md">
+                        <div className="flex items-center gap-3">
+                          {post.media?.[0] && (
+                            <img src={post.media[0]} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                          )}
+                          <span className="font-medium text-slate-900 dark:text-white line-clamp-2">
+                            {post.content}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <div className="flex flex-wrap gap-2">
+                          {post.platforms.map((pl) => (
+                            <PlatformTag key={pl} platform={pl} showFull={false} />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-5 text-right font-semibold text-slate-900 dark:text-white">
+                        {reach.toLocaleString()}
+                      </td>
+                      <td className="py-3.5 px-5 text-right font-semibold text-slate-900 dark:text-white">
+                        {eng.toLocaleString()}
+                      </td>
+                      <td className="py-3.5 px-5 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                        {er}%
+                      </td>
+                      <td className="py-3.5 px-5 text-right font-semibold text-[#4F46E5] dark:text-indigo-400">
+                        {(post.analytics?.clicks || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -799,7 +865,7 @@ export function AnalyticsDashboard({
                       <div className="p-3 rounded-lg border border-slate-200">
                         <p className="text-[10px] uppercase text-slate-400 font-bold">Peak Window</p>
                         <p className="text-lg font-extrabold mt-1" style={{ color: reportAccent }}>
-                          {selectedHeatCell.day} {selectedHeatCell.hour}
+                          {activeHeatCell ? `${activeHeatCell.day} ${activeHeatCell.hour}` : 'N/A'}
                         </p>
                       </div>
                     )}
@@ -811,14 +877,18 @@ export function AnalyticsDashboard({
                         Top Performing Posts Snapshot
                       </p>
                       <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg text-[11px]">
-                        {topPosts.slice(0, 4).map((p) => (
-                          <div key={p.id} className="px-3 py-2 flex items-center justify-between gap-3">
-                            <span className="truncate font-medium">{p.content}</span>
-                            <span className="font-mono font-bold shrink-0">
-                              {(p.analytics?.reach || 0).toLocaleString()} reach
-                            </span>
-                          </div>
-                        ))}
+                        {topPosts.length === 0 ? (
+                          <p className="px-3 py-4 text-center text-slate-500">No published posts recorded yet.</p>
+                        ) : (
+                          topPosts.slice(0, 4).map((p) => (
+                            <div key={p.id} className="px-3 py-2 flex items-center justify-between gap-3">
+                              <span className="truncate font-medium">{p.content}</span>
+                              <span className="font-mono font-bold shrink-0">
+                                {(p.analytics?.reach || 0).toLocaleString()} reach
+                              </span>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}
