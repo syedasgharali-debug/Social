@@ -11,7 +11,7 @@ interface AdManagerProps {
   onUpdateAd: (ad: AdCampaign) => void;
   onAddAd: (ad: AdCampaign) => void;
   onDeleteAd: (id: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 export function AdManager({
@@ -68,6 +68,12 @@ export function AdManager({
       const res = await aiService.generateAdCopy(form.platform, form.objective, form.audience);
       setAiVariations(res.variations || []);
       onToast('AI Ad Variations Ready', `Generated 3 ${form.platform.toUpperCase()} ad concepts.`);
+    } catch (err) {
+      onToast(
+        'AI Ad Copy Unavailable',
+        err instanceof Error ? err.message : 'Unable to generate ad variations right now.',
+        'warning'
+      );
     } finally {
       setAiLoading(false);
     }

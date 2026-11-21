@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Share2,
   Plus,
@@ -6,13 +6,19 @@ import {
   CheckCircle2,
   AlertTriangle,
   Unlink,
-  Link2,
   Trash2,
   X,
+  ExternalLink,
+  KeyRound,
+  Copy,
+  Check,
+  Activity,
+  Loader2,
 } from 'lucide-react';
 import { ConnectedProfile, Platform } from '../../types';
 import { ALL_PLATFORMS, PLATFORM_META, SocialLogo } from '../common/PlatformMeta';
 import { KpiMetricCard, StatusBadge, EmptyStatePanel } from '../common/DesignPrimitives';
+import { aiService, SocialProviderStatus } from '../../services/aiService';
 
 interface ConnectedProfilesViewProps {
   workspaceId: string;
@@ -21,7 +27,15 @@ interface ConnectedProfilesViewProps {
   onAddProfile: (profile: ConnectedProfile) => void;
   onUpdateProfile: (profile: ConnectedProfile) => void;
   onDeleteProfile: (id: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
+}
+
+interface MissingKeyChecklist {
+  platform: Platform;
+  error: string;
+  missingEnvVars: string[];
+  redirectUri?: string;
+  setupSteps: string[];
 }
 
 export function ConnectedProfilesView({
@@ -38,13 +52,95 @@ export function ConnectedProfilesView({
     [profiles, workspaceId]
   );
 
+  const [providers, setProviders] = useState<SocialProviderStatus[]>([]);
   const [showConnectModal, setShowConnectModal] = useState(false);
-  const [form, setForm] = useState({
-    platform: 'instagram' as Platform,
-    accountName: '',
-    handle: '@',
-    followers: '0',
-  });
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('bluesky');
+  const [connecting, setConnecting] = useState(false);
+  const [missingKeyInfo, setMissingKeyInfo] = useState<MissingKeyChecklist | null>(null);
+  const [copiedUri, setCopiedUri] = useState(false);
+
+  // Bluesky live AT Protocol credentials (sent over HTTPS, never stored in Firestore)
+  const [bskyHandle, setBskyHandle] = useState('');
+  const [bskyAppPassword, setBskyAppPassword] = useState('');
+
+  // Per-card async loading & live test diagnostics
+  const [busyCardId, setBusyCardId] = useState<string | null>(null);
+  const [cardDiagnostics, setCardDiagnostics] = useState<Record<string, { latencyMs: number; detail: string; ok: boolean }>>({});
+
+  useEffect(() => {
+    let active = true;
+    aiService
+      .getSocialProviders()
+      .then((res) => {
+        if (active && Array.isArray(res.providers)) setProviders(res.providers);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Listen for real OAuth 2.0 popup postMessage callbacks from /api/social/oauth/:platform/callback
+  const handleOAuthMessage = useCallback(
+    (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const msg = event.data as {
+        type?: string;
+        ok?: boolean;
+        error?: string;
+        connection?: {
+          connectionId: string;
+          platform: Platform;
+          workspaceId?: string;
+          handle: string;
+          displayName: string;
+          followers: number;
+          externalAccountId?: string;
+          scopes?: string[];
+          connectedAt?: string;
+          lastVerifiedAt?: string;
+        };
+      };
+      if (!msg || msg.type !== 'SOCIAL_OAUTH_RESULT') return;
+
+      if (!msg.ok || !msg.connection) {
+        onToast('OAuth Authorization Failed', msg.error || 'Provider rejected authorization.', 'warning');
+        return;
+      }
+
+      const c = msg.connection;
+      const newProfile: ConnectedProfile = {
+        id: `prof-${Date.now()}`,
+        workspaceId: c.workspaceId || workspaceId,
+        platform: c.platform,
+        accountName: c.displayName || c.handle,
+        displayName: c.displayName || c.handle,
+        handle: c.handle,
+        followers: c.followers || 0,
+        status: 'connected',
+        lastSynced: 'Just now',
+        authType: 'oauth2',
+        connectionId: c.connectionId,
+        externalAccountId: c.externalAccountId,
+        scopes: c.scopes,
+        connectedAt: c.connectedAt || new Date().toISOString(),
+        lastVerifiedAt: c.lastVerifiedAt || new Date().toISOString(),
+      };
+      onAddProfile(newProfile);
+      setShowConnectModal(false);
+      onToast(
+        `${PLATFORM_META[c.platform].label} Connected`,
+        `${newProfile.handle} authorized via OAuth 2.0.`,
+        'success'
+      );
+    },
+    [workspaceId, onAddProfile, onToast]
+  );
+
+  useEffect(() => {
+    window.addEventListener('message', handleOAuthMessage);
+    return () => window.removeEventListener('message', handleOAuthMessage);
+  }, [handleOAuthMessage]);
 
   const stats = useMemo(() => {
     const active = wsProfiles.filter((p) => p.status === 'connected');
@@ -53,23 +149,174 @@ export function ConnectedProfilesView({
     return { activeCount: active.length, needsReauth, totalFollowers };
   }, [wsProfiles]);
 
-  const handleConnectSubmit = (e: React.FormEvent) => {
+  const providerMap = useMemo(() => {
+    const map: Partial<Record<Platform, SocialProviderStatus>> = {};
+    for (const p of providers) map[p.platform] = p;
+    return map;
+  }, [providers]);
+
+  const handleStartOAuth = async (platform: Platform) => {
+    setConnecting(true);
+    setMissingKeyInfo(null);
+    try {
+      const resp = await aiService.getSocialOAuthUrl(platform, workspaceId);
+      if (resp.ok && resp.authUrl) {
+        const popup = window.open(
+          resp.authUrl,
+          `socialify_oauth_${platform}`,
+          'width=600,height=720,noopener=no'
+        );
+        if (!popup) {
+          onToast('Popup Blocked', 'Allow browser popups to complete OAuth 2.0 sign-in.', 'warning');
+        } else {
+          onToast('OAuth Window Opened', `Complete authorization in the ${PLATFORM_META[platform].label} popup.`, 'info');
+        }
+      } else {
+        setMissingKeyInfo({
+          platform,
+          error: resp.error || `Missing API Key for ${PLATFORM_META[platform].label}`,
+          missingEnvVars: resp.missingEnvVars || [],
+          redirectUri: resp.redirectUri,
+          setupSteps: resp.setupSteps || [],
+        });
+      }
+    } catch (err) {
+      onToast(
+        'OAuth Initialization Error',
+        err instanceof Error ? err.message : 'Unable to start OAuth flow.',
+        'warning'
+      );
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleBlueskyConnect = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.accountName.trim()) return;
-    const profile: ConnectedProfile = {
-      id: `prof-${Date.now()}`,
-      workspaceId,
-      platform: form.platform,
-      accountName: form.accountName.trim(),
-      handle: form.handle.trim() || `@${form.accountName.trim().toLowerCase().replace(/\s+/g, '')}`,
-      followers: Math.max(0, Number(form.followers) || 0),
-      status: 'connected',
-      lastSynced: 'Just now',
-    };
-    onAddProfile(profile);
-    onToast('Social Profile Connected', `${PLATFORM_META[profile.platform].label} (${profile.handle}) linked.`);
-    setShowConnectModal(false);
-    setForm({ platform: 'instagram', accountName: '', handle: '@', followers: '0' });
+    if (!bskyHandle.trim() || !bskyAppPassword.trim()) return;
+    setConnecting(true);
+    try {
+      const res = await aiService.connectBluesky({
+        handle: bskyHandle.trim(),
+        appPassword: bskyAppPassword.trim(),
+        workspaceId,
+      });
+      const c = res.connection;
+      const profile: ConnectedProfile = {
+        id: `prof-${Date.now()}`,
+        workspaceId,
+        platform: 'bluesky',
+        accountName: c.displayName || c.handle,
+        displayName: c.displayName || c.handle,
+        handle: c.handle,
+        followers: c.followers,
+        status: 'connected',
+        lastSynced: 'Just now',
+        authType: 'atproto',
+        connectionId: c.connectionId,
+        externalAccountId: c.externalAccountId,
+        scopes: c.scopes,
+        connectedAt: c.connectedAt,
+        lastVerifiedAt: c.lastVerifiedAt,
+      };
+      onAddProfile(profile);
+      setBskyHandle('');
+      setBskyAppPassword('');
+      setShowConnectModal(false);
+      onToast(
+        'Bluesky Connected Live',
+        `Authenticated ${profile.handle} (${profile.followers.toLocaleString()} followers).`,
+        'success'
+      );
+    } catch (err) {
+      onToast(
+        'Bluesky Authentication Failed',
+        err instanceof Error ? err.message : 'Check your Bluesky handle and App Password.',
+        'warning'
+      );
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleTestConnection = async (profile: ConnectedProfile) => {
+    setBusyCardId(profile.id);
+    try {
+      const result = await aiService.testSocialConnection({
+        connectionId: profile.connectionId || profile.id,
+        platform: profile.platform,
+        handle: profile.handle,
+      });
+      setCardDiagnostics((prev) => ({
+        ...prev,
+        [profile.id]: { latencyMs: result.latencyMs, detail: result.detail, ok: result.ok },
+      }));
+      onUpdateProfile({
+        ...profile,
+        status: result.ok ? 'connected' : 'needs_reauth',
+        followers: typeof result.followers === 'number' ? result.followers : profile.followers,
+        lastSynced: 'Just now',
+        lastVerifiedAt: result.verifiedAt,
+      });
+      onToast(
+        result.ok ? 'Connection Verified' : 'Re-authentication Needed',
+        `${PLATFORM_META[profile.platform].label}: ${result.detail} (${result.latencyMs}ms)`,
+        result.ok ? 'success' : 'warning'
+      );
+    } catch (err) {
+      setCardDiagnostics((prev) => ({
+        ...prev,
+        [profile.id]: {
+          latencyMs: 0,
+          detail: err instanceof Error ? err.message : 'Connection test failed',
+          ok: false,
+        },
+      }));
+      onToast(
+        'Connection Test Failed',
+        err instanceof Error ? err.message : 'Could not verify token with provider.',
+        'warning'
+      );
+    } finally {
+      setBusyCardId(null);
+    }
+  };
+
+  const handleRefreshToken = async (profile: ConnectedProfile) => {
+    setBusyCardId(profile.id);
+    try {
+      const result = await aiService.refreshSocialConnection({
+        connectionId: profile.connectionId || profile.id,
+        platform: profile.platform,
+      });
+      onUpdateProfile({
+        ...profile,
+        status: 'connected',
+        lastSynced: 'Just now',
+        lastVerifiedAt: result.refreshedAt,
+      });
+      onToast('Token Refreshed', result.detail, 'success');
+    } catch (err) {
+      onUpdateProfile({ ...profile, status: 'needs_reauth' });
+      onToast(
+        'Token Refresh Failed',
+        err instanceof Error ? err.message : 'Re-connect this account to obtain a fresh OAuth token.',
+        'warning'
+      );
+    } finally {
+      setBusyCardId(null);
+    }
+  };
+
+  const handleDisconnect = async (profile: ConnectedProfile) => {
+    setBusyCardId(profile.id);
+    try {
+      await aiService.disconnectSocialConnection(profile.connectionId || profile.id).catch(() => {});
+      onUpdateProfile({ ...profile, status: 'disconnected' });
+      onToast('Profile Disconnected', `${PLATFORM_META[profile.platform].label} (${profile.handle}) token revoked.`, 'info');
+    } finally {
+      setBusyCardId(null);
+    }
   };
 
   return (
@@ -78,18 +325,21 @@ export function ConnectedProfilesView({
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E5E7EB] dark:border-white/[0.08] pb-5">
           <div>
             <p className="text-[11px] font-medium text-[#06B6D4] uppercase tracking-[0.04em]">
-              OAuth Connections &amp; Channel Sync
+              OAuth 2.0 &amp; AT Protocol Channel Connections
             </p>
             <h1 className="text-[22px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em] mt-1">
               Connected Social Profiles
             </h1>
             <p className="text-[13px] text-[#4B5563] dark:text-[#9CA3AF] mt-1">
-              OAuth channels and follower sync health scoped to {workspaceName}.
+              Real OAuth 2.0 &amp; Bluesky AT Protocol connections scoped to {workspaceName}.
             </p>
           </div>
 
           <button
-            onClick={() => setShowConnectModal(true)}
+            onClick={() => {
+              setMissingKeyInfo(null);
+              setShowConnectModal(true);
+            }}
             className="px-3.5 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] text-[12px] font-medium flex items-center gap-1.5 self-start transition-colors"
           >
             <Plus size={14} strokeWidth={1.5} /> Connect Social Profile
@@ -101,17 +351,17 @@ export function ConnectedProfilesView({
           <KpiMetricCard
             label="Connected Channels"
             value={`${stats.activeCount} / ${wsProfiles.length}`}
-            sub="Active OAuth tokens"
+            sub="Verified OAuth / AT Protocol tokens"
           />
           <KpiMetricCard
             label="Total Reachable Followers"
             value={stats.totalFollowers.toLocaleString()}
-            sub="Aggregated across connected profiles"
+            sub="Synced from connected accounts"
           />
           <KpiMetricCard
             label="Token Health Alerts"
             value={`${stats.needsReauth} Need Re-auth`}
-            sub={stats.needsReauth > 0 ? 'Refresh expired tokens below' : 'All tokens healthy'}
+            sub={stats.needsReauth > 0 ? 'Refresh or re-authorize below' : 'All connected tokens healthy'}
             alert={stats.needsReauth > 0}
           />
         </div>
@@ -122,15 +372,20 @@ export function ConnectedProfilesView({
             <EmptyStatePanel
               icon={Share2}
               title="No social profiles connected yet"
-              description="Connect your brand's social accounts to publish posts, sync inbox messages, and track live audience totals."
+              description="Connect a Bluesky account live via App Password or authorize YouTube, Meta, X, LinkedIn, TikTok, Pinterest, Threads, or Google Business Profile via OAuth 2.0."
               actionLabel="Connect First Profile"
-              onAction={() => setShowConnectModal(true)}
+              onAction={() => {
+                setMissingKeyInfo(null);
+                setShowConnectModal(true);
+              }}
             />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {wsProfiles.map((profile) => {
               const meta = PLATFORM_META[profile.platform];
+              const isBusy = busyCardId === profile.id;
+              const diag = cardDiagnostics[profile.id];
               return (
                 <div
                   key={profile.id}
@@ -143,7 +398,7 @@ export function ConnectedProfilesView({
                       </div>
                       <div className="min-w-0">
                         <span className="text-[11px] font-mono uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF]">
-                          {meta.label}
+                          {meta.label} · {profile.authType === 'atproto' ? 'AT Proto' : 'OAuth 2.0'}
                         </span>
                         <h3 className="text-[15px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em] mt-0.5 truncate">
                           {profile.accountName}
@@ -173,42 +428,58 @@ export function ConnectedProfilesView({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] uppercase text-[#6B7280] font-medium tracking-[0.04em]">Last Synced</p>
+                      <p className="text-[10px] uppercase text-[#6B7280] font-medium tracking-[0.04em]">Last Verified</p>
                       <p className="font-mono text-[#4B5563] dark:text-[#9CA3AF] mt-0.5">{profile.lastSynced}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      onClick={() => {
-                        onUpdateProfile({
-                          ...profile,
-                          status: 'connected',
-                          lastSynced: 'Just now',
-                        });
-                        onToast('Token Refreshed & Synced', `${meta.label} (${profile.handle}) is active.`);
-                      }}
-                      className="px-3 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] rounded-[8px] text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
+                  {diag && (
+                    <div
+                      className={`px-3 py-2 rounded-[8px] text-[11px] border ${
+                        diag.ok
+                          ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-orange-500/5 border-orange-500/25 text-orange-700 dark:text-orange-300'
+                      }`}
                     >
-                      <RefreshCw size={12} strokeWidth={1.5} /> {profile.status === 'needs_reauth' ? 'Re-authenticate' : 'Sync Now'}
-                    </button>
+                      <span className="font-mono">{diag.latencyMs > 0 ? `${diag.latencyMs}ms · ` : ''}</span>
+                      {diag.detail}
+                    </div>
+                  )}
 
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => {
-                          const next = profile.status === 'disconnected' ? 'connected' : 'disconnected';
-                          onUpdateProfile({ ...profile, status: next });
-                          onToast(next === 'connected' ? 'Profile Reconnected' : 'Profile Disconnected');
-                        }}
-                        className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[8px] text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] flex items-center gap-1 transition-colors"
+                        disabled={isBusy}
+                        onClick={() => handleTestConnection(profile)}
+                        className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] rounded-[8px] text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1 transition-colors disabled:opacity-50"
                       >
-                        {profile.status === 'disconnected' ? <Link2 size={12} strokeWidth={1.5} /> : <Unlink size={12} strokeWidth={1.5} />}
-                        {profile.status === 'disconnected' ? 'Connect' : 'Disconnect'}
+                        {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Activity size={12} strokeWidth={1.5} />}
+                        Test
                       </button>
                       <button
+                        disabled={isBusy}
+                        onClick={() => handleRefreshToken(profile)}
+                        className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] rounded-[8px] text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw size={12} strokeWidth={1.5} /> Refresh
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {profile.status !== 'disconnected' && (
+                        <button
+                          disabled={isBusy}
+                          onClick={() => handleDisconnect(profile)}
+                          className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-orange-500/40 rounded-[8px] text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] flex items-center gap-1 transition-colors"
+                        >
+                          <Unlink size={12} strokeWidth={1.5} /> Disconnect
+                        </button>
+                      )}
+                      <button
                         onClick={() => {
+                          aiService.disconnectSocialConnection(profile.connectionId || profile.id).catch(() => {});
                           onDeleteProfile(profile.id);
-                          onToast('Profile Removed');
+                          onToast('Profile Removed', `${meta.label} (${profile.handle}) deleted.`);
                         }}
                         className="p-1.5 text-[#6B7280] hover:text-rose-500 rounded-md transition-colors"
                         title="Remove profile"
@@ -224,14 +495,14 @@ export function ConnectedProfilesView({
         )}
       </div>
 
-      {/* Connect Profile Modal */}
+      {/* Connect Profile Modal (Real OAuth 2.0 + Bluesky AT Protocol + Missing API Key Setup Checklist) */}
       {showConnectModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => setShowConnectModal(false)} />
-          <div className="relative w-full max-w-md bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5">
+          <div className="absolute inset-0 bg-black/45 dark:bg-black/65" onClick={() => setShowConnectModal(false)} />
+          <div className="relative w-full max-w-lg bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[12px] p-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
               <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
-                Connect Social Network Profile
+                Connect Social Channel to {workspaceName}
               </h3>
               <button
                 onClick={() => setShowConnectModal(false)}
@@ -240,65 +511,187 @@ export function ConnectedProfilesView({
                 <X size={16} strokeWidth={1.5} />
               </button>
             </div>
-            <form onSubmit={handleConnectSubmit} className="mt-4 space-y-3.5 text-[12px]">
-              <div>
-                <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Network</label>
-                <select
-                  value={form.platform}
-                  onChange={(e) => setForm({ ...form, platform: e.target.value as Platform })}
-                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
-                >
-                  {ALL_PLATFORMS.map((p) => (
-                    <option key={p} value={p}>{PLATFORM_META[p].label}</option>
-                  ))}
-                </select>
+
+            {/* Network Selector Grid */}
+            <div className="mt-4">
+              <label className="text-[11px] font-medium text-[#6B7280] uppercase tracking-wider block mb-2">
+                Select Network
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {ALL_PLATFORMS.map((p) => {
+                  const status = providerMap[p];
+                  const active = selectedPlatform === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlatform(p);
+                        setMissingKeyInfo(null);
+                      }}
+                      className={`p-2.5 rounded-[8px] border text-left flex items-center justify-between gap-2 transition-colors ${
+                        active
+                          ? 'border-[#06B6D4] bg-cyan-500/10'
+                          : 'border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] hover:border-[#D1D5DB] dark:hover:border-white/[0.15]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <SocialLogo platform={p} size={16} />
+                        <span className="text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] truncate">
+                          {PLATFORM_META[p].label}
+                        </span>
+                      </div>
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          status?.configured || p === 'bluesky' ? 'bg-emerald-500' : 'bg-amber-400'
+                        }`}
+                        title={status?.configured || p === 'bluesky' ? 'Ready to connect' : 'OAuth keys required'}
+                      />
+                    </button>
+                  );
+                })}
               </div>
-              <div>
-                <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Account Display Name</label>
-                <input
-                  required
-                  value={form.accountName}
-                  onChange={(e) => setForm({ ...form, accountName: e.target.value })}
-                  placeholder="e.g. DigiXy Official"
-                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            </div>
+
+            {/* Bluesky Live AT Protocol Form */}
+            {selectedPlatform === 'bluesky' ? (
+              <form onSubmit={handleBlueskyConnect} className="mt-4 space-y-3.5 text-[12px] pt-4 border-t border-[#E5E7EB] dark:border-white/[0.08]">
+                <div className="p-3 rounded-[8px] bg-cyan-500/5 border border-cyan-500/20 text-[#4B5563] dark:text-[#9CA3AF]">
+                  <p className="font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5">
+                    <KeyRound size={13} className="text-[#06B6D4]" /> Live Bluesky AT Protocol Sign-In
+                  </p>
+                  <p className="mt-1 text-[11px]">
+                    Authenticates directly against <span className="font-mono">bsky.social</span>. Generate an App Password in Bluesky Settings → Privacy &amp; Security → App Passwords.
+                  </p>
+                </div>
                 <div>
-                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Handle / Page Slug</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Bluesky Handle</label>
                   <input
-                    value={form.handle}
-                    onChange={(e) => setForm({ ...form, handle: e.target.value })}
+                    required
+                    value={bskyHandle}
+                    onChange={(e) => setBskyHandle(e.target.value)}
+                    placeholder="yourbrand.bsky.social"
                     className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
                 <div>
-                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Current Followers</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">App Password</label>
                   <input
-                    type="number"
-                    min="0"
-                    value={form.followers}
-                    onChange={(e) => setForm({ ...form, followers: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] font-mono tabular-nums text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                    required
+                    type="password"
+                    value={bskyAppPassword}
+                    onChange={(e) => setBskyAppPassword(e.target.value)}
+                    placeholder="xxxx-xxxx-xxxx-xxxx"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowConnectModal(false)}
+                    className="flex-1 py-2 border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] font-medium text-[#4B5563] dark:text-[#9CA3AF]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={connecting}
+                    className="flex-[2] py-2 bg-[#111827] hover:bg-[#1F2937] disabled:opacity-50 text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] font-medium flex items-center justify-center gap-1.5"
+                  >
+                    {connecting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    {connecting ? 'Authenticating...' : 'Authenticate Bluesky'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-4 pt-4 border-t border-[#E5E7EB] dark:border-white/[0.08] space-y-3.5 text-[12px]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <SocialLogo platform={selectedPlatform} size={18} />
+                    <span className="font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                      {PLATFORM_META[selectedPlatform].label} OAuth 2.0
+                    </span>
+                  </div>
+                  <StatusBadge tone={providerMap[selectedPlatform]?.configured ? 'emerald' : 'orange'}>
+                    {providerMap[selectedPlatform]?.configured ? 'Credentials Configured' : 'API Key Required'}
+                  </StatusBadge>
+                </div>
+
+                {missingKeyInfo && missingKeyInfo.platform === selectedPlatform && (
+                  <div className="p-3.5 rounded-[10px] border border-orange-500/30 bg-orange-500/10 space-y-2.5">
+                    <p className="font-semibold text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5">
+                      <AlertTriangle size={14} className="text-[#F97316]" />
+                      {missingKeyInfo.error}
+                    </p>
+                    {missingKeyInfo.missingEnvVars.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {missingKeyInfo.missingEnvVars.map((envName) => (
+                          <span
+                            key={envName}
+                            className="px-2 py-0.5 rounded bg-[#FFFFFF] dark:bg-[#0E1015] border border-orange-500/30 font-mono text-[11px] text-[#F97316]"
+                          >
+                            {envName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {missingKeyInfo.redirectUri && (
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+                          Authorized OAuth Redirect URI:
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <code className="flex-1 px-2.5 py-1.5 rounded bg-[#FFFFFF] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] font-mono text-[10px] text-[#111827] dark:text-[#F3F4F6] truncate">
+                            {missingKeyInfo.redirectUri}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(missingKeyInfo.redirectUri || '');
+                              setCopiedUri(true);
+                              setTimeout(() => setCopiedUri(false), 1800);
+                            }}
+                            className="px-2 py-1.5 rounded border border-[#E5E7EB] dark:border-white/[0.1] bg-[#FFFFFF] dark:bg-[#13161D] text-[#111827] dark:text-[#F3F4F6]"
+                          >
+                            {copiedUri ? <Check size={12} /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {missingKeyInfo.setupSteps.length > 0 && (
+                      <ol className="list-decimal list-inside space-y-1 text-[11px] text-[#4B5563] dark:text-[#9CA3AF]">
+                        {missingKeyInfo.setupSteps.map((step, i) => (
+                          <li key={i}>{step}</li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowConnectModal(false)}
+                    className="flex-1 py-2 border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] font-medium text-[#4B5563] dark:text-[#9CA3AF]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={connecting}
+                    onClick={() => handleStartOAuth(selectedPlatform)}
+                    className="flex-[2] py-2 bg-[#111827] hover:bg-[#1F2937] disabled:opacity-50 text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] font-medium flex items-center justify-center gap-1.5"
+                  >
+                    {connecting ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <ExternalLink size={14} strokeWidth={1.5} />
+                    )}
+                    {connecting ? 'Checking Provider...' : `Authorize ${PLATFORM_META[selectedPlatform].label}`}
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowConnectModal(false)}
-                  className="flex-1 py-2 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[8px] font-medium text-[#4B5563] dark:text-[#9CA3AF] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-[2] py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] font-medium transition-colors"
-                >
-                  Authorize &amp; Connect
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}

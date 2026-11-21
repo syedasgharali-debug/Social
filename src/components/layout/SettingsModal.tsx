@@ -15,10 +15,13 @@ interface SettingsModalProps {
 }
 
 const ROLE_PERMISSIONS: Record<TeamRole, string> = {
-  Owner: 'Full access: manage workspaces, billing plans, approval overrides, and CRM exports.',
+  Owner: 'Full access: manage workspaces, billing plans, team roles, approval overrides, and CRM exports.',
+  Admin: 'Approve pending posts, manage team members, connect social profiles, and publish across channels.',
+  Editor: 'Create drafts and submit posts into Pending Approval for Owner, Admin, or Client Approver sign-off.',
+  'Client Approver': 'Review, approve, request changes, or reject posts in the workspace approval queue.',
   Manager: 'Approve pending posts, pause category queues, manage ad budgets, and edit deals.',
   Publisher: 'Create drafts, schedule approved posts, and triage Unified Inbox threads.',
-  Contributor: 'Create drafts and submit posts into Pending Approval for Manager sign-off.',
+  Contributor: 'Create drafts and submit posts into Pending Approval for Admin sign-off.',
 };
 
 export function SettingsModal({
@@ -179,7 +182,7 @@ export function SettingsModal({
               Team Role & Approval Permissions
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {(['Owner', 'Manager', 'Publisher', 'Contributor'] as TeamRole[]).map((role) => {
+              {(['Owner', 'Admin', 'Editor', 'Client Approver'] as TeamRole[]).map((role) => {
                 const active = state.activeRole === role;
                 return (
                   <button

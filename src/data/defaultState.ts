@@ -266,6 +266,7 @@ export const DEFAULT_STATE: AppState = {
   ecommerceFeeds: [],
   viralCampaigns: [],
   workspaceCredits: {},
+  approvalAuditLogs: [],
   tenants: [],
   featureFlags: DEFAULT_FEATURE_FLAGS,
   auditLogs: [],

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { AppState, ToastItem } from '../types';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { AppState, ConnectedProfile, TeamMember, ToastItem } from '../types';
 import { DEFAULT_STATE, DEFAULT_WORKSPACE, DEFAULT_API_HEALTH } from '../data/defaultState';
 import { db, OperationType, handleFirestoreError } from '../firebase';
+import { aiService } from '../services/aiService';
 import { AuthSessionUser } from '../contexts/AuthContext';
 
 const STORAGE_PREFIX = 'socialifyai_state_v6_';
@@ -73,6 +74,7 @@ function sanitizeLegacySeedData(state: AppState): AppState {
     curatedItems: Array.isArray(state.curatedItems) ? state.curatedItems : [],
     ecommerceFeeds: Array.isArray(state.ecommerceFeeds) ? state.ecommerceFeeds : [],
     viralCampaigns: Array.isArray(state.viralCampaigns) ? state.viralCampaigns : [],
+    approvalAuditLogs: Array.isArray(state.approvalAuditLogs) ? state.approvalAuditLogs : [],
     workspaceCredits:
       state.workspaceCredits && typeof state.workspaceCredits === 'object'
         ? state.workspaceCredits
@@ -131,6 +133,7 @@ function buildWorkspacePayload(state: AppState, ownerId: string, isCreate: boole
     curatedItems: (state.curatedItems || []).slice(0, 200),
     ecommerceFeeds: (state.ecommerceFeeds || []).slice(0, 50),
     viralCampaigns: (state.viralCampaigns || []).slice(0, 100),
+    approvalAuditLogs: (state.approvalAuditLogs || []).slice(0, 300),
     workspaceCredits: state.workspaceCredits || {},
   });
 
@@ -259,6 +262,17 @@ export function useStorage(
   const hasPendingWorkspaceSaveRef = useRef(false);
   const hasPendingAdminSaveRef = useRef(false);
 
+  const [impersonation, setImpersonation] = useState<{
+    uid: string;
+    workspaceName: string;
+    email: string;
+    savedAdminState: AppState;
+  } | null>(null);
+  const impersonationRef = useRef(impersonation);
+  useEffect(() => {
+    impersonationRef.current = impersonation;
+  }, [impersonation]);
+
   useEffect(() => {
     latestStateRef.current = state;
   }, [state]);
@@ -375,6 +389,9 @@ export function useStorage(
               curatedItems: Array.isArray(data.curatedItems) ? data.curatedItems : merged.curatedItems,
               ecommerceFeeds: Array.isArray(data.ecommerceFeeds) ? data.ecommerceFeeds : merged.ecommerceFeeds,
               viralCampaigns: Array.isArray(data.viralCampaigns) ? data.viralCampaigns : merged.viralCampaigns,
+              approvalAuditLogs: Array.isArray(data.approvalAuditLogs)
+                ? data.approvalAuditLogs
+                : merged.approvalAuditLogs,
               workspaceCredits:
                 data.workspaceCredits && typeof data.workspaceCredits === 'object'
                   ? data.workspaceCredits
@@ -463,6 +480,19 @@ export function useStorage(
       if (!user) return;
       if (user.provider === 'google' && !googleProfileReady) return;
       hasPendingWorkspaceSaveRef.current = false;
+
+      if (impersonationRef.current) {
+        const targetUid = impersonationRef.current.uid;
+        try {
+          localStorage.setItem(`${STORAGE_PREFIX}${targetUid}`, JSON.stringify(nextState));
+        } catch {
+          // ignore
+        }
+        if (user.provider === 'password' && user.token && !user.token.startsWith('local_sess_')) {
+          await aiService.adminSaveUserWorkspace(targetUid, stripUndefined(nextState)).catch(() => {});
+        }
+        return;
+      }
 
       if (user.provider === 'password' && user.token) {
         if (user.token.startsWith('local_sess_')) return;
@@ -580,7 +610,8 @@ export function useStorage(
 
       // Write immediately to localStorage for instant zero-loss reload resilience
       try {
-        localStorage.setItem(`${STORAGE_PREFIX}${user.uid}`, JSON.stringify(nextState));
+        const storageUid = impersonationRef.current ? impersonationRef.current.uid : user.uid;
+        localStorage.setItem(`${STORAGE_PREFIX}${storageUid}`, JSON.stringify(nextState));
       } catch {
         // Ignore storage quota errors
       }
@@ -643,5 +674,155 @@ export function useStorage(
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  return { state, updateState, resetDemoData, toasts, pushToast, dismissToast, cloudLoading };
+  const syncWorkspaceMemberDoc = useCallback(
+    async (member: TeamMember) => {
+      if (!user || user.provider !== 'google' || impersonationRef.current) return;
+      const safeId = member.id.replace(/[^a-zA-Z0-9_-]/g, '');
+      const memberRef = doc(db, 'users', user.uid, 'workspaces', 'main', 'workspaceMembers', safeId);
+      try {
+        await setDoc(
+          memberRef,
+          stripUndefined({
+            id: safeId,
+            workspaceId: member.workspaceId,
+            name: member.name.slice(0, 120),
+            email: member.email.slice(0, 254),
+            role: member.role,
+            status: member.status,
+            avatar: member.avatar || '',
+            permissions: member.permissions || {
+              canPublish: member.role !== 'Editor' && member.role !== 'Contributor',
+              canApprove: member.role === 'Owner' || member.role === 'Admin' || member.role === 'Client Approver',
+              canManageTeam: member.role === 'Owner' || member.role === 'Admin',
+              canConnectProfiles: member.role === 'Owner' || member.role === 'Admin',
+            },
+            updatedAt: serverTimestamp(),
+          }),
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn('Firestore workspaceMembers sync skipped:', err);
+      }
+    },
+    [user]
+  );
+
+  const deleteWorkspaceMemberDoc = useCallback(
+    async (memberId: string) => {
+      if (!user || user.provider !== 'google' || impersonationRef.current) return;
+      const safeId = memberId.replace(/[^a-zA-Z0-9_-]/g, '');
+      const memberRef = doc(db, 'users', user.uid, 'workspaces', 'main', 'workspaceMembers', safeId);
+      await deleteDoc(memberRef).catch(() => {});
+    },
+    [user]
+  );
+
+  const syncSocialConnectionDoc = useCallback(
+    async (profile: ConnectedProfile) => {
+      if (!user || user.provider !== 'google' || impersonationRef.current) return;
+      const safeId = profile.id.replace(/[^a-zA-Z0-9_-]/g, '');
+      const connRef = doc(db, 'users', user.uid, 'workspaces', 'main', 'socialConnections', safeId);
+      try {
+        await setDoc(
+          connRef,
+          stripUndefined({
+            id: safeId,
+            workspaceId: profile.workspaceId,
+            platform: profile.platform,
+            handle: profile.handle,
+            displayName: profile.displayName,
+            status: profile.status,
+            followers: profile.followers,
+            authType: profile.authType || 'oauth2',
+            connectionId: profile.connectionId || safeId,
+            externalAccountId: profile.externalAccountId || '',
+            connectedAt: profile.connectedAt,
+            lastVerifiedAt: profile.lastVerifiedAt || profile.connectedAt,
+            updatedAt: serverTimestamp(),
+          }),
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn('Firestore socialConnections sync skipped:', err);
+      }
+    },
+    [user]
+  );
+
+  const deleteSocialConnectionDoc = useCallback(
+    async (profileId: string) => {
+      if (!user || user.provider !== 'google' || impersonationRef.current) return;
+      const safeId = profileId.replace(/[^a-zA-Z0-9_-]/g, '');
+      const connRef = doc(db, 'users', user.uid, 'workspaces', 'main', 'socialConnections', safeId);
+      await deleteDoc(connRef).catch(() => {});
+    },
+    [user]
+  );
+
+  const startImpersonation = useCallback(
+    async (target: { uid: string; workspaceName: string; email: string; plan?: AppState['selectedPlan'] }) => {
+      if (!isAdmin) return false;
+      const savedAdminState = latestStateRef.current;
+      let loadedData: Partial<AppState> | null = null;
+      try {
+        const resp = await aiService.adminGetUserWorkspace(target.uid);
+        if (resp.exists && resp.data) {
+          loadedData = resp.data;
+        }
+      } catch {
+        // Fall back to local cache for static-host mode
+      }
+      if (!loadedData) {
+        const local = readLocalCache(target.uid);
+        loadedData = local;
+      }
+
+      const hydrated = sanitizeLegacySeedData({
+        ...DEFAULT_STATE,
+        ...loadedData,
+        selectedPlan: (loadedData?.selectedPlan as AppState['selectedPlan']) || target.plan || 'accelerate',
+        viewMode: 'app',
+      });
+
+      const nextImp = {
+        uid: target.uid,
+        workspaceName: target.workspaceName,
+        email: target.email,
+        savedAdminState,
+      };
+      impersonationRef.current = nextImp;
+      setImpersonation(nextImp);
+      setState(hydrated);
+      latestStateRef.current = hydrated;
+      return true;
+    },
+    [isAdmin]
+  );
+
+  const exitImpersonation = useCallback(() => {
+    const current = impersonationRef.current;
+    if (!current) return;
+    impersonationRef.current = null;
+    setImpersonation(null);
+    const restored: AppState = { ...current.savedAdminState, viewMode: 'admin' };
+    setState(restored);
+    latestStateRef.current = restored;
+  }, []);
+
+  return {
+    state,
+    updateState,
+    resetDemoData,
+    toasts,
+    pushToast,
+    dismissToast,
+    cloudLoading,
+    syncWorkspaceMemberDoc,
+    deleteWorkspaceMemberDoc,
+    syncSocialConnectionDoc,
+    deleteSocialConnectionDoc,
+    impersonation,
+    startImpersonation,
+    exitImpersonation,
+  };
 }

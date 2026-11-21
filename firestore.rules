@@ -44,7 +44,7 @@ service cloud.firestore {
     }
 
     function isValidTeamRole(role) {
-      return role is string && role in ['Owner', 'Manager', 'Publisher', 'Contributor'];
+      return role is string && role in ['Owner', 'Admin', 'Editor', 'Client Approver', 'Manager', 'Publisher', 'Contributor'];
     }
 
     function isBoundedMapList(arr, maxLen) {
@@ -56,13 +56,14 @@ service cloud.firestore {
     // =========================================================================
     function isValidUserProfile(data) {
       return data.keys().hasAll(['uid', 'displayName', 'email', 'selectedPlan', 'activeRole', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'selectedPlan', 'activeRole', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'selectedPlan', 'activeRole', 'status', 'createdAt', 'updatedAt'])
         && isValidId(data.uid)
-        && data.uid == request.auth.uid
+        && (data.uid == request.auth.uid || isAdmin())
         && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
         && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
-        && data.email == request.auth.token.email
+        && (data.email == request.auth.token.email || isAdmin())
         && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && (!('status' in data) || (data.status is string && data.status in ['active', 'suspended']))
         && isValidPlan(data.selectedPlan)
         && isValidTeamRole(data.activeRole)
         && data.createdAt is timestamp
@@ -82,10 +83,10 @@ service cloud.firestore {
           'threads', 'deals', 'posts', 'ads', 'drafts', 'discoveryAlerts',
           'youtubeChannels', 'youtubeVideos', 'seoArticles', 'cmsConnectors',
           'rssSources', 'curatedItems', 'ecommerceFeeds', 'viralCampaigns',
-          'workspaceCredits', 'createdAt', 'updatedAt'
+          'workspaceCredits', 'approvalAuditLogs', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.ownerId)
-        && data.ownerId == request.auth.uid
+        && (data.ownerId == request.auth.uid || isAdmin())
         && isValidId(data.activeWorkspaceId)
         && isValidTeamRole(data.activeRole)
         && isValidPlan(data.selectedPlan)
@@ -110,6 +111,42 @@ service cloud.firestore {
         && (!('ecommerceFeeds' in data) || isBoundedMapList(data.ecommerceFeeds, 50))
         && (!('viralCampaigns' in data) || isBoundedMapList(data.viralCampaigns, 100))
         && (!('workspaceCredits' in data) || data.workspaceCredits is map)
+        && (!('approvalAuditLogs' in data) || isBoundedMapList(data.approvalAuditLogs, 200))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidWorkspaceMember(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'workspaceId', 'name', 'email', 'role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'workspaceId', 'name', 'email', 'role', 'status', 'permissions', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerId)
+        && (data.ownerId == request.auth.uid || isAdmin())
+        && isValidId(data.workspaceId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && isValidTeamRole(data.role)
+        && data.status is string && data.status in ['active', 'invited']
+        && (!('permissions' in data) || data.permissions is map)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSocialConnection(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'workspaceId', 'platform', 'accountName', 'handle', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'workspaceId', 'platform', 'accountName', 'handle', 'status', 'authMethod', 'followers', 'lastSynced', 'externalId', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerId)
+        && (data.ownerId == request.auth.uid || isAdmin())
+        && isValidId(data.workspaceId)
+        && data.platform is string && data.platform.size() >= 1 && data.platform.size() <= 32
+        && data.accountName is string && data.accountName.size() >= 1 && data.accountName.size() <= 160
+        && data.handle is string && data.handle.size() >= 1 && data.handle.size() <= 160
+        && data.status is string && data.status in ['connected', 'needs_reauth', 'disconnected']
+        && (!('authMethod' in data) || (data.authMethod is string && data.authMethod in ['oauth2', 'app_password', 'manual']))
+        && (!('followers' in data) || (data.followers is number && data.followers >= 0))
+        && (!('lastSynced' in data) || (data.lastSynced is string && data.lastSynced.size() <= 80))
+        && (!('externalId' in data) || (data.externalId is string && data.externalId.size() <= 160))
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -160,7 +197,7 @@ service cloud.firestore {
     // =========================================================================
     match /users/{userId} {
       allow get: if isVerifiedUser() && isValidId(userId) && (isOwner(userId) || isAdmin());
-      allow list: if isVerifiedUser() && resource.data.uid == request.auth.uid;
+      allow list: if isVerifiedUser() && (resource.data.uid == request.auth.uid || isAdmin());
 
       allow create: if isVerifiedUser()
         && isValidId(userId)
@@ -168,7 +205,7 @@ service cloud.firestore {
         && incoming().uid == userId
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time
-        && isOwner(userId);
+        && (isOwner(userId) || isAdmin());
 
       allow update: if isVerifiedUser()
         && isValidId(userId)
@@ -200,7 +237,7 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/users/$(userId))
           && get(/databases/$(database)/documents/users/$(userId)).data.uid == userId;
 
-        allow list: if isVerifiedUser() && resource.data.ownerId == request.auth.uid;
+        allow list: if isVerifiedUser() && (resource.data.ownerId == request.auth.uid || isAdmin());
 
         allow create: if isVerifiedUser()
           && isValidId(userId)
@@ -209,9 +246,9 @@ service cloud.firestore {
           && incoming().ownerId == userId
           && incoming().createdAt == request.time
           && incoming().updatedAt == request.time
-          && isOwner(userId)
+          && (isOwner(userId) || isAdmin())
           && exists(/databases/$(database)/documents/users/$(userId))
-          && get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
+          && get(/databases/$(database)/documents/users/$(userId)).data.uid == userId;
 
         allow update: if isVerifiedUser()
           && isValidId(userId)
@@ -232,7 +269,8 @@ service cloud.firestore {
                 'contacts', 'threads', 'deals', 'posts', 'ads', 'drafts',
                 'discoveryAlerts', 'youtubeChannels', 'youtubeVideos',
                 'seoArticles', 'cmsConnectors', 'rssSources', 'curatedItems',
-                'ecommerceFeeds', 'viralCampaigns', 'workspaceCredits', 'updatedAt'
+                'ecommerceFeeds', 'viralCampaigns', 'workspaceCredits',
+                'approvalAuditLogs', 'updatedAt'
               ])
             )
           );
@@ -242,6 +280,106 @@ service cloud.firestore {
           && isValidId(workspaceDocId)
           && (isOwner(userId) || isAdmin())
           && exists(/databases/$(database)/documents/users/$(userId));
+
+        // Subcollection: workspaceMembers
+        match /workspaceMembers/{memberId} {
+          allow get: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(memberId)
+            && (isOwner(userId) || isAdmin())
+            && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId));
+
+          allow list: if isVerifiedUser() && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+          allow create: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(memberId)
+            && isValidWorkspaceMember(incoming())
+            && incoming().id == memberId
+            && incoming().ownerId == userId
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && (isOwner(userId) || isAdmin())
+            && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId));
+
+          allow update: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(memberId)
+            && isValidWorkspaceMember(incoming())
+            && incoming().id == existing().id
+            && incoming().ownerId == existing().ownerId
+            && incoming().workspaceId == existing().workspaceId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (
+              isAdmin() ||
+              (
+                isOwner(userId)
+                && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId))
+                && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'status', 'permissions', 'updatedAt'])
+              )
+            );
+
+          allow delete: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(memberId)
+            && (isOwner(userId) || isAdmin())
+            && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId));
+        }
+
+        // Subcollection: socialConnections
+        match /socialConnections/{connectionId} {
+          allow get: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(connectionId)
+            && (isOwner(userId) || isAdmin())
+            && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId));
+
+          allow list: if isVerifiedUser() && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+          allow create: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(connectionId)
+            && isValidSocialConnection(incoming())
+            && incoming().id == connectionId
+            && incoming().ownerId == userId
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && (isOwner(userId) || isAdmin())
+            && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId));
+
+          allow update: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(connectionId)
+            && isValidSocialConnection(incoming())
+            && incoming().id == existing().id
+            && incoming().ownerId == existing().ownerId
+            && incoming().workspaceId == existing().workspaceId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (
+              isAdmin() ||
+              (
+                isOwner(userId)
+                && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId))
+                && incoming().diff(existing()).affectedKeys().hasOnly(['accountName', 'handle', 'status', 'authMethod', 'followers', 'lastSynced', 'externalId', 'updatedAt'])
+              )
+            );
+
+          allow delete: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(workspaceDocId)
+            && isValidId(connectionId)
+            && (isOwner(userId) || isAdmin())
+            && exists(/databases/$(database)/documents/users/$(userId)/workspaces/$(workspaceDocId));
+        }
       }
     }
 

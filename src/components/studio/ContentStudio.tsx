@@ -63,7 +63,7 @@ interface ContentStudioProps {
   onDeleteDraft: (id: string) => void;
   onScheduleDraft: (draft: Draft, scheduledAt: string, categoryId?: string) => void;
   onGoToScheduler: () => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 const QUICK_EMOJIS = ['🚀', '🔥', '✨', '💡', '📈', '🎯', '💬', '👏', '⚡', '✅', '📸', '🔗', '🤝', '🎉', '🧠', '💼'];
@@ -229,6 +229,12 @@ export function ContentStudio({
       }
       setCustomizePerNetwork(true);
       onToast('AI Copilot Drafted Content', 'Generated tailored copy for Master, Instagram, LinkedIn & X.');
+    } catch (err) {
+      onToast(
+        'AI Generation Unavailable',
+        err instanceof Error ? err.message : 'Unable to generate content right now.',
+        'warning'
+      );
     } finally {
       setAiBusy(false);
     }
@@ -254,6 +260,12 @@ export function ContentStudio({
         updateActiveCaption(res.linkedin);
       }
       onToast(`Rewritten in ${tone} Tone`);
+    } catch (err) {
+      onToast(
+        'AI Rewrite Unavailable',
+        err instanceof Error ? err.message : 'Unable to rewrite content right now.',
+        'warning'
+      );
     } finally {
       setAiBusy(false);
     }
@@ -271,11 +283,16 @@ export function ContentStudio({
     }
   };
 
+  const requiresApprovalGate = activeRole === 'Editor' || activeRole === 'Contributor';
+
   const buildAndSavePost = (targetStatus: SocialPost['status'], evergreenOverride?: boolean, scheduledAtOverride?: string) => {
     if (!masterCaption.trim()) {
-      onToast('Caption Required', 'Write a post caption or generate one with AI first.');
+      onToast('Caption Required', 'Write a post caption or generate one with AI first.', 'warning');
       return;
     }
+
+    const gatedByRole = requiresApprovalGate && targetStatus !== 'draft' && targetStatus !== 'pending_approval';
+    const effectiveStatus: SocialPost['status'] = gatedByRole ? 'pending_approval' : targetStatus;
 
     const activeCategory = wsCategories.find((c) => c.id === categoryId);
     const nextIso = scheduledAtOverride || new Date(scheduleDateTime).toISOString();
@@ -295,7 +312,7 @@ export function ContentStudio({
       igGridOrder:
         editingPost?.igGridOrder ??
         (selectedPlatforms.includes('instagram') ? highestIgOrder + 1 : undefined),
-      status: targetStatus,
+      status: effectiveStatus,
       isEvergreen: evergreenOverride ?? isEvergreen,
       maxShares: activeCategory?.evergreenEnabled ? 10 : undefined,
       shareCount: editingPost?.shareCount ?? 0,
@@ -305,12 +322,18 @@ export function ContentStudio({
     if (editingPost) {
       onUpdatePost(payload);
       onClearEditingPost();
-      onToast('Post Updated', `Saved changes (${targetStatus.replace('_', ' ')}).`);
+      onToast('Post Updated', `Saved changes (${effectiveStatus.replace('_', ' ')}).`);
     } else {
       onAddPost(payload);
-      if (targetStatus === 'draft') {
+      if (effectiveStatus === 'draft') {
         onToast('Saved as Draft', 'Post stored in your workspace drafts & scheduler list.');
-      } else if (targetStatus === 'pending_approval') {
+      } else if (gatedByRole) {
+        onToast(
+          'Sent for Approval (Role Gate)',
+          `${activeRole} role requires Owner, Admin, or Client Approver sign-off before publishing.`,
+          'info'
+        );
+      } else if (effectiveStatus === 'pending_approval') {
         onToast('Sent for Client Approval', 'Moved to Team & Approvals queue for sign-off.');
       } else if (evergreenOverride) {
         onToast(
@@ -771,17 +794,22 @@ export function ContentStudio({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {requiresApprovalGate && (
+                  <span className="text-[11px] font-medium text-[#F97316] bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-md">
+                    Approval gate active ({activeRole})
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() =>
                     buildAndSavePost(
-                      activeRole === 'Contributor' ? 'pending_approval' : 'scheduled',
+                      requiresApprovalGate ? 'pending_approval' : 'scheduled',
                       true
                     )
                   }
                   className="px-3 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6] rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors"
                 >
-                  <Layers size={13} strokeWidth={1.5} /> Add to Queue
+                  <Layers size={13} strokeWidth={1.5} /> {requiresApprovalGate ? 'Queue for Approval' : 'Add to Queue'}
                 </button>
 
                 <div className="relative">
@@ -790,7 +818,7 @@ export function ContentStudio({
                     onClick={() => setShowSchedulePopover(!showSchedulePopover)}
                     className="px-3.5 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors"
                   >
-                    <Calendar size={13} strokeWidth={1.5} /> Schedule Date/Time
+                    <Calendar size={13} strokeWidth={1.5} /> {requiresApprovalGate ? 'Submit Schedule' : 'Schedule Date/Time'}
                   </button>
 
                   {showSchedulePopover && (
@@ -811,14 +839,14 @@ export function ContentStudio({
                         type="button"
                         onClick={() =>
                           buildAndSavePost(
-                            activeRole === 'Contributor' ? 'pending_approval' : 'scheduled',
+                            requiresApprovalGate ? 'pending_approval' : 'scheduled',
                             isEvergreen,
                             new Date(scheduleDateTime).toISOString()
                           )
                         }
                         className="w-full py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-md text-[12px] font-medium transition-colors"
                       >
-                        Confirm Schedule
+                        {requiresApprovalGate ? 'Submit for Approval' : 'Confirm Schedule'}
                       </button>
                     </div>
                   )}

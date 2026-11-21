@@ -14,7 +14,7 @@ interface AiCopilotWizardProps {
   onPopulatePosts: (newPosts: SocialPost[]) => void;
   onOpenInStudio?: (preset: ComposerPreset) => void;
   onGoToScheduler: () => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 interface GeneratedDayPost {
@@ -114,6 +114,12 @@ export function AiCopilotWizard({
 
       setWeekPlan(generatedDays);
       setStep(2);
+    } catch (err) {
+      onToast(
+        'AI Strategy Generation Unavailable',
+        err instanceof Error ? err.message : 'Unable to generate strategy right now.',
+        'warning'
+      );
     } finally {
       setLoading(false);
     }

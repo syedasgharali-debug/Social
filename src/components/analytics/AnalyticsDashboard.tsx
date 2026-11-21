@@ -35,7 +35,7 @@ interface AnalyticsDashboardProps {
   onCreateDraftFromAlert: (alert: DiscoveryAlert) => void;
   onTriggerSpikeAlert: () => void;
   onAcknowledgeAlert: (id: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -227,6 +227,12 @@ export function AnalyticsDashboard({
     try {
       const answer = await aiService.askAnalyst(state, q);
       setAiAnswer(answer);
+    } catch (err) {
+      onToast(
+        'AI Analyst Unavailable',
+        err instanceof Error ? err.message : 'Unable to analyze workspace metrics right now.',
+        'warning'
+      );
     } finally {
       setAiLoading(false);
     }

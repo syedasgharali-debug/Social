@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   Link2,
   ExternalLink,
+  Activity,
+  Loader2,
 } from 'lucide-react';
+import { aiService } from '../../services/aiService';
 import {
   ViralCampaign,
   ViralCampaignType,
@@ -91,6 +94,13 @@ export function ViralCampaignsView({
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [inspectedEntryId, setInspectedEntryId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [pixelTesting, setPixelTesting] = useState(false);
+  const [lastPixelEvent, setLastPixelEvent] = useState<{
+    id: string;
+    eventName: string;
+    valueUsd: number;
+    receivedAt: string;
+  } | null>(null);
 
   const inspectedEntry = useMemo(
     () => activeCampaign?.entries.find((e) => e.id === inspectedEntryId) || null,
@@ -203,7 +213,7 @@ export function ViralCampaignsView({
 
   const DISPOSABLE_EMAIL_RE = /mailinator|tempmail|10minutemail|guerrillamail|yopmail|trashmail|throwawaymail|sharklasers/i;
 
-  const handleRecordEntry = (e: React.FormEvent) => {
+  const handleRecordEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeCampaign || !entryForm.name.trim() || !entryForm.email.trim()) return;
     const emailNorm = entryForm.email.trim().toLowerCase();
@@ -213,7 +223,7 @@ export function ViralCampaignsView({
     const duplicateFpCount = activeCampaign.entries.filter((en) => en.ipFingerprint === fp).length;
     const isDisposable = DISPOSABLE_EMAIL_RE.test(emailNorm);
 
-    const fraudStatus: CampaignEntry['fraudStatus'] = isDisposable || duplicateFpCount >= 2
+    let fraudStatus: CampaignEntry['fraudStatus'] = isDisposable || duplicateFpCount >= 2
       ? 'flagged_bot'
       : duplicateEmail
       ? 'flagged_duplicate'
@@ -223,8 +233,34 @@ export function ViralCampaignsView({
     const refs = Math.max(0, Number(entryForm.referralsCount) || 0);
     const basePoints = enabledActions.reduce((s, a) => s + (a.platform === 'referral' ? a.points * refs : a.points), 1);
 
+    let resolvedFp = fp;
+    let entryId = `ent-${Date.now()}`;
+    try {
+      const serverResp = await aiService.submitCampaignEntry({
+        campaignId: activeCampaign.id,
+        workspaceId,
+        name: entryForm.name.trim(),
+        email: emailNorm,
+        handle: entryForm.handle.trim() || `@${entryForm.name.trim().toLowerCase().replace(/\s+/g, '')}`,
+        platform: entryForm.platform,
+        bonusPoints: basePoints,
+        slug: activeCampaign.slug,
+        utmSource: activeCampaign.utmSource,
+        utmCampaign: activeCampaign.utmCampaign,
+      });
+      if (serverResp?.entry) {
+        entryId = serverResp.entry.id;
+        resolvedFp = serverResp.entry.ipFingerprint || fp;
+        if (serverResp.entry.fraudStatus !== 'verified') {
+          fraudStatus = serverResp.entry.fraudStatus;
+        }
+      }
+    } catch {
+      // Proceed with local client verification when backend is offline
+    }
+
     const newEntry: CampaignEntry = {
-      id: `ent-${Date.now()}`,
+      id: entryId,
       name: entryForm.name.trim(),
       email: emailNorm,
       handle: entryForm.handle.trim() || `@${entryForm.name.trim().toLowerCase().replace(/\s+/g, '')}`,
@@ -233,7 +269,7 @@ export function ViralCampaignsView({
       referralsCount: refs,
       completedActions: enabledActions.map((a) => a.label),
       ugcUrl: entryForm.ugcUrl.trim() || undefined,
-      ipFingerprint: fp,
+      ipFingerprint: resolvedFp,
       fraudStatus,
       syncedToCrm: false,
       estimatedLtv: Math.max(0, Number(entryForm.estimatedLtv) || 0),
@@ -262,7 +298,7 @@ export function ViralCampaignsView({
     );
   };
 
-  const handleSubmitPreviewEntry = (e: React.FormEvent) => {
+  const handleSubmitPreviewEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeCampaign || !previewName.trim() || !previewEmail.trim()) return;
     const emailNorm = previewEmail.trim().toLowerCase();
@@ -270,7 +306,7 @@ export function ViralCampaignsView({
 
     const duplicateEmail = activeCampaign.entries.some((en) => en.email.toLowerCase() === emailNorm);
     const isDisposable = DISPOSABLE_EMAIL_RE.test(emailNorm);
-    const fraudStatus: CampaignEntry['fraudStatus'] = isDisposable
+    let fraudStatus: CampaignEntry['fraudStatus'] = isDisposable
       ? 'flagged_bot'
       : duplicateEmail
       ? 'flagged_duplicate'
@@ -280,23 +316,52 @@ export function ViralCampaignsView({
       (a) => a.enabled && previewCheckedIds.includes(a.id)
     );
     const totalPoints = 1 + completed.reduce((sum, a) => sum + a.points, 0);
-    const refCode = `${previewName.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || 'fan'}-${Math.random()
+    let refCode = `${previewName.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || 'fan'}-${Math.random()
       .toString(36)
       .slice(2, 6)
       .toUpperCase()}`;
 
+    const resolvedHandle = previewHandle.trim().startsWith('@')
+      ? previewHandle.trim()
+      : `@${(previewHandle.trim() || previewName.trim()).toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+
+    let entryId = `ent-${Date.now()}`;
+    let resolvedFp = fp;
+    try {
+      const serverResp = await aiService.submitCampaignEntry({
+        campaignId: activeCampaign.id,
+        workspaceId,
+        name: previewName.trim(),
+        email: emailNorm,
+        handle: resolvedHandle,
+        platform: 'instagram',
+        bonusPoints: totalPoints,
+        slug: activeCampaign.slug,
+        utmSource: activeCampaign.utmSource,
+        utmCampaign: activeCampaign.utmCampaign,
+      });
+      if (serverResp?.entry) {
+        entryId = serverResp.entry.id;
+        refCode = serverResp.referralCode || serverResp.entry.referralCode || refCode;
+        resolvedFp = serverResp.entry.ipFingerprint || fp;
+        if (serverResp.entry.fraudStatus !== 'verified') {
+          fraudStatus = serverResp.entry.fraudStatus;
+        }
+      }
+    } catch {
+      // Fallback to local recording if backend unreachable
+    }
+
     const newEntry: CampaignEntry = {
-      id: `ent-${Date.now()}`,
+      id: entryId,
       name: previewName.trim(),
       email: emailNorm,
-      handle: previewHandle.trim().startsWith('@')
-        ? previewHandle.trim()
-        : `@${(previewHandle.trim() || previewName.trim()).toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+      handle: resolvedHandle,
       platform: 'instagram',
       entriesPoints: totalPoints,
       referralsCount: 0,
       completedActions: completed.map((a) => a.label),
-      ipFingerprint: fp,
+      ipFingerprint: resolvedFp,
       fraudStatus,
       syncedToCrm: false,
       estimatedLtv: 250,
@@ -327,6 +392,44 @@ export function ViralCampaignsView({
       `${newEntry.name} earned ${totalPoints} entry points and generated unique referral code ${refCode}.`,
       fraudStatus === 'verified' ? 'success' : 'warning'
     );
+  };
+
+  const handleSendTestPixelEvent = async () => {
+    if (!activeCampaign) return;
+    setPixelTesting(true);
+    const sampleOrderValue = 199;
+    try {
+      const res = await aiService.sendPixelEvent({
+        pixelId: activeCampaign.pixelId,
+        campaignId: activeCampaign.id,
+        workspaceId,
+        eventType: 'purchase',
+        revenueUsd: sampleOrderValue,
+      });
+      setLastPixelEvent({
+        id: res.event.id,
+        eventName: res.event.eventType,
+        valueUsd: res.event.revenueUsd,
+        receivedAt: res.event.recordedAt,
+      });
+      onUpdateCampaign({
+        ...activeCampaign,
+        attributedRevenueUsd: activeCampaign.attributedRevenueUsd + res.event.revenueUsd,
+      });
+      onToast(
+        'Live Pixel Event Verified',
+        `POST /api/pixel/event recorded ${res.event.eventType} ($${res.event.revenueUsd}) for ${activeCampaign.pixelId}.`,
+        'success'
+      );
+    } catch (err) {
+      onToast(
+        'Pixel Event Failed',
+        err instanceof Error ? err.message : 'Unable to reach /api/pixel/event.',
+        'warning'
+      );
+    } finally {
+      setPixelTesting(false);
+    }
   };
 
   const handleRunFraudAudit = () => {
@@ -1153,6 +1256,26 @@ export function ViralCampaignsView({
                     <pre className="p-3 bg-[#090A0D] text-[#E5E7EB] border border-white/[0.08] rounded-[8px] font-mono text-[11px] overflow-x-auto">
                       {pixelSnippet}
                     </pre>
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSendTestPixelEvent}
+                        disabled={pixelTesting}
+                        className="px-3 py-1.5 rounded-[7px] bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] text-[11px] font-medium inline-flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                      >
+                        {pixelTesting ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Activity size={12} strokeWidth={1.5} />
+                        )}
+                        Send Live Test Pixel Event (+$199)
+                      </button>
+                      {lastPixelEvent && (
+                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                          Ingested {lastPixelEvent.eventName} · ${lastPixelEvent.valueUsd} ({new Date(lastPixelEvent.receivedAt).toLocaleTimeString()})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

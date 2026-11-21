@@ -14,7 +14,14 @@ export type Sentiment = 'positive' | 'neutral' | 'urgent' | 'negative';
 
 export type MessageStatus = 'open' | 'snoozed' | 'resolved';
 
-export type TeamRole = 'Owner' | 'Manager' | 'Publisher' | 'Contributor';
+export type TeamRole =
+  | 'Owner'
+  | 'Admin'
+  | 'Editor'
+  | 'Client Approver'
+  | 'Manager'
+  | 'Publisher'
+  | 'Contributor';
 
 export type PlanTier =
   | 'bootstrap'
@@ -45,6 +52,24 @@ export interface ConnectedProfile {
   followers: number;
   status: 'connected' | 'needs_reauth' | 'disconnected';
   lastSynced: string;
+  authMethod?: 'oauth2' | 'app_password' | 'manual';
+  authType?: 'oauth2' | 'atproto' | 'manual';
+  displayName?: string;
+  connectionId?: string;
+  externalId?: string;
+  externalAccountId?: string;
+  connectedAt?: string;
+  tokenExpiresAt?: string;
+  scopes?: string[];
+  lastTestedAt?: string;
+  lastVerifiedAt?: string;
+}
+
+export interface TeamMemberPermissions {
+  canPublish: boolean;
+  canApprove: boolean;
+  canManageTeam: boolean;
+  canConnectProfiles: boolean;
 }
 
 export interface TeamMember {
@@ -55,6 +80,23 @@ export interface TeamMember {
   role: TeamRole;
   avatar: string;
   status: 'active' | 'invited';
+  permissions?: TeamMemberPermissions;
+  invitedAt?: string;
+}
+
+export interface ApprovalAuditEntry {
+  id: string;
+  workspaceId: string;
+  postId: string;
+  postSnippet?: string;
+  action: 'approved' | 'changes_requested' | 'rejected' | 'submitted';
+  actor?: string;
+  actorName?: string;
+  role?: TeamRole;
+  actorRole?: TeamRole;
+  note?: string;
+  timestamp?: string;
+  createdAt?: string;
 }
 
 export interface ContentCategory {
@@ -135,7 +177,7 @@ export interface Deal {
   expectedCloseDate: string;
 }
 
-export type PostStatus = 'draft' | 'pending_approval' | 'approved' | 'scheduled' | 'published';
+export type PostStatus = 'draft' | 'pending_approval' | 'approved' | 'scheduled' | 'published' | 'rejected';
 
 export interface SocialPost {
   id: string;
@@ -223,6 +265,7 @@ export interface TenantAccount {
   status: 'active' | 'trial' | 'past_due' | 'suspended';
   joinedAt: string;
   linkedWorkspaceId?: string;
+  uid?: string;
 }
 
 export interface ApiHealthNode {
@@ -369,9 +412,13 @@ export interface CmsConnector {
   provider: CmsProvider;
   label: string;
   endpointUrl: string;
+  authHeaderHint?: string;
   status: 'connected' | 'disconnected';
   autoSyndicateDefault: boolean;
   lastPublishedAt?: string;
+  lastHttpStatus?: number;
+  lastPublishedUrl?: string;
+  lastError?: string;
 }
 
 export interface SeoArticleSection {
@@ -557,6 +604,7 @@ export interface AppState {
   ecommerceFeeds: EcommerceFeed[];
   viralCampaigns: ViralCampaign[];
   workspaceCredits: Record<string, number>;
+  approvalAuditLogs?: ApprovalAuditEntry[];
   tenants: TenantAccount[];
   featureFlags: FeatureFlag[];
   auditLogs: AdminAuditEntry[];

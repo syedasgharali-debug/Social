@@ -34,7 +34,7 @@ interface SocialInboxProps {
   onUpdateThread: (thread: Thread) => void;
   onUpdateContact: (contact: Contact) => void;
   onOpenContactInCrm: (contactId: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 type InboxBucket = 'all' | 'unread' | 'dm' | 'comment' | 'mention';
@@ -187,6 +187,12 @@ export function SocialInbox({
         friendly: res.friendly,
         concise: res.concise,
       });
+    } catch (err) {
+      onToast(
+        'AI Replies Unavailable',
+        err instanceof Error ? err.message : 'Unable to generate reply suggestions.',
+        'warning'
+      );
     } finally {
       setAiLoading(false);
     }
@@ -208,6 +214,12 @@ export function SocialInbox({
         tags: mergedTags,
       });
       onToast('AI Summary & CRM Tags Applied', `${res.intent} intent detected.`);
+    } catch (err) {
+      onToast(
+        'AI Summary Unavailable',
+        err instanceof Error ? err.message : 'Unable to summarize thread right now.',
+        'warning'
+      );
     } finally {
       setSummaryLoading(false);
     }

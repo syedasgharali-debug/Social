@@ -42,7 +42,7 @@ interface SocialCRMProps {
   onAddDeal: (deal: Deal) => void;
   onDeleteDeal: (id: string) => void;
   onOpenInboxForContact: (contactId: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 const STAGES: { id: DealStage; label: string; prob: number; accent: string; dot: string }[] = [
@@ -632,6 +632,12 @@ export function SocialCRM({
         leadScore: res.score,
       });
       onToast('AI Lead Score Updated', `${drawerContact.name} scored ${res.score}/100.`);
+    } catch (err) {
+      onToast(
+        'AI Lead Scoring Unavailable',
+        err instanceof Error ? err.message : 'Unable to score lead right now.',
+        'warning'
+      );
     } finally {
       setAiScoreLoading(false);
     }

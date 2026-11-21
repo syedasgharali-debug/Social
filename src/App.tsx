@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckCircle2, TrendingUp, Loader2 } from 'lucide-react';
+import { X, CheckCircle2, TrendingUp, Loader2, Eye } from 'lucide-react';
 import { Sidebar, CommandBar, NavTabId } from './components/layout/Shell';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -53,6 +53,7 @@ import {
   CuratedFeedItem,
   EcommerceFeed,
   ViralCampaign,
+  ApprovalAuditEntry,
 } from './types';
 
 export default function App() {
@@ -73,7 +74,22 @@ export default function App() {
     updateProfilePrefs,
   } = useAuth();
 
-  const { state, updateState, resetDemoData, toasts, pushToast, dismissToast, cloudLoading } = useStorage(
+  const {
+    state,
+    updateState,
+    resetDemoData,
+    toasts,
+    pushToast,
+    dismissToast,
+    cloudLoading,
+    syncWorkspaceMemberDoc,
+    deleteWorkspaceMemberDoc,
+    syncSocialConnectionDoc,
+    deleteSocialConnectionDoc,
+    impersonation,
+    startImpersonation,
+    exitImpersonation,
+  } = useStorage(
     user,
     authReady,
     Boolean(profile),
@@ -494,7 +510,31 @@ export default function App() {
         </div>
       )}
 
+      {impersonation && (
+        <div className="bg-[#F97316] text-white px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-[12px] font-medium shrink-0 z-[90]">
+          <div className="flex items-center gap-2 min-w-0">
+            <Eye size={14} strokeWidth={1.75} className="shrink-0" />
+            <span className="truncate">
+              Viewing as <strong>{impersonation.workspaceName}</strong> ({impersonation.email}) — Edits persist directly to this tenant workspace.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              exitImpersonation();
+              setFocusedThreadId(undefined);
+              setFocusedContactId(undefined);
+              setEditingPost(null);
+            }}
+            className="px-3 py-1 rounded-md bg-white/15 hover:bg-white/25 border border-white/30 text-[11px] font-semibold whitespace-nowrap transition-colors"
+          >
+            Exit Impersonation
+          </button>
+        </div>
+      )}
+
       {state.viewMode === 'admin' && user && isAdmin && (
+        <ErrorBoundary key="super-admin">
         <SuperAdminPanel
           state={state}
           onUpdateTenant={(tenant: TenantAccount) =>
@@ -703,7 +743,32 @@ export default function App() {
             }));
             pushToast('Impersonating Tenant Dashboard', `Opened ${targetWs?.name || 'tenant'} workspace.`);
           }}
-          onToast={(title, desc) => pushToast(title, desc, 'success')}
+          onImpersonateTenant={(tenant: TenantAccount) => {
+            const targetUid = tenant.uid || tenant.id.replace(/^reg-/, '');
+            if (targetUid && targetUid !== tenant.id) {
+              startImpersonation({
+                uid: targetUid,
+                workspaceName: tenant.orgName,
+                email: tenant.ownerEmail,
+                plan: tenant.plan,
+              });
+            } else if (tenant.uid) {
+              startImpersonation({
+                uid: tenant.uid,
+                workspaceName: tenant.orgName,
+                email: tenant.ownerEmail,
+                plan: tenant.plan,
+              });
+            } else {
+              updateState((prev) => ({
+                ...prev,
+                viewMode: 'app',
+                activeWorkspaceId: tenant.linkedWorkspaceId || prev.activeWorkspaceId,
+              }));
+              pushToast('Inspecting Workspace', `Switched to ${tenant.orgName}.`);
+            }
+          }}
+          onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
           onBackToWorkspace={() => updateState({ viewMode: 'app' })}
           onBackToLanding={() => updateState({ viewMode: 'landing' })}
           darkMode={state.darkMode}
@@ -715,6 +780,7 @@ export default function App() {
           onSignOut={handleSignOut}
           authToken={user.token}
         />
+        </ErrorBoundary>
       )}
 
       {(state.viewMode === 'app' || (state.viewMode === 'admin' && !isAdmin)) && user && currentUserProfile && (
@@ -1098,7 +1164,7 @@ export default function App() {
                     setActiveTab('studio');
                   }}
                   onGoToScheduler={() => setActiveTab('scheduler')}
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1139,13 +1205,15 @@ export default function App() {
                     }))
                   }
                   onScheduleDraft={(draft: Draft, scheduledAt: string, categoryId?: string) => {
+                    const needsApproval =
+                      state.activeRole === 'Editor' || state.activeRole === 'Contributor';
                     const newPost: SocialPost = {
                       id: `p-${Date.now()}`,
                       workspaceId: state.activeWorkspaceId,
                       categoryId: categoryId || draft.categoryId,
                       platforms: draft.platforms,
                       content: draft.content,
-                      status: state.activeRole === 'Contributor' ? 'pending_approval' : 'scheduled',
+                      status: needsApproval ? 'pending_approval' : 'scheduled',
                       isEvergreen: true,
                       scheduledAt,
                     };
@@ -1154,10 +1222,16 @@ export default function App() {
                       posts: [newPost, ...prev.posts],
                       drafts: prev.drafts.filter((d) => d.id !== draft.id),
                     }));
-                    pushToast('Draft Scheduled', `Scheduled for ${new Date(scheduledAt).toLocaleString()}.`, 'success');
+                    pushToast(
+                      needsApproval ? 'Sent for Approval (Role Gate)' : 'Draft Scheduled',
+                      needsApproval
+                        ? `${state.activeRole} submissions require Owner, Admin, or Client Approver sign-off.`
+                        : `Scheduled for ${new Date(scheduledAt).toLocaleString()}.`,
+                      needsApproval ? 'info' : 'success'
+                    );
                   }}
                   onGoToScheduler={() => setActiveTab('scheduler')}
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1247,7 +1321,7 @@ export default function App() {
                     setFocusedContactId(contactId);
                     setActiveTab('crm');
                   }}
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1264,7 +1338,7 @@ export default function App() {
                       ),
                     }))
                   }
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1276,6 +1350,8 @@ export default function App() {
                   teamMembers={state.teamMembers}
                   categories={state.categories}
                   activeRole={state.activeRole}
+                  approvalAuditLogs={state.approvalAuditLogs || []}
+                  actorName={currentUserProfile.displayName}
                   onUpdatePost={(post: SocialPost) =>
                     updateState((prev) => ({
                       ...prev,
@@ -1286,22 +1362,31 @@ export default function App() {
                     setEditingPost(post);
                     setActiveTab('studio');
                   }}
-                  onAddTeamMember={(member: TeamMember) =>
-                    updateState((prev) => ({ ...prev, teamMembers: [...prev.teamMembers, member] }))
-                  }
-                  onUpdateTeamMember={(member: TeamMember) =>
+                  onAddTeamMember={(member: TeamMember) => {
+                    updateState((prev) => ({ ...prev, teamMembers: [...prev.teamMembers, member] }));
+                    syncWorkspaceMemberDoc(member).catch(() => {});
+                  }}
+                  onUpdateTeamMember={(member: TeamMember) => {
                     updateState((prev) => ({
                       ...prev,
                       teamMembers: prev.teamMembers.map((m) => (m.id === member.id ? member : m)),
-                    }))
-                  }
-                  onRemoveTeamMember={(id: string) =>
+                    }));
+                    syncWorkspaceMemberDoc(member).catch(() => {});
+                  }}
+                  onRemoveTeamMember={(id: string) => {
                     updateState((prev) => ({
                       ...prev,
                       teamMembers: prev.teamMembers.filter((m) => m.id !== id),
+                    }));
+                    deleteWorkspaceMemberDoc(id).catch(() => {});
+                  }}
+                  onLogApprovalAudit={(entry: ApprovalAuditEntry) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      approvalAuditLogs: [entry, ...(prev.approvalAuditLogs || [])].slice(0, 200),
                     }))
                   }
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1310,27 +1395,30 @@ export default function App() {
                   workspaceId={state.activeWorkspaceId}
                   workspaceName={activeWorkspace.name}
                   profiles={state.connectedProfiles}
-                  onAddProfile={(profile: ConnectedProfile) =>
+                  onAddProfile={(profile: ConnectedProfile) => {
                     updateState((prev) => ({
                       ...prev,
                       connectedProfiles: [profile, ...prev.connectedProfiles],
-                    }))
-                  }
-                  onUpdateProfile={(profile: ConnectedProfile) =>
+                    }));
+                    syncSocialConnectionDoc(profile).catch(() => {});
+                  }}
+                  onUpdateProfile={(profile: ConnectedProfile) => {
                     updateState((prev) => ({
                       ...prev,
                       connectedProfiles: prev.connectedProfiles.map((p) =>
                         p.id === profile.id ? profile : p
                       ),
-                    }))
-                  }
-                  onDeleteProfile={(id: string) =>
+                    }));
+                    syncSocialConnectionDoc(profile).catch(() => {});
+                  }}
+                  onDeleteProfile={(id: string) => {
                     updateState((prev) => ({
                       ...prev,
                       connectedProfiles: prev.connectedProfiles.filter((p) => p.id !== id),
-                    }))
-                  }
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                    }));
+                    deleteSocialConnectionDoc(id).catch(() => {});
+                  }}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1379,7 +1467,7 @@ export default function App() {
                     }))
                   }
                   onOpenInboxForContact={handleOpenInboxForContact}
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1402,7 +1490,7 @@ export default function App() {
                       ads: prev.ads.filter((a) => a.id !== id),
                     }))
                   }
-                  onToast={(title, desc) => pushToast(title, desc, 'success')}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
               </ErrorBoundary>

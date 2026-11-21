@@ -60,6 +60,8 @@ import {
   MonochromeSparkline,
   EmptyStatePanel,
 } from '../common/DesignPrimitives';
+import { aiService, AdminEnvStatusItem } from '../../services/aiService';
+import { upsertLocalAdminAccount, setLocalAccountStatus } from '../../contexts/AuthContext';
 
 function resolveApiBrand(nodeName: string): SocialBrandKey {
   const lower = nodeName.toLowerCase();
@@ -102,7 +104,8 @@ interface SuperAdminPanelProps {
   onDeletePromoCode: (id: string) => void;
   onRetryInvoice: (invoice: InvoiceRecord) => void;
   onInspectWorkspace: (workspaceId?: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onImpersonateTenant?: (tenant: TenantAccount) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
   onBackToWorkspace?: () => void;
   onBackToLanding?: () => void;
   darkMode?: boolean;
@@ -117,9 +120,13 @@ interface RegisteredUserRecord {
   displayName: string;
   companyName?: string;
   createdAt: string;
+  status?: 'active' | 'suspended';
   plan?: string;
+  linkedWorkspaceId?: string;
   workspacesCount?: number;
   profilesUsed?: number;
+  aiCreditsUsed?: number;
+  aiCreditsLimit?: number;
   scheduledPostsCount?: number;
 }
 
@@ -162,6 +169,7 @@ export function SuperAdminPanel({
   onDeletePromoCode,
   onRetryInvoice,
   onInspectWorkspace,
+  onImpersonateTenant,
   onToast,
   onBackToWorkspace,
   onBackToLanding,
@@ -174,6 +182,28 @@ export function SuperAdminPanel({
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUserRecord[]>([]);
   const [testingNodeId, setTestingNodeId] = useState<string | null>(null);
   const [inspectedTenantId, setInspectedTenantId] = useState<string | null>(null);
+  const [showEnvDrawer, setShowEnvDrawer] = useState(false);
+  const [envStatusLoading, setEnvStatusLoading] = useState(false);
+  const [envStatusItems, setEnvStatusItems] = useState<AdminEnvStatusItem[]>([]);
+  const [envCheckedAt, setEnvCheckedAt] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
+
+  const loadEnvStatus = useCallback(async () => {
+    setEnvStatusLoading(true);
+    try {
+      const res = await aiService.getAdminEnvStatus();
+      setEnvStatusItems(res.items || []);
+      setEnvCheckedAt(res.checkedAt || new Date().toISOString());
+    } catch (err) {
+      onToast(
+        'Env Status Unavailable',
+        err instanceof Error ? err.message : 'Backend API is required to inspect server environment status.',
+        'warning'
+      );
+    } finally {
+      setEnvStatusLoading(false);
+    }
+  }, [onToast]);
 
   const loadRegisteredUsers = useCallback(async () => {
     const collected: RegisteredUserRecord[] = [];
@@ -247,7 +277,8 @@ export function SuperAdminPanel({
     orgName: '',
     ownerName: '',
     ownerEmail: '',
-    plan: 'bootstrap' as PlanTier,
+    initialPassword: '',
+    plan: 'accelerate' as PlanTier,
   });
 
   // Module 4: AI Governance & Module Quotas Draft Form
@@ -302,6 +333,7 @@ export function SuperAdminPanel({
       const meta = PLAN_PRICING[planKey];
       synced.push({
         id: `reg-${u.uid}`,
+        uid: u.uid,
         orgName: u.companyName || `${u.displayName}'s Workspace`,
         ownerName: u.displayName,
         ownerEmail: u.email,
@@ -310,11 +342,11 @@ export function SuperAdminPanel({
         profilesUsed: u.profilesUsed || 0,
         profilesLimit: meta.profiles,
         workspacesCount: u.workspacesCount || 1,
-        aiCreditsUsed: 0,
-        aiCreditsLimit: meta.aiLimit,
-        status: 'active',
+        aiCreditsUsed: u.aiCreditsUsed ?? 0,
+        aiCreditsLimit: u.aiCreditsLimit ?? meta.aiLimit,
+        status: u.status === 'suspended' ? 'suspended' : 'active',
         joinedAt: (u.createdAt || new Date().toISOString()).slice(0, 10),
-        linkedWorkspaceId: state.workspaces[0]?.id,
+        linkedWorkspaceId: u.linkedWorkspaceId || state.workspaces[0]?.id,
       });
     }
     return [...state.tenants, ...synced];
@@ -413,36 +445,120 @@ export function SuperAdminPanel({
     }
   };
 
-  const handlePlanChange = (tenant: TenantAccount, plan: PlanTier) => {
+  const resolveTenantUid = (tenant: TenantAccount): string | null => {
+    if (tenant.uid) return tenant.uid;
+    if (tenant.id.startsWith('reg-')) return tenant.id.slice(4);
+    const match = registeredUsers.find(
+      (u) => u.email.toLowerCase() === tenant.ownerEmail.toLowerCase()
+    );
+    return match?.uid || null;
+  };
+
+  const handlePlanChange = async (tenant: TenantAccount, plan: PlanTier) => {
     const meta = PLAN_PRICING[plan];
+    const uid = resolveTenantUid(tenant);
+    if (uid) {
+      await aiService.adminUpdateUser(uid, { plan, aiCreditsLimit: meta.aiLimit }).catch(() => {});
+    }
     upsertTenant({
       ...tenant,
+      uid: uid || tenant.uid,
       plan,
       mrr: meta.mrr,
       profilesLimit: meta.profiles,
       aiCreditsLimit: meta.aiLimit,
     });
-    onToast('Tenant Plan Updated', `${tenant.orgName} switched to ${meta.label}.`);
+    onToast('Tenant Plan Updated', `${tenant.orgName} switched to ${meta.label}.`, 'success');
   };
 
-  const handleStatusToggle = (tenant: TenantAccount) => {
-    const nextStatus = tenant.status === 'suspended' ? 'active' : 'suspended';
-    upsertTenant({ ...tenant, status: nextStatus });
+  const handleTopUpCredits = async (tenant: TenantAccount, delta: number) => {
+    const uid = resolveTenantUid(tenant);
+    const nextLimit = Math.max(1000, tenant.aiCreditsLimit + delta);
+    if (uid) {
+      await aiService.adminUpdateUser(uid, { aiCreditsLimit: nextLimit }).catch(() => {});
+    }
+    upsertTenant({
+      ...tenant,
+      uid: uid || tenant.uid,
+      aiCreditsLimit: nextLimit,
+    });
     onToast(
-      nextStatus === 'suspended' ? 'Account Suspended' : 'Account Reactivated',
-      `${tenant.orgName} is now ${nextStatus}.`
+      'AI Credits Topped Up',
+      `${tenant.orgName} quota increased by +${delta.toLocaleString()} (limit: ${nextLimit.toLocaleString()}).`,
+      'success'
     );
   };
 
-  const handleCreateTenant = (e: React.FormEvent) => {
+  const handleResetCreditsPersisted = async (tenant: TenantAccount) => {
+    const uid = resolveTenantUid(tenant);
+    if (uid) {
+      await aiService.adminUpdateUser(uid, { aiCreditsUsed: 0 }).catch(() => {});
+    }
+    onResetTenantCredits({ ...tenant, uid: uid || tenant.uid });
+  };
+
+  const handleStatusToggle = async (tenant: TenantAccount) => {
+    const nextStatus = tenant.status === 'suspended' ? 'active' : 'suspended';
+    const uid = resolveTenantUid(tenant);
+    if (uid) {
+      await aiService.adminUpdateUser(uid, { status: nextStatus }).catch(() => {});
+    }
+    setLocalAccountStatus(uid || tenant.ownerEmail, nextStatus);
+    upsertTenant({ ...tenant, uid: uid || tenant.uid, status: nextStatus });
+    onToast(
+      nextStatus === 'suspended' ? 'Account Suspended' : 'Account Reactivated',
+      nextStatus === 'suspended'
+        ? `${tenant.orgName} login and AI API access blocked.`
+        : `${tenant.orgName} restored to active status.`,
+      nextStatus === 'suspended' ? 'warning' : 'success'
+    );
+  };
+
+  const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantForm.orgName.trim() || !tenantForm.ownerEmail.trim()) return;
+    if (tenantForm.initialPassword.length < 6) {
+      onToast('Password Too Short', 'Initial password must be at least 6 characters.', 'warning');
+      return;
+    }
+
+    setProvisioning(true);
     const meta = PLAN_PRICING[tenantForm.plan];
+    let createdUid = '';
+    let linkedWsId = state.workspaces[0]?.id;
+
+    try {
+      const resp = await aiService.adminProvisionUser({
+        displayName: tenantForm.ownerName.trim() || 'Workspace Owner',
+        email: tenantForm.ownerEmail.trim().toLowerCase(),
+        password: tenantForm.initialPassword,
+        companyName: tenantForm.orgName.trim(),
+        plan: tenantForm.plan,
+      });
+      createdUid = resp.user.uid;
+      linkedWsId = resp.user.linkedWorkspaceId;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.toLowerCase().includes('already exists')) {
+        onToast('Duplicate Account', msg, 'warning');
+        setProvisioning(false);
+        return;
+      }
+      // Static-host fallback so provisioned user can still sign in locally
+      createdUid = upsertLocalAdminAccount({
+        displayName: tenantForm.ownerName.trim() || 'Workspace Owner',
+        email: tenantForm.ownerEmail.trim().toLowerCase(),
+        password: tenantForm.initialPassword,
+        companyName: tenantForm.orgName.trim(),
+      });
+    }
+
     const newTenant: TenantAccount = {
-      id: `ten-${Date.now()}`,
+      id: `reg-${createdUid}`,
+      uid: createdUid,
       orgName: tenantForm.orgName.trim(),
       ownerName: tenantForm.ownerName.trim() || 'Workspace Owner',
-      ownerEmail: tenantForm.ownerEmail.trim(),
+      ownerEmail: tenantForm.ownerEmail.trim().toLowerCase(),
       plan: tenantForm.plan,
       mrr: meta.mrr,
       profilesUsed: 0,
@@ -452,12 +568,24 @@ export function SuperAdminPanel({
       aiCreditsLimit: meta.aiLimit,
       status: 'active',
       joinedAt: new Date().toISOString().slice(0, 10),
-      linkedWorkspaceId: state.workspaces[0]?.id,
+      linkedWorkspaceId: linkedWsId,
     };
     onAddTenant(newTenant);
-    onToast('Account Provisioned', `${newTenant.orgName} added on ${meta.label}.`);
+    await loadRegisteredUsers();
+    onToast(
+      'Account Provisioned',
+      `${newTenant.ownerEmail} can now sign in at /login on ${meta.label}.`,
+      'success'
+    );
+    setProvisioning(false);
     setShowNewTenant(false);
-    setTenantForm({ orgName: '', ownerName: '', ownerEmail: '', plan: 'bootstrap' });
+    setTenantForm({
+      orgName: '',
+      ownerName: '',
+      ownerEmail: '',
+      initialPassword: '',
+      plan: 'accelerate',
+    });
   };
 
   const handleCreatePromo = (e: React.FormEvent) => {
@@ -606,6 +734,17 @@ export function SuperAdminPanel({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowEnvDrawer(true);
+                loadEnvStatus();
+              }}
+              className="h-8 px-2.5 rounded-[7px] border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#13161D] hover:border-[#06B6D4] text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 whitespace-nowrap transition-colors"
+            >
+              <Server size={13} strokeWidth={1.5} className="text-[#06B6D4]" />
+              <span className="hidden sm:inline">System &amp; API Status</span>
+            </button>
             <button
               type="button"
               onClick={() => setShowNewTenant(true)}
@@ -1002,14 +1141,18 @@ export function SuperAdminPanel({
                           <div className="inline-flex items-center gap-2.5 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                             <button
                               type="button"
-                              onClick={() => onInspectWorkspace(tenant.linkedWorkspaceId)}
+                              onClick={() =>
+                                onImpersonateTenant
+                                  ? onImpersonateTenant(tenant)
+                                  : onInspectWorkspace(tenant.linkedWorkspaceId)
+                              }
                               className="text-[11px] font-medium text-[#06B6D4] hover:underline inline-flex items-center gap-1"
                             >
                               Impersonate <ExternalLink size={11} strokeWidth={1.5} />
                             </button>
                             <button
                               type="button"
-                              onClick={() => onResetTenantCredits(tenant)}
+                              onClick={() => handleResetCreditsPersisted(tenant)}
                               className="text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] inline-flex items-center gap-1"
                               title="Reset monthly AI credits to 0"
                             >
@@ -1738,7 +1881,11 @@ export function SuperAdminPanel({
               <button
                 type="button"
                 onClick={() => {
-                  onInspectWorkspace(inspectedTenant.linkedWorkspaceId);
+                  if (onImpersonateTenant) {
+                    onImpersonateTenant(inspectedTenant);
+                  } else {
+                    onInspectWorkspace(inspectedTenant.linkedWorkspaceId);
+                  }
                   setInspectedTenantId(null);
                 }}
                 className="h-8 px-3.5 rounded-[7px] bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] text-[12px] font-medium inline-flex items-center gap-1.5"
@@ -1837,17 +1984,80 @@ export function SuperAdminPanel({
                     }}
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onResetTenantCredits(inspectedTenant)}
-                  className="mt-2.5 text-[11px] font-medium text-[#06B6D4] hover:underline inline-flex items-center gap-1"
-                >
-                  <RotateCcw size={11} strokeWidth={1.5} /> Reset monthly AI credit balance to 0
-                </button>
+                <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleResetCreditsPersisted(inspectedTenant)}
+                    className="text-[11px] font-medium text-[#06B6D4] hover:underline inline-flex items-center gap-1"
+                  >
+                    <RotateCcw size={11} strokeWidth={1.5} /> Reset used to 0
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTopUpCredits(inspectedTenant, 5000)}
+                    className="text-[11px] font-medium text-emerald-500 hover:underline inline-flex items-center gap-1"
+                  >
+                    <Plus size={11} strokeWidth={1.75} /> Top-up +5,000 credits
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
+      </InspectorDrawer>
+
+      {/* Slide-Over System & API Configuration Status Drawer (Read-Only Env Diagnostics) */}
+      <InspectorDrawer
+        open={showEnvDrawer}
+        onClose={() => setShowEnvDrawer(false)}
+        title="System & API Configuration Status"
+        subtitle={
+          envCheckedAt
+            ? `Read-only server environment diagnostics · Checked ${new Date(envCheckedAt).toLocaleTimeString()}`
+            : 'Read-only server environment diagnostics (secret values are never exposed)'
+        }
+        footer={
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-[#6B7280] font-mono tabular-nums">
+              {envStatusItems.filter((i) => i.configured).length} / {envStatusItems.length} configured
+            </span>
+            <button
+              type="button"
+              onClick={loadEnvStatus}
+              disabled={envStatusLoading}
+              className="h-8 px-3 rounded-[7px] border border-[#E5E7EB] dark:border-white/[0.1] text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] inline-flex items-center gap-1.5"
+            >
+              <RefreshCw size={12} className={envStatusLoading ? 'animate-spin' : ''} /> Re-check Status
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-[12px]">
+          <p className="text-[11px] text-[#6B7280] leading-relaxed">
+            Configure missing provider keys in your deployment environment variables (see <code className="font-mono">.env.example</code>). Secret keys are kept strictly server-side and never rendered in the browser.
+          </p>
+          {envStatusLoading && envStatusItems.length === 0 ? (
+            <div className="py-10 text-center text-[#6B7280]">Checking server environment variables...</div>
+          ) : (
+            <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] overflow-hidden">
+              {envStatusItems.map((item) => (
+                <div key={item.key} className="px-3.5 py-2.5 flex items-start justify-between gap-3 bg-[#FFFFFF] dark:bg-[#13161D]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[#111827] dark:text-[#F3F4F6]">{item.label}</span>
+                      <span className="text-[10px] text-[#6B7280]">{item.category}</span>
+                    </div>
+                    <p className="font-mono text-[10px] text-[#6B7280] mt-0.5">{item.key}</p>
+                    <p className="text-[11px] text-[#6B7280] mt-0.5">{item.detail}</p>
+                  </div>
+                  <StatusBadge tone={item.configured ? 'emerald' : 'orange'}>
+                    {item.configured ? 'Configured' : 'Awaiting Key'}
+                  </StatusBadge>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </InspectorDrawer>
 
       {/* Focused Creation Modal: Provision Tenant */}
@@ -1902,6 +2112,20 @@ export function SuperAdminPanel({
                 </div>
               </div>
               <div>
+                <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                  Initial Account Password
+                </label>
+                <input
+                  required
+                  type="password"
+                  minLength={6}
+                  value={tenantForm.initialPassword}
+                  onChange={(e) => setTenantForm({ ...tenantForm, initialPassword: e.target.value })}
+                  placeholder="Minimum 6 characters (usable immediately at /login)"
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[8px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                />
+              </div>
+              <div>
                 <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Subscription Tier</label>
                 <select
                   value={tenantForm.plan}
@@ -1925,9 +2149,10 @@ export function SuperAdminPanel({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] font-medium transition-colors"
+                  disabled={provisioning}
+                  className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] disabled:opacity-50 text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] font-medium transition-colors"
                 >
-                  Create account
+                  {provisioning ? 'Provisioning...' : 'Create account'}
                 </button>
               </div>
             </form>

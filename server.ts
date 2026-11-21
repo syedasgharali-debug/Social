@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
+import { createSocialRouter } from './server/socialRoutes';
+import { createIntegrationsRouter } from './server/integrationsRoutes';
 
 dotenv.config();
 
@@ -37,6 +39,10 @@ interface StoredUser {
   displayName: string;
   companyName?: string;
   role: 'super_admin' | 'customer';
+  status?: 'active' | 'suspended';
+  plan?: string;
+  aiCreditsUsed?: number;
+  aiCreditsLimit?: number;
   salt: string;
   passwordHash: string;
   createdAt: string;
@@ -168,22 +174,55 @@ function extractBearerUser(req: express.Request): StoredUser | null {
   return users.find((u) => u.uid === payload.uid) || null;
 }
 
+function isStrictSuperAdminUser(u: StoredUser | null): boolean {
+  return Boolean(u && u.email.toLowerCase() === 'essadhiif@gmail.com' && u.role === 'super_admin');
+}
+
+function readWorkspaceByUid(uid: string): Record<string, unknown> | null {
+  ensureDataDirs();
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
+  try {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+  } catch {
+    // fall back to memory cache
+  }
+  return memoryWorkspaces.get(safeUid) || null;
+}
+
+function writeWorkspaceByUid(uid: string, payload: Record<string, unknown>) {
+  ensureDataDirs();
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '');
+  memoryWorkspaces.set(safeUid, payload);
+  const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf8');
+  } catch {
+    // In-memory store retains workspace when FS is read-only
+  }
+}
+
 function toPublicUser(u: StoredUser) {
-  const isStrictSuperAdmin =
-    u.email.toLowerCase() === 'essadhiif@gmail.com' && u.role === 'super_admin';
+  const isStrictSuperAdmin = isStrictSuperAdminUser(u);
   return {
     uid: u.uid,
     email: u.email,
     displayName: u.displayName,
     companyName: u.companyName || '',
     role: isStrictSuperAdmin ? ('super_admin' as const) : ('customer' as const),
+    status: u.status || 'active',
+    plan: u.plan || 'bootstrap',
     isAdmin: isStrictSuperAdmin,
     createdAt: u.createdAt,
   };
 }
 
-// Initialize auth user store on boot
+// Initialize auth user store on boot & mount real OAuth + Integration routers
 loadUsers();
+app.use('/api/social', createSocialRouter(TOKEN_SECRET));
+app.use('/api', createIntegrationsRouter(DATA_DIR));
 
 app.post('/api/auth/signup', (req, res) => {
   const { displayName, email, password, companyName } = req.body || {};
@@ -256,6 +295,12 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password. Please check your credentials and try again.' });
   }
 
+  if (found.status === 'suspended' && !isStrictSuperAdminUser(found)) {
+    return res.status(403).json({
+      error: 'This account has been suspended by an administrator. Contact support@socialifyai.com to restore access.',
+    });
+  }
+
   const token = createSessionToken({
     uid: found.uid,
     email: found.email,
@@ -274,6 +319,9 @@ app.get('/api/auth/me', (req, res) => {
   if (!user) {
     return res.status(401).json({ error: 'Session expired or invalid.' });
   }
+  if (user.status === 'suspended' && !isStrictSuperAdminUser(user)) {
+    return res.status(403).json({ error: 'Account suspended. Access revoked.' });
+  }
   return res.json({ user: toPublicUser(user) });
 });
 
@@ -285,70 +333,56 @@ app.post('/api/auth/logout', (_req, res) => {
 app.get('/api/workspace', (req, res) => {
   const user = extractBearerUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  ensureDataDirs();
-  const safeUid = user.uid.replace(/[^a-zA-Z0-9_-]/g, '');
-  const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
-  try {
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      return res.json({ exists: true, data });
-    }
-  } catch {
-    // Fall back to in-memory cache
+  if (user.status === 'suspended' && !isStrictSuperAdminUser(user)) {
+    return res.status(403).json({ error: 'Account suspended.' });
   }
-  if (memoryWorkspaces.has(safeUid)) {
-    return res.json({ exists: true, data: memoryWorkspaces.get(safeUid) });
-  }
+  const data = readWorkspaceByUid(user.uid);
+  if (data) return res.json({ exists: true, data });
   return res.json({ exists: false, data: null });
 });
 
 app.put('/api/workspace', (req, res) => {
   const user = extractBearerUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  ensureDataDirs();
-  const safeUid = user.uid.replace(/[^a-zA-Z0-9_-]/g, '');
-  const payload = (req.body || {}) as Record<string, unknown>;
-  memoryWorkspaces.set(safeUid, payload);
-  const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf8');
-  } catch {
-    // In-memory store retains workspace when FS is read-only
+  if (user.status === 'suspended' && !isStrictSuperAdminUser(user)) {
+    return res.status(403).json({ error: 'Account suspended.' });
   }
+  const payload = (req.body || {}) as Record<string, unknown>;
+  writeWorkspaceByUid(user.uid, payload);
   return res.json({ ok: true });
 });
 
-// Super Admin endpoint: list real registered customer accounts & persisted workspace counts
+// Super Admin endpoints: real registered customer accounts, provisioning, suspension, quotas, impersonation & env status
+const PLAN_CREDIT_DEFAULTS: Record<string, number> = {
+  bootstrap: 5000,
+  accelerate: 25000,
+  pro_agency: 100000,
+  lifetime: 100000,
+};
+
 app.get('/api/admin/users', (req, res) => {
   const user = extractBearerUser(req);
-  const isStrictSuperAdmin =
-    Boolean(user) &&
-    user!.email.toLowerCase() === 'essadhiif@gmail.com' &&
-    user!.role === 'super_admin';
-  if (!isStrictSuperAdmin) {
+  if (!isStrictSuperAdminUser(user)) {
     return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
   }
 
-  ensureDataDirs();
   const users = loadUsers().filter((u) => u.role !== 'super_admin');
   const records = users.map((u) => {
-    const safeUid = u.uid.replace(/[^a-zA-Z0-9_-]/g, '');
-    let wsData: Record<string, unknown> | null = memoryWorkspaces.get(safeUid) || null;
-    if (!wsData) {
-      const filePath = path.join(WORKSPACES_DIR, `${safeUid}.json`);
-      try {
-        if (fs.existsSync(filePath)) {
-          wsData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        }
-      } catch {
-        wsData = null;
-      }
-    }
-
+    const wsData = readWorkspaceByUid(u.uid);
     const workspaces = Array.isArray(wsData?.workspaces) ? wsData.workspaces : [];
     const connectedProfiles = Array.isArray(wsData?.connectedProfiles) ? wsData.connectedProfiles : [];
     const posts = Array.isArray(wsData?.posts) ? wsData.posts : [];
-    const selectedPlan = typeof wsData?.selectedPlan === 'string' ? wsData.selectedPlan : 'bootstrap';
+    const selectedPlan =
+      u.plan || (typeof wsData?.selectedPlan === 'string' ? wsData.selectedPlan : 'bootstrap');
+    const activeWsId =
+      typeof wsData?.activeWorkspaceId === 'string'
+        ? wsData.activeWorkspaceId
+        : (workspaces[0] as { id?: string } | undefined)?.id || 'ws-default';
+    const wsCreditsMap =
+      wsData?.workspaceCredits && typeof wsData.workspaceCredits === 'object'
+        ? (wsData.workspaceCredits as Record<string, { used?: number; limit?: number }>)
+        : {};
+    const wsCredit = wsCreditsMap[activeWsId];
 
     return {
       uid: u.uid,
@@ -356,9 +390,23 @@ app.get('/api/admin/users', (req, res) => {
       displayName: u.displayName,
       companyName: u.companyName || `${u.displayName}'s Workspace`,
       createdAt: u.createdAt,
+      status: u.status || 'active',
       plan: selectedPlan,
+      linkedWorkspaceId: activeWsId,
       workspacesCount: Math.max(1, workspaces.length),
       profilesUsed: connectedProfiles.length,
+      aiCreditsUsed:
+        typeof u.aiCreditsUsed === 'number'
+          ? u.aiCreditsUsed
+          : typeof wsCredit?.used === 'number'
+          ? wsCredit.used
+          : 0,
+      aiCreditsLimit:
+        typeof u.aiCreditsLimit === 'number'
+          ? u.aiCreditsLimit
+          : typeof wsCredit?.limit === 'number'
+          ? wsCredit.limit
+          : PLAN_CREDIT_DEFAULTS[selectedPlan] || 5000,
       scheduledPostsCount: posts.filter(
         (p: { status?: string }) => p.status === 'scheduled' || p.status === 'approved'
       ).length,
@@ -366,6 +414,361 @@ app.get('/api/admin/users', (req, res) => {
   });
 
   return res.json({ users: records });
+});
+
+app.post('/api/admin/users', (req, res) => {
+  const admin = extractBearerUser(req);
+  if (!isStrictSuperAdminUser(admin)) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+
+  const { displayName, email, password, companyName, plan } = req.body || {};
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanName = String(displayName || '').trim();
+  const cleanPassword = String(password || '');
+  const cleanCompany = String(companyName || cleanName || '').trim().slice(0, 80);
+  const validPlans = new Set(['bootstrap', 'accelerate', 'pro_agency', 'lifetime']);
+  const cleanPlan = validPlans.has(String(plan)) ? String(plan) : 'accelerate';
+
+  if (!cleanName || cleanName.length < 2) {
+    return res.status(400).json({ error: 'Display name must be at least 2 characters.' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+  if (cleanPassword.length < 6) {
+    return res.status(400).json({ error: 'Initial password must be at least 6 characters.' });
+  }
+
+  const users = loadUsers();
+  if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
+    return res.status(409).json({ error: 'An account with this email already exists.' });
+  }
+
+  const salt = crypto.randomBytes(16).toString('hex');
+  const uid = `usr_${crypto.randomBytes(8).toString('hex')}`;
+  const creditLimit = PLAN_CREDIT_DEFAULTS[cleanPlan] || 25000;
+  const newUser: StoredUser = {
+    uid,
+    email: cleanEmail,
+    displayName: cleanName.slice(0, 120),
+    companyName: cleanCompany,
+    role: 'customer',
+    status: 'active',
+    plan: cleanPlan,
+    aiCreditsUsed: 0,
+    aiCreditsLimit: creditLimit,
+    salt,
+    passwordHash: hashPassword(cleanPassword, salt),
+    createdAt: new Date().toISOString(),
+  };
+  users.push(newUser);
+  saveUsers(users);
+
+  const wsId = `ws_${crypto.randomBytes(4).toString('hex')}`;
+  writeWorkspaceByUid(uid, {
+    activeWorkspaceId: wsId,
+    activeRole: 'Owner',
+    selectedPlan: cleanPlan,
+    darkMode: true,
+    workspaces: [
+      {
+        id: wsId,
+        name: cleanCompany || `${cleanName}'s Workspace`,
+        slug: (cleanCompany || cleanName).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) || 'workspace',
+        brandColor: '#06B6D4',
+        logoInitials: (cleanCompany || cleanName).slice(0, 2).toUpperCase(),
+        industry: 'Digital Marketing',
+        timezone: 'UTC',
+      },
+    ],
+    workspaceCredits: {
+      [wsId]: { used: 0, limit: creditLimit, lastResetAt: new Date().toISOString() },
+    },
+    connectedProfiles: [],
+    teamMembers: [
+      {
+        id: `tm_${uid}`,
+        workspaceId: wsId,
+        name: cleanName,
+        email: cleanEmail,
+        role: 'Owner',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=06B6D4&color=090A0D`,
+        status: 'active',
+        permissions: { canPublish: true, canApprove: true, canManageTeam: true, canConnectProfiles: true },
+      },
+    ],
+    categories: [],
+    contacts: [],
+    threads: [],
+    deals: [],
+    posts: [],
+    ads: [],
+    drafts: [],
+    discoveryAlerts: [],
+    youtubeChannels: [],
+    youtubeVideos: [],
+    seoArticles: [],
+    cmsConnectors: [],
+    rssSources: [],
+    curatedItems: [],
+    ecommerceFeeds: [],
+    viralCampaigns: [],
+    approvalAuditLogs: [],
+  });
+
+  return res.status(201).json({
+    ok: true,
+    user: {
+      uid: newUser.uid,
+      email: newUser.email,
+      displayName: newUser.displayName,
+      companyName: newUser.companyName,
+      status: newUser.status,
+      plan: newUser.plan,
+      linkedWorkspaceId: wsId,
+      aiCreditsUsed: 0,
+      aiCreditsLimit: creditLimit,
+      createdAt: newUser.createdAt,
+    },
+  });
+});
+
+app.patch('/api/admin/users/:uid', (req, res) => {
+  const admin = extractBearerUser(req);
+  if (!isStrictSuperAdminUser(admin)) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+
+  const targetUid = String(req.params.uid || '').trim();
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.uid === targetUid && u.role !== 'super_admin');
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Customer account not found.' });
+  }
+
+  const target = users[idx];
+  const { status, plan, aiCreditsUsed, aiCreditsLimit, creditTopUp } = req.body || {};
+
+  if (status === 'active' || status === 'suspended') {
+    target.status = status;
+  }
+  const validPlans = new Set(['bootstrap', 'accelerate', 'pro_agency', 'lifetime']);
+  if (typeof plan === 'string' && validPlans.has(plan)) {
+    target.plan = plan;
+    if (typeof aiCreditsLimit !== 'number' && typeof creditTopUp !== 'number') {
+      target.aiCreditsLimit = PLAN_CREDIT_DEFAULTS[plan] || target.aiCreditsLimit || 5000;
+    }
+  }
+  if (typeof aiCreditsUsed === 'number' && aiCreditsUsed >= 0) {
+    target.aiCreditsUsed = Math.round(aiCreditsUsed);
+  }
+  if (typeof aiCreditsLimit === 'number' && aiCreditsLimit > 0) {
+    target.aiCreditsLimit = Math.round(aiCreditsLimit);
+  }
+  if (typeof creditTopUp === 'number' && creditTopUp !== 0) {
+    const currentLimit = target.aiCreditsLimit || PLAN_CREDIT_DEFAULTS[target.plan || 'bootstrap'] || 5000;
+    target.aiCreditsLimit = Math.max(1000, currentLimit + Math.round(creditTopUp));
+  }
+
+  users[idx] = target;
+  saveUsers(users);
+
+  // Sync updated plan & credit metering into the tenant's workspace file
+  const existingWs = readWorkspaceByUid(targetUid);
+  if (existingWs) {
+    const activeWsId = String(existingWs.activeWorkspaceId || 'ws-default');
+    const prevCredits =
+      existingWs.workspaceCredits && typeof existingWs.workspaceCredits === 'object'
+        ? { ...(existingWs.workspaceCredits as Record<string, Record<string, unknown>>) }
+        : {};
+    const currWsCredit = prevCredits[activeWsId] || {};
+    prevCredits[activeWsId] = {
+      ...currWsCredit,
+      used: target.aiCreditsUsed ?? (typeof currWsCredit.used === 'number' ? currWsCredit.used : 0),
+      limit: target.aiCreditsLimit ?? (typeof currWsCredit.limit === 'number' ? currWsCredit.limit : 5000),
+      lastResetAt:
+        aiCreditsUsed === 0 ? new Date().toISOString() : (currWsCredit.lastResetAt as string) || new Date().toISOString(),
+    };
+    writeWorkspaceByUid(targetUid, {
+      ...existingWs,
+      selectedPlan: target.plan || existingWs.selectedPlan || 'bootstrap',
+      workspaceCredits: prevCredits,
+    });
+  }
+
+  return res.json({
+    ok: true,
+    user: {
+      uid: target.uid,
+      email: target.email,
+      displayName: target.displayName,
+      companyName: target.companyName,
+      status: target.status || 'active',
+      plan: target.plan || 'bootstrap',
+      aiCreditsUsed: target.aiCreditsUsed ?? 0,
+      aiCreditsLimit: target.aiCreditsLimit ?? PLAN_CREDIT_DEFAULTS[target.plan || 'bootstrap'] ?? 5000,
+    },
+  });
+});
+
+app.get('/api/admin/users/:uid/workspace', (req, res) => {
+  const admin = extractBearerUser(req);
+  if (!isStrictSuperAdminUser(admin)) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+  const targetUid = String(req.params.uid || '').trim();
+  const target = loadUsers().find((u) => u.uid === targetUid);
+  if (!target) {
+    return res.status(404).json({ error: 'Target customer account not found.' });
+  }
+  const data = readWorkspaceByUid(targetUid);
+  return res.json({
+    exists: Boolean(data),
+    user: toPublicUser(target),
+    data,
+  });
+});
+
+app.put('/api/admin/users/:uid/workspace', (req, res) => {
+  const admin = extractBearerUser(req);
+  if (!isStrictSuperAdminUser(admin)) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+  const targetUid = String(req.params.uid || '').trim();
+  const target = loadUsers().find((u) => u.uid === targetUid);
+  if (!target) {
+    return res.status(404).json({ error: 'Target customer account not found.' });
+  }
+  const payload = (req.body || {}) as Record<string, unknown>;
+  writeWorkspaceByUid(targetUid, payload);
+  return res.json({ ok: true });
+});
+
+app.get('/api/admin/env-status', (req, res) => {
+  const admin = extractBearerUser(req);
+  if (!isStrictSuperAdminUser(admin)) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+
+  let firebaseProjectConfigured = Boolean(process.env.FIREBASE_PROJECT_ID);
+  if (!firebaseProjectConfigured) {
+    try {
+      const cfgPath = path.resolve(__dirname, 'firebase-applet-config.json');
+      if (fs.existsSync(cfgPath)) {
+        const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        firebaseProjectConfigured = Boolean(cfg?.projectId && cfg?.apiKey);
+      }
+    } catch {
+      firebaseProjectConfigured = false;
+    }
+  }
+
+  const check = (envKey: string) => {
+    const val = (process.env[envKey] || '').trim();
+    return Boolean(val && !val.startsWith('MY_') && !val.startsWith('your_'));
+  };
+
+  const items = [
+    {
+      key: 'FIREBASE_PROJECT_ID',
+      label: 'Firebase Auth & Firestore',
+      category: 'Core Infrastructure',
+      configured: firebaseProjectConfigured,
+      detail: firebaseProjectConfigured ? 'Connected via firebase-applet-config.json' : 'Firebase project config missing',
+    },
+    {
+      key: 'GEMINI_API_KEY',
+      label: 'Gemini AI Generation Engine',
+      category: 'AI Engine',
+      configured: check('GEMINI_API_KEY'),
+      detail: check('GEMINI_API_KEY') ? 'Server-side Gemini SDK active' : 'Set GEMINI_API_KEY in server environment',
+    },
+    {
+      key: 'APP_URL',
+      label: 'Public App Callback URL',
+      category: 'Core Infrastructure',
+      configured: check('APP_URL'),
+      detail: check('APP_URL') ? 'Explicit OAuth redirect origin set' : 'Using dynamic request Host header',
+    },
+    {
+      key: 'YOUTUBE_CLIENT_ID',
+      label: 'YouTube Data API v3 (OAuth)',
+      category: 'Social OAuth',
+      configured: check('YOUTUBE_CLIENT_ID') && check('YOUTUBE_CLIENT_SECRET'),
+      detail: 'Requires YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET',
+    },
+    {
+      key: 'META_APP_ID',
+      label: 'Meta Graph API (Instagram & Facebook)',
+      category: 'Social OAuth',
+      configured: check('META_APP_ID') && check('META_APP_SECRET'),
+      detail: 'Requires META_APP_ID + META_APP_SECRET',
+    },
+    {
+      key: 'X_CLIENT_ID',
+      label: 'X / Twitter API v2 (OAuth PKCE)',
+      category: 'Social OAuth',
+      configured: check('X_CLIENT_ID') && check('X_CLIENT_SECRET'),
+      detail: 'Requires X_CLIENT_ID + X_CLIENT_SECRET',
+    },
+    {
+      key: 'LINKEDIN_CLIENT_ID',
+      label: 'LinkedIn Marketing API (OAuth)',
+      category: 'Social OAuth',
+      configured: check('LINKEDIN_CLIENT_ID') && check('LINKEDIN_CLIENT_SECRET'),
+      detail: 'Requires LINKEDIN_CLIENT_ID + LINKEDIN_CLIENT_SECRET',
+    },
+    {
+      key: 'TIKTOK_CLIENT_KEY',
+      label: 'TikTok Content Posting API',
+      category: 'Social OAuth',
+      configured: check('TIKTOK_CLIENT_KEY') && check('TIKTOK_CLIENT_SECRET'),
+      detail: 'Requires TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET',
+    },
+    {
+      key: 'PINTEREST_APP_ID',
+      label: 'Pinterest API v5 (OAuth)',
+      category: 'Social OAuth',
+      configured: check('PINTEREST_APP_ID') && check('PINTEREST_APP_SECRET'),
+      detail: 'Requires PINTEREST_APP_ID + PINTEREST_APP_SECRET',
+    },
+    {
+      key: 'THREADS_APP_ID',
+      label: 'Meta Threads API (OAuth)',
+      category: 'Social OAuth',
+      configured: check('THREADS_APP_ID') && check('THREADS_APP_SECRET'),
+      detail: 'Requires THREADS_APP_ID + THREADS_APP_SECRET',
+    },
+    {
+      key: 'GBP_CLIENT_ID',
+      label: 'Google Business Profile API',
+      category: 'Social OAuth',
+      configured: check('GBP_CLIENT_ID') && check('GBP_CLIENT_SECRET'),
+      detail: 'Requires GBP_CLIENT_ID + GBP_CLIENT_SECRET',
+    },
+    {
+      key: 'BLUESKY_ATPROTO',
+      label: 'Bluesky AT Protocol (App Password)',
+      category: 'Social OAuth',
+      configured: true,
+      detail: 'Live out-of-the-box via bsky.social com.atproto.server.createSession',
+    },
+    {
+      key: 'STRIPE_SECRET_KEY',
+      label: 'Stripe Billing & Webhooks',
+      category: 'Billing',
+      configured: check('STRIPE_SECRET_KEY'),
+      detail: 'Requires STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET',
+    },
+  ];
+
+  return res.json({
+    checkedAt: new Date().toISOString(),
+    configuredCount: items.filter((i) => i.configured).length,
+    totalCount: items.length,
+    items,
+  });
 });
 
 // Global platform governance config (quotas + feature flags): readable by any signed-in user, writable strictly by Super Admin
@@ -446,12 +849,95 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+function guardAiRequest(req: express.Request, res: express.Response, creditCost = 25): GoogleGenAI | null {
+  const user = extractBearerUser(req);
+  if (user && user.status === 'suspended' && !isStrictSuperAdminUser(user)) {
+    res.status(403).json({ error: 'Your account is suspended. Contact an administrator to restore AI access.' });
+    return null;
+  }
+  if (user && !isStrictSuperAdminUser(user)) {
+    const limit = user.aiCreditsLimit ?? PLAN_CREDIT_DEFAULTS[user.plan || 'bootstrap'] ?? 5000;
+    const used = user.aiCreditsUsed ?? 0;
+    if (used + creditCost > limit) {
+      res.status(402).json({
+        error: `Workspace AI credit quota reached (${used.toLocaleString()} / ${limit.toLocaleString()} credits). Upgrade plan or request a top-up.`,
+        code: 'CREDIT_LIMIT_REACHED',
+      });
+      return null;
+    }
+  }
+  const ai = getAiClient();
+  if (!ai) {
+    res.status(503).json({
+      error: 'Missing API Key: GEMINI_API_KEY is not configured on the server.',
+      code: 'MISSING_API_KEY',
+      envVar: 'GEMINI_API_KEY',
+    });
+    return null;
+  }
+  return ai;
+}
+
+function recordServerAiCredits(req: express.Request, creditCost: number) {
+  const user = extractBearerUser(req);
+  if (!user || isStrictSuperAdminUser(user)) return;
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.uid === user.uid);
+  if (idx !== -1) {
+    users[idx].aiCreditsUsed = (users[idx].aiCreditsUsed ?? 0) + creditCost;
+    saveUsers(users);
+  }
+}
+
+app.post('/api/ai/generate', async (req, res) => {
+  try {
+    const { task, prompt, context } = req.body || {};
+    const taskName = String(task || '').trim();
+    const costMap: Record<string, number> = {
+      youtube_ideation: 50,
+      youtube_script: 150,
+      seo_article: 250,
+      social_captions: 40,
+      hashtags: 20,
+      inbox_reply: 30,
+      rss_repurpose: 45,
+      thread_summary: 25,
+      lead_score: 25,
+      ad_copy: 60,
+      analyst: 35,
+    };
+    const creditCost = costMap[taskName] || 30;
+    const ai = guardAiRequest(req, res, creditCost);
+    if (!ai) return;
+
+    if (!taskName || !prompt) {
+      return res.status(400).json({ error: 'Both "task" and "prompt" fields are required.' });
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: `Task: ${taskName}\nContext: ${context ? JSON.stringify(context).slice(0, 3500) : 'None'}\nPrompt:\n${String(prompt).slice(0, 6000)}`,
+    });
+
+    recordServerAiCredits(req, creditCost);
+    return res.json({
+      ok: true,
+      task: taskName,
+      creditsUsed: creditCost,
+      text: response.text || '',
+    });
+  } catch (error) {
+    console.error('Unified /api/ai/generate error:', error);
+    return res.status(502).json({
+      error: error instanceof Error ? error.message : 'AI generation failed upstream. Please retry.',
+    });
+  }
+});
+
 app.post('/api/ai/reply-drafts', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) {
-      return res.status(200).json({ fallback: true });
-    }
+    const ai = guardAiRequest(req, res, 30);
+    if (!ai) return;
     const { contactName, contactTitle, tags, messages } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-4-hydrogen',
@@ -471,17 +957,18 @@ Conversation:\n${(messages || []).map((m: { senderName: string; text: string }) 
         },
       },
     });
+    recordServerAiCredits(req, 30);
     return res.json({ fallback: false, data: JSON.parse(response.text || '{}') });
   } catch (error) {
     console.error('AI reply-drafts error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'Failed to generate AI reply drafts from Gemini API.' });
   }
 });
 
 app.post('/api/ai/summarize-thread', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) return res.status(200).json({ fallback: true });
+    const ai = guardAiRequest(req, res, 25);
+    if (!ai) return;
     const { messages } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-4-hydrogen',
@@ -502,17 +989,18 @@ Thread:\n${(messages || []).map((m: { senderName: string; text: string }) => `${
         },
       },
     });
+    recordServerAiCredits(req, 25);
     return res.json({ fallback: false, data: JSON.parse(response.text || '{}') });
   } catch (error) {
     console.error('AI summarize-thread error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'Failed to summarize conversation thread via Gemini API.' });
   }
 });
 
 app.post('/api/ai/score-lead', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) return res.status(200).json({ fallback: true });
+    const ai = guardAiRequest(req, res, 25);
+    if (!ai) return;
     const { name, notes, tags, ltv, lifecycleStage } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-4-hydrogen',
@@ -536,17 +1024,18 @@ Notes: ${notes}`,
         },
       },
     });
+    recordServerAiCredits(req, 25);
     return res.json({ fallback: false, data: JSON.parse(response.text || '{}') });
   } catch (error) {
     console.error('AI score-lead error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'Failed to score lead via Gemini API.' });
   }
 });
 
 app.post('/api/ai/repurpose', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) return res.status(200).json({ fallback: true });
+    const ai = guardAiRequest(req, res, 40);
+    if (!ai) return;
     const { topic, tone } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-4-hydrogen',
@@ -568,17 +1057,18 @@ Include LinkedIn, X, Instagram, TikTok script hook, and 4 concise hashtags.`,
         },
       },
     });
+    recordServerAiCredits(req, 40);
     return res.json({ fallback: false, data: JSON.parse(response.text || '{}') });
   } catch (error) {
     console.error('AI repurpose error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'Failed to generate repurposed copy via Gemini API.' });
   }
 });
 
 app.post('/api/ai/bulk-drafts', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) return res.status(200).json({ fallback: true });
+    const ai = guardAiRequest(req, res, 80);
+    if (!ai) return;
     const { topic, audience, tone, platforms, count } = req.body;
     const draftCount = Math.min(10, Math.max(5, Number(count) || 7));
     const response = await ai.models.generateContent({
@@ -609,17 +1099,18 @@ Platforms: ${(platforms || []).join(', ')}`,
         },
       },
     });
+    recordServerAiCredits(req, 80);
     return res.json({ fallback: false, data: JSON.parse(response.text || '{}') });
   } catch (error) {
     console.error('AI bulk-drafts error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'Failed to generate bulk drafts via Gemini API.' });
   }
 });
 
 app.post('/api/ai/ad-copy', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) return res.status(200).json({ fallback: true });
+    const ai = guardAiRequest(req, res, 60);
+    if (!ai) return;
     const { platform, objective, audience } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-4-hydrogen',
@@ -649,17 +1140,18 @@ Audience: ${audience}`,
         },
       },
     });
+    recordServerAiCredits(req, 60);
     return res.json({ fallback: false, data: JSON.parse(response.text || '{}') });
   } catch (error) {
     console.error('AI ad-copy error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'Failed to generate ad copy variations via Gemini API.' });
   }
 });
 
 app.post('/api/ai/analyst', async (req, res) => {
   try {
-    const ai = getAiClient();
-    if (!ai) return res.status(200).json({ fallback: true });
+    const ai = guardAiRequest(req, res, 35);
+    if (!ai) return;
     const { summary, query } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-4-hydrogen',
@@ -667,10 +1159,11 @@ app.post('/api/ai/analyst', async (req, res) => {
 Workspace Summary: ${JSON.stringify(summary)}
 Question: ${query}`,
     });
+    recordServerAiCredits(req, 35);
     return res.json({ fallback: false, data: { answer: response.text || '' } });
   } catch (error) {
     console.error('AI analyst error:', error);
-    return res.status(200).json({ fallback: true });
+    return res.status(502).json({ error: 'AI Analyst query failed via Gemini API.' });
   }
 });
 
@@ -1621,14 +2114,12 @@ app.post('/api/ai/youtube-studio', async (req, res) => {
     const toneClean = String(tone || 'High-Retention & Practical').trim();
     const channelClean = String(channelName || 'YouTube Channel').trim();
 
-    const ai = getAiClient();
+    const ai = guardAiRequest(req, res, mode === 'ideation' ? 50 : 150);
+    if (!ai) return;
 
     if (mode === 'ideation') {
       if (!nicheClean || nicheClean.length < 2) {
         return res.status(400).json({ error: 'Enter a niche or keyword to generate YouTube concepts.' });
-      }
-      if (!ai) {
-        return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
       }
       const response = await ai.models.generateContent({
         model: 'gemini-4-hydrogen',
@@ -1753,10 +2244,8 @@ app.post('/api/ai/seo-article', async (req, res) => {
       return res.status(400).json({ error: 'Enter a target keyword to generate an SEO blog article.' });
     }
 
-    const ai = getAiClient();
-    if (!ai) {
-      return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
-    }
+    const ai = guardAiRequest(req, res, 250);
+    if (!ai) return;
 
     const scraped = urlClean ? await fetchWebPageSummary(urlClean) : null;
     const referenceBlock = scraped?.fetched
@@ -1907,65 +2396,7 @@ Requirements:
   }
 });
 
-app.post('/api/cms/publish', async (req, res) => {
-  try {
-    const { provider, endpointUrl, article } = req.body || {};
-    const endpointStr = String(endpointUrl || '').trim();
-    const parsedUrl = isSafePublicUrl(endpointStr);
-    if (!parsedUrl) {
-      return res.status(400).json({ error: 'Please configure a valid public http(s) CMS endpoint or webhook URL.' });
-    }
-
-    const publishedAt = new Date().toISOString();
-    if (provider === 'webhook') {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
-      try {
-        const response = await fetch(parsedUrl.toString(), {
-          method: 'POST',
-          signal: controller.signal,
-          headers: { 'Content-Type': 'application/json', 'User-Agent': 'SocialifyAI-CMS/1.0' },
-          body: JSON.stringify({ event: 'seo_article.published', publishedAt, article }),
-        });
-        if (!response.ok) {
-          return res.status(502).json({
-            error: `Remote webhook endpoint responded with HTTP ${response.status} (${response.statusText || 'Error'}). Verify endpoint URL and credentials.`,
-            httpStatus: response.status,
-            endpoint: parsedUrl.toString(),
-          });
-        }
-        return res.json({
-          ok: true,
-          dispatched: true,
-          httpStatus: response.status,
-          publishedAt,
-          endpoint: parsedUrl.toString(),
-        });
-      } catch (err) {
-        const isTimeout = err instanceof Error && err.name === 'AbortError';
-        return res.status(isTimeout ? 504 : 502).json({
-          error: isTimeout
-            ? 'Remote CMS webhook timed out after 6 seconds. Verify the server is reachable.'
-            : 'Could not reach the remote CMS webhook URL. Check DNS/TLS and firewall rules.',
-          endpoint: parsedUrl.toString(),
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-
-    return res.json({
-      ok: true,
-      dispatched: true,
-      httpStatus: 201,
-      publishedAt,
-      endpoint: parsedUrl.toString(),
-    });
-  } catch (error) {
-    console.error('cms-publish error:', error);
-    return res.status(500).json({ error: 'CMS publish dispatch failed.' });
-  }
-});
+// Note: POST /api/cms/publish is handled by createIntegrationsRouter (real WordPress, Webflow, Shopify, Ghost & Signed Webhook dispatch)
 
 app.post('/api/discover/fetch-rss', async (req, res) => {
   try {
@@ -2165,10 +2596,8 @@ app.post('/api/discover/repurpose', async (req, res) => {
   try {
     const { title, summary, url, platform, brandVoice, utmCampaign } = req.body || {};
     const targetPlatform = String(platform || 'linkedin').toLowerCase();
-    const ai = getAiClient();
-    if (!ai) {
-      return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
-    }
+    const ai = guardAiRequest(req, res, 45);
+    if (!ai) return;
 
     let trackedUrl = String(url || '').trim();
     const campaignTag = String(utmCampaign || 'curated_growth')

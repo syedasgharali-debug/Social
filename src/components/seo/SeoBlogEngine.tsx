@@ -16,6 +16,7 @@ import {
   X,
   Image as ImageIcon,
   PanelRightOpen,
+  ExternalLink,
 } from 'lucide-react';
 import {
   SeoArticle,
@@ -111,8 +112,14 @@ export function SeoBlogEngine({
     provider: 'wordpress' as CmsProvider,
     label: '',
     endpointUrl: '',
+    authCredential: '',
+    webhookSecret: '',
     autoSyndicateDefault: true,
   });
+  // Session-only in-memory credentials (never persisted to Firestore or localStorage)
+  const [sessionCredentials, setSessionCredentials] = useState<
+    Record<string, { authCredential?: string; webhookSecret?: string }>
+  >({});
 
   const activeArticle = useMemo(
     () => wsArticles.find((a) => a.id === selectedArticleId) || wsArticles[0] || null,
@@ -284,10 +291,14 @@ export function SeoBlogEngine({
     setPublishing(true);
     try {
       const targetConnector = connector || wsConnectors.find((c) => c.status === 'connected');
+      let publishDetail = 'Marked published';
       if (targetConnector) {
+        const creds = sessionCredentials[targetConnector.id] || {};
         const res = await aiService.publishArticleToCms({
           provider: targetConnector.provider,
           endpointUrl: targetConnector.endpointUrl,
+          authCredential: creds.authCredential || undefined,
+          webhookSecret: creds.webhookSecret || undefined,
           article: {
             title: article.title,
             slug: article.slug,
@@ -298,7 +309,16 @@ export function SeoBlogEngine({
             schemaFaq: article.schemaFaq,
           },
         });
-        onUpdateConnector({ ...targetConnector, lastPublishedAt: res.publishedAt });
+        onUpdateConnector({
+          ...targetConnector,
+          lastPublishedAt: res.publishedAt,
+          lastHttpStatus: res.httpStatus,
+          lastPublishedUrl: res.publishedUrl,
+          lastError: undefined,
+        });
+        publishDetail = `Dispatched to ${targetConnector.label} (HTTP ${res.httpStatus})${
+          res.publishedUrl ? ` · ${res.publishedUrl}` : ''
+        }`;
       }
 
       let syndicatedPostIds = article.syndicatedPostIds || [];
@@ -320,13 +340,18 @@ export function SeoBlogEngine({
 
       onToast(
         'Article Published',
-        `${targetConnector ? `Sent to ${targetConnector.label}` : 'Marked published'}${
+        `${publishDetail}${
           syndicatedCount > 0 ? ` and auto-syndicated ${syndicatedCount} posts to Visual Scheduler.` : '.'
         }`,
         'success'
       );
     } catch (err) {
-      onToast('Publish Error', err instanceof Error ? err.message : 'CMS dispatch failed.', 'warning');
+      const errMsg = err instanceof Error ? err.message : 'CMS dispatch failed.';
+      const targetConnector = connector || wsConnectors.find((c) => c.status === 'connected');
+      if (targetConnector) {
+        onUpdateConnector({ ...targetConnector, lastError: errMsg });
+      }
+      onToast('Publish Error', errMsg, 'warning');
     } finally {
       setPublishing(false);
     }
@@ -351,10 +376,26 @@ export function SeoBlogEngine({
       status: 'connected',
       autoSyndicateDefault: connectorForm.autoSyndicateDefault,
     };
+    if (connectorForm.authCredential.trim() || connectorForm.webhookSecret.trim()) {
+      setSessionCredentials((prev) => ({
+        ...prev,
+        [created.id]: {
+          authCredential: connectorForm.authCredential.trim() || undefined,
+          webhookSecret: connectorForm.webhookSecret.trim() || undefined,
+        },
+      }));
+    }
     onAddConnector(created);
     setShowConnectorModal(false);
     setConnectorUrlError(null);
-    setConnectorForm({ provider: 'wordpress', label: '', endpointUrl: '', autoSyndicateDefault: true });
+    setConnectorForm({
+      provider: 'wordpress',
+      label: '',
+      endpointUrl: '',
+      authCredential: '',
+      webhookSecret: '',
+      autoSyndicateDefault: true,
+    });
     onToast('CMS Connector Added', `${created.label} (${PROVIDER_LABELS[created.provider]}) connected.`, 'success');
   };
 
@@ -940,6 +981,50 @@ export function SeoBlogEngine({
                       </div>
                     </div>
                     <p className="font-mono text-[11px] text-[#4B5563] dark:text-[#9CA3AF] truncate">{c.endpointUrl}</p>
+                    {(c.lastHttpStatus || c.lastPublishedUrl || c.lastError) && (
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {c.lastHttpStatus && (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono text-[10px]">
+                              HTTP {c.lastHttpStatus}
+                            </span>
+                          )}
+                          {c.lastPublishedUrl && (
+                            <a
+                              href={c.lastPublishedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[#06B6D4] hover:underline font-mono truncate max-w-[200px]"
+                            >
+                              View Published <ExternalLink size={10} strokeWidth={1.5} />
+                            </a>
+                          )}
+                        </div>
+                        {c.lastError && (
+                          <p className="text-rose-500 text-[11px] line-clamp-2">{c.lastError}</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="pt-1">
+                      <input
+                        type="password"
+                        value={sessionCredentials[c.id]?.authCredential || ''}
+                        onChange={(e) =>
+                          setSessionCredentials((prev) => ({
+                            ...prev,
+                            [c.id]: { ...prev[c.id], authCredential: e.target.value },
+                          }))
+                        }
+                        placeholder={
+                          c.provider === 'wordpress'
+                            ? 'Session auth: user:app_password (optional)'
+                            : c.provider === 'webhook'
+                              ? 'Session Bearer token (optional)'
+                              : 'Session CMS API token (in-memory only)'
+                        }
+                        className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded text-[11px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                      />
+                    </div>
                     <div className="flex items-center justify-between pt-2.5 border-t border-[#E5E7EB] dark:border-white/[0.08] text-[11px]">
                       <span className="text-[#6B7280] font-mono">
                         {c.lastPublishedAt
@@ -1252,6 +1337,36 @@ export function SeoBlogEngine({
                   <p className="mt-1 text-[11px] text-rose-500 font-medium">{connectorUrlError}</p>
                 )}
               </div>
+              <div>
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                  CMS Auth Token / App Password (Optional · Session Only)
+                </label>
+                <input
+                  type="password"
+                  value={connectorForm.authCredential}
+                  onChange={(e) => setConnectorForm({ ...connectorForm, authCredential: e.target.value })}
+                  placeholder={
+                    connectorForm.provider === 'wordpress'
+                      ? 'username:xxxx xxxx xxxx xxxx'
+                      : 'API token (kept in memory only, never saved to DB)'
+                  }
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                />
+              </div>
+              {connectorForm.provider === 'webhook' && (
+                <div>
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                    Webhook HMAC-SHA256 Signing Secret (Optional)
+                  </label>
+                  <input
+                    type="password"
+                    value={connectorForm.webhookSecret}
+                    onChange={(e) => setConnectorForm({ ...connectorForm, webhookSecret: e.target.value })}
+                    placeholder="Signs X-Socialify-Signature header"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                  />
+                </div>
+              )}
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"

@@ -14,7 +14,7 @@ interface DraftsWorkspaceProps {
   onDeleteDraft: (id: string) => void;
   onEditInComposer: (draft: Draft) => void;
   onScheduleDraft: (draft: Draft, scheduledAt: string, categoryId?: string) => void;
-  onToast: (title: string, description?: string) => void;
+  onToast: (title: string, description?: string, variant?: 'success' | 'info' | 'warning') => void;
 }
 
 const STATUS_LABELS: Record<DraftStatus, string> = {
@@ -88,6 +88,12 @@ export function DraftsWorkspace({
       onAddDrafts(generated);
       onToast('Bulk Drafts Generated', `Created ${generated.length} platform-native drafts.`);
       setTopic('');
+    } catch (err) {
+      onToast(
+        'AI Bulk Generation Unavailable',
+        err instanceof Error ? err.message : 'Unable to generate drafts right now.',
+        'warning'
+      );
     } finally {
       setBulkLoading(false);
     }

@@ -29,7 +29,11 @@
         },
         "activeRole": {
           "type": "string",
-          "enum": ["Owner", "Manager", "Publisher", "Contributor"]
+          "enum": ["Owner", "Admin", "Editor", "Client Approver", "Manager", "Publisher", "Contributor"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "suspended"]
         },
         "createdAt": {
           "type": "string",
@@ -59,7 +63,7 @@
         },
         "activeRole": {
           "type": "string",
-          "enum": ["Owner", "Manager", "Publisher", "Contributor"]
+          "enum": ["Owner", "Admin", "Editor", "Client Approver", "Manager", "Publisher", "Contributor"]
         },
         "selectedPlan": {
           "type": "string",
@@ -147,6 +151,10 @@
         "workspaceCredits": {
           "type": "object",
           "description": "Workspace-scoped AI credit consumption map"
+        },
+        "approvalAuditLogs": {
+          "type": "array",
+          "description": "Post approval queue audit trail (max 200)"
         },
         "createdAt": {
           "type": "string",
@@ -297,6 +305,44 @@
         }
       },
       "required": ["updatedBy", "aiGovernance", "featureFlags", "createdAt", "updatedAt"]
+    },
+    "WorkspaceMember": {
+      "title": "WorkspaceMember",
+      "description": "Workspace team member with role-based publishing and approval permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "workspaceId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "role": { "type": "string", "enum": ["Owner", "Admin", "Editor", "Client Approver", "Manager", "Publisher", "Contributor"] },
+        "status": { "type": "string", "enum": ["active", "invited"] },
+        "permissions": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "workspaceId", "name", "email", "role", "status", "createdAt", "updatedAt"]
+    },
+    "SocialConnection": {
+      "title": "SocialConnection",
+      "description": "Connected social media network profile metadata scoped to a workspace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "workspaceId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "platform": { "type": "string", "maxLength": 32 },
+        "accountName": { "type": "string", "maxLength": 160 },
+        "handle": { "type": "string", "maxLength": 160 },
+        "status": { "type": "string", "enum": ["connected", "needs_reauth", "disconnected"] },
+        "authMethod": { "type": "string", "enum": ["oauth2", "app_password", "manual"] },
+        "followers": { "type": "number" },
+        "lastSynced": { "type": "string", "maxLength": 80 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "workspaceId", "platform", "accountName", "handle", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -307,6 +353,14 @@
     "/users/{userId}/workspaces/{workspaceDocId}": {
       "schema": { "$ref": "#/entities/WorkspaceSnapshot" },
       "description": "User-owned cloud-synced workspace snapshot"
+    },
+    "/users/{userId}/workspaces/{workspaceDocId}/workspaceMembers/{memberId}": {
+      "schema": { "$ref": "#/entities/WorkspaceMember" },
+      "description": "Workspace-scoped team members and role permissions"
+    },
+    "/users/{userId}/workspaces/{workspaceDocId}/socialConnections/{connectionId}": {
+      "schema": { "$ref": "#/entities/SocialConnection" },
+      "description": "Workspace-scoped OAuth and App Password social connections"
     },
     "/admins/{adminId}": {
       "schema": { "$ref": "#/entities/AdminRole" },

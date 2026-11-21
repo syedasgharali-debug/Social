@@ -28,6 +28,7 @@ interface LocalStoredAccount {
   email: string;
   displayName: string;
   companyName?: string;
+  status?: 'active' | 'suspended';
   salt: string;
   passwordDigest: string;
   createdAt: string;
@@ -116,7 +117,47 @@ function persistLocalSession(session: AuthSessionUser) {
   }
 }
 
-function attemptLocalEmailLogin(email: string, password: string): AuthSessionUser | null {
+export function upsertLocalAdminAccount(params: {
+  uid?: string;
+  displayName: string;
+  email: string;
+  password: string;
+  companyName?: string;
+}): string {
+  const cleanEmail = params.email.trim().toLowerCase();
+  const accounts = loadLocalAccounts();
+  const idx = accounts.findIndex((a) => a.email.toLowerCase() === cleanEmail);
+  const salt = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  const uid = params.uid || (idx !== -1 ? accounts[idx].uid : `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`);
+  const rec: LocalStoredAccount = {
+    uid,
+    email: cleanEmail,
+    displayName: params.displayName.trim().slice(0, 120),
+    companyName: (params.companyName || '').trim().slice(0, 80),
+    status: 'active',
+    salt,
+    passwordDigest: sha256Hex(`${salt}:${params.password}`),
+    createdAt: idx !== -1 ? accounts[idx].createdAt : new Date().toISOString(),
+  };
+  if (idx !== -1) {
+    accounts[idx] = rec;
+  } else {
+    accounts.push(rec);
+  }
+  saveLocalAccounts(accounts);
+  return uid;
+}
+
+export function setLocalAccountStatus(emailOrUid: string, status: 'active' | 'suspended') {
+  const needle = emailOrUid.trim().toLowerCase();
+  const accounts = loadLocalAccounts();
+  const updated = accounts.map((a) =>
+    a.uid.toLowerCase() === needle || a.email.toLowerCase() === needle ? { ...a, status } : a
+  );
+  saveLocalAccounts(updated);
+}
+
+function attemptLocalEmailLogin(email: string, password: string): { session?: AuthSessionUser; error?: string } {
   const cleanEmail = email.trim().toLowerCase();
   const rawPassword = password;
   const trimmedPassword = password.trim();
@@ -126,33 +167,44 @@ function attemptLocalEmailLogin(email: string, password: string): AuthSessionUse
     const matchesTrim = sha256Hex(`socialifyai:${cleanEmail}:${trimmedPassword}`) === SUPER_ADMIN_DIGEST;
     if (matchesRaw || matchesTrim) {
       return {
-        uid: 'admin-essadhiif',
-        email: SUPER_ADMIN_EMAIL,
-        displayName: 'Super Admin',
-        companyName: 'socialifyai.com HQ',
-        isAdmin: true,
-        provider: 'password',
-        token: 'local_sess_admin-essadhiif',
+        session: {
+          uid: 'admin-essadhiif',
+          email: SUPER_ADMIN_EMAIL,
+          displayName: 'Super Admin',
+          companyName: 'socialifyai.com HQ',
+          isAdmin: true,
+          provider: 'password',
+          token: 'local_sess_admin-essadhiif',
+        },
       };
     }
-    return null;
+    return { error: 'Invalid email or password. Please check your credentials and try again.' };
   }
 
   const accounts = loadLocalAccounts();
   const found = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
-  if (!found) return null;
+  if (!found) return { error: 'Invalid email or password. Please check your credentials and try again.' };
   const validRaw = sha256Hex(`${found.salt}:${rawPassword}`) === found.passwordDigest;
   const validTrim = sha256Hex(`${found.salt}:${trimmedPassword}`) === found.passwordDigest;
-  if (!validRaw && !validTrim) return null;
+  if (!validRaw && !validTrim) {
+    return { error: 'Invalid email or password. Please check your credentials and try again.' };
+  }
+  if (found.status === 'suspended') {
+    return {
+      error: 'This account has been suspended by an administrator. Contact support@socialifyai.com to restore access.',
+    };
+  }
 
   return {
-    uid: found.uid,
-    email: found.email,
-    displayName: found.displayName,
-    companyName: found.companyName || '',
-    isAdmin: false,
-    provider: 'password',
-    token: `local_sess_${found.uid}`,
+    session: {
+      uid: found.uid,
+      email: found.email,
+      displayName: found.displayName,
+      companyName: found.companyName || '',
+      isAdmin: false,
+      provider: 'password',
+      token: `local_sess_${found.uid}`,
+    },
   };
 }
 
@@ -547,13 +599,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Static-domain fallback (e.g. https://www.socialifyai.com/ without Express API routes)
       try {
-        const localSession = attemptLocalEmailLogin(email, password);
-        if (localSession) {
-          persistLocalSession(localSession);
-          setPasswordSession(localSession);
-          return localSession;
+        const result = attemptLocalEmailLogin(email, password);
+        if (result.session) {
+          persistLocalSession(result.session);
+          setPasswordSession(result.session);
+          return result.session;
         }
-        setAuthError('Invalid email or password. Please check your credentials and try again.');
+        setAuthError(result.error || 'Invalid email or password. Please check your credentials and try again.');
         return null;
       } finally {
         setSigningIn(false);
