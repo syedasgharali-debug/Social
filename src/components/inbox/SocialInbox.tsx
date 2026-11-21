@@ -13,10 +13,15 @@ import {
   MessageCircle,
   AtSign,
   Eye,
+  PanelRightOpen,
+  Building2,
+  Tag,
+  Briefcase,
 } from 'lucide-react';
 import { Thread, Contact, Deal, Platform, MessageStatus } from '../../types';
 import { aiService } from '../../services/aiService';
-import { ALL_PLATFORMS, PLATFORM_META, PlatformTag, ContactAvatar } from '../common/PlatformMeta';
+import { ALL_PLATFORMS, PLATFORM_META, PlatformTag, ContactAvatar, SocialLogo } from '../common/PlatformMeta';
+import { InspectorDrawer, StatusBadge, EmptyStatePanel } from '../common/DesignPrimitives';
 
 interface SocialInboxProps {
   workspaceId: string;
@@ -57,6 +62,7 @@ export function SocialInbox({
   const [statusFilter, setStatusFilter] = useState<MessageStatus | 'all'>('all');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   const [replyText, setReplyText] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
@@ -208,14 +214,14 @@ export function SocialInbox({
   };
 
   return (
-    <div className="h-full flex bg-white dark:bg-slate-900 overflow-hidden">
+    <div className="h-full flex bg-[#F8F9FB] dark:bg-[#090A0D] overflow-hidden">
       {/* PANE 1: FILTER SIDEBAR */}
-      <aside className="hidden md:flex w-56 border-r border-slate-200 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-950/60 flex-col p-3.5 space-y-5 shrink-0 overflow-y-auto custom-scrollbar">
+      <aside className="hidden md:flex w-52 border-r border-[#E5E7EB] dark:border-white/[0.08] bg-[#F3F4F6] dark:bg-[#0E1015] flex-col p-3 space-y-5 shrink-0 overflow-y-auto custom-scrollbar">
         <div>
-          <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#6B7280] dark:text-[#6B7280] mb-1.5">
             Inbox Streams
           </p>
-          <div className="space-y-0.5 text-xs font-semibold">
+          <div className="space-y-0.5 text-[12px] font-medium">
             {(
               [
                 { id: 'all', label: 'All Messages', count: bucketCounts.all, icon: Inbox },
@@ -231,17 +237,17 @@ export function SocialInbox({
                 <button
                   key={item.id}
                   onClick={() => setBucketFilter(item.id)}
-                  className={`w-full px-2.5 py-2 rounded-lg flex items-center justify-between transition-colors ${
+                  className={`w-full px-2.5 py-1.5 rounded-md flex items-center justify-between transition-colors ${
                     active
-                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-[#4F46E5] dark:text-indigo-300'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-black/[0.06] dark:bg-white/[0.07] text-[#111827] dark:text-[#F3F4F6]'
+                      : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <Icon size={14} />
+                    <Icon size={13} strokeWidth={1.5} className={active ? 'text-[#06B6D4]' : ''} />
                     {item.label}
                   </span>
-                  <span className="font-mono text-[10px] tabular-nums">{item.count}</span>
+                  <span className="font-mono text-[10px] text-[#6B7280] tabular-nums">{item.count}</span>
                 </button>
               );
             })}
@@ -249,20 +255,20 @@ export function SocialInbox({
         </div>
 
         <div>
-          <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#6B7280] mb-1.5">
             Filter by Network
           </p>
-          <div className="space-y-0.5 text-xs font-semibold">
+          <div className="space-y-0.5 text-[12px] font-medium">
             <button
               onClick={() => setPlatformFilter('all')}
-              className={`w-full px-2.5 py-1.5 rounded-lg flex items-center justify-between ${
+              className={`w-full px-2.5 py-1.5 rounded-md flex items-center justify-between transition-colors ${
                 platformFilter === 'all'
-                  ? 'bg-slate-900 dark:bg-[#4F46E5] text-white'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-[#111827] text-white dark:bg-white dark:text-[#090A0D]'
+                  : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
               }`}
             >
               <span>All Networks</span>
-              <span className="font-mono text-[10px]">{wsThreads.length}</span>
+              <span className="font-mono text-[10px] tabular-nums">{wsThreads.length}</span>
             </button>
             {ALL_PLATFORMS.filter((p) =>
               ['instagram', 'facebook', 'linkedin', 'x', 'tiktok', 'threads', 'bluesky'].includes(p)
@@ -273,20 +279,17 @@ export function SocialInbox({
                 <button
                   key={p}
                   onClick={() => setPlatformFilter(p)}
-                  className={`w-full px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
+                  className={`w-full px-2.5 py-1.5 rounded-md flex items-center justify-between transition-colors ${
                     active
-                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-[#4F46E5] dark:text-indigo-300'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-black/[0.06] dark:bg-white/[0.07] text-[#111827] dark:text-[#F3F4F6]'
+                      : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-xs"
-                      style={{ backgroundColor: PLATFORM_META[p].accentHex }}
-                    />
+                    <SocialLogo platform={p} size={14} />
                     {PLATFORM_META[p].label}
                   </span>
-                  <span className="font-mono text-[10px] text-slate-400">{count}</span>
+                  <span className="font-mono text-[10px] text-[#6B7280] tabular-nums">{count}</span>
                 </button>
               );
             })}
@@ -294,18 +297,18 @@ export function SocialInbox({
         </div>
 
         <div>
-          <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#6B7280] mb-1.5">
             Queue Status
           </p>
-          <div className="grid grid-cols-2 gap-1 text-[11px] font-semibold">
+          <div className="grid grid-cols-2 gap-1 text-[11px] font-medium">
             {(['all', 'open', 'snoozed', 'resolved'] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`py-1.5 rounded-md capitalize border ${
+                className={`py-1.5 rounded-md capitalize border transition-colors ${
                   statusFilter === st
-                    ? 'border-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/50 text-[#4F46E5]'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-500'
+                    ? 'border-[#06B6D4] bg-[#06B6D4]/10 text-[#0891B2] dark:text-[#22D3EE]'
+                    : 'border-[#E5E7EB] dark:border-white/[0.08] text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                 }`}
               >
                 {st}
@@ -316,31 +319,31 @@ export function SocialInbox({
       </aside>
 
       {/* PANE 2: CONVERSATION THREAD LIST */}
-      <div className="w-80 lg:w-88 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
-        <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
+      <div className="w-80 lg:w-88 border-r border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#13161D] flex flex-col shrink-0">
+        <div className="p-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08] space-y-2.5">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-sm font-bold text-slate-900 dark:text-white">
+            <h2 className="text-[13px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
               Conversations
             </h2>
-            <span className="text-[11px] font-mono text-slate-500 tabular-nums">
+            <span className="text-[11px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">
               {filteredThreads.length} showing
             </span>
           </div>
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={13} strokeWidth={1.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search person, company, or message..."
-              className="w-full pl-8 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
+              className="w-full pl-8 pr-3 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] text-[#111827] dark:text-[#F3F4F6] placeholder-[#9CA3AF] outline-none focus:border-[#06B6D4]"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto divide-y divide-[#E5E7EB] dark:divide-white/[0.06] custom-scrollbar">
           {filteredThreads.length === 0 ? (
-            <div className="p-6 text-center text-xs text-slate-500">
+            <div className="p-6 text-center text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
               No conversations match the selected filters.
             </div>
           ) : (
@@ -351,32 +354,32 @@ export function SocialInbox({
                 <button
                   key={thread.id}
                   onClick={() => handleSelectThread(thread)}
-                  className={`w-full text-left p-3.5 transition-colors flex items-start gap-3 ${
+                  className={`w-full text-left p-3.5 transition-colors flex items-start gap-3 border-l-2 ${
                     selected
-                      ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-l-2 border-l-[#4F46E5]'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                      ? 'bg-black/[0.03] dark:bg-white/[0.05] border-l-[#06B6D4]'
+                      : 'border-l-transparent hover:bg-[#F8F9FB] dark:hover:bg-[#191D26]'
                   }`}
                 >
                   <ContactAvatar name={contact?.name || 'Unknown'} src={contact?.avatar} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6] truncate">
                         {contact?.name || 'Unknown'}
                       </p>
                       {thread.unreadCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-[#4F46E5] text-white font-mono text-[10px] font-bold tabular-nums">
+                        <span className="px-1.5 py-0.5 rounded bg-[#06B6D4] text-[#090A0D] font-mono text-[10px] font-semibold tabular-nums">
                           {thread.unreadCount}
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
                       <PlatformTag platform={thread.platform} showFull={false} />
-                      <span>· {thread.type.toUpperCase()}</span>
+                      <span className="font-mono text-[10px]">· {thread.type.toUpperCase()}</span>
                       {thread.sentiment === 'urgent' && (
-                        <span className="text-amber-600 font-bold">· Urgent</span>
+                        <span className="text-[#F97316] font-semibold">· Urgent</span>
                       )}
                     </div>
-                    <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-snug">
+                    <p className="mt-1.5 text-[12px] text-[#4B5563] dark:text-[#9CA3AF] line-clamp-2 leading-snug">
                       {thread.lastMessage}
                     </p>
                   </div>
@@ -389,45 +392,46 @@ export function SocialInbox({
 
       {/* PANE 3: ACTIVE CHAT REPLY PANE */}
       {activeThread && activeContact ? (
-        <div className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC] dark:bg-[#090D16]">
-          {/* Active Header + Inline CRM Context */}
-          <div className="px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#F8F9FB] dark:bg-[#090A0D]">
+          {/* Active Header */}
+          <div className="px-5 py-3 bg-white dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <ContactAvatar name={activeContact.name} src={activeContact.avatar} size="sm" />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  <h3 className="text-[13px] font-semibold text-[#111827] dark:text-[#F3F4F6] truncate">
                     {activeContact.name}
                   </h3>
                   <PlatformTag platform={activeThread.platform} />
-                  <span className="text-[11px] font-mono font-bold text-[#4F46E5] dark:text-indigo-400">
+                  <span className="text-[11px] font-mono font-medium text-[#0891B2] dark:text-[#22D3EE] tabular-nums">
                     Lead {activeContact.leadScore}/100
                   </span>
                   {linkedDeal && (
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      · Deal ${linkedDeal.value.toLocaleString()}
+                    <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">
+                      · ${linkedDeal.value.toLocaleString()}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 truncate">
+                <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate">
                   {activeContact.title} · {activeContact.company} · {activeContact.email}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
-                onClick={() => onOpenContactInCrm(activeContact.id)}
-                className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                type="button"
+                onClick={() => setInspectorOpen(true)}
+                className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.1] hover:border-[#D1D5DB] dark:hover:border-white/[0.2] bg-white dark:bg-[#13161D] rounded-lg text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5"
               >
-                CRM Profile <ExternalLink size={12} />
+                <PanelRightOpen size={13} strokeWidth={1.5} /> Inspect
               </button>
               <button
                 onClick={handleSummarizeAndTag}
                 disabled={summaryLoading}
-                className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 rounded-lg text-xs font-semibold text-[#4F46E5] dark:text-indigo-300 flex items-center gap-1.5"
+                className="px-2.5 py-1.5 bg-[#06B6D4]/10 hover:bg-[#06B6D4]/15 border border-[#06B6D4]/25 rounded-lg text-[12px] font-medium text-[#0891B2] dark:text-[#22D3EE] flex items-center gap-1.5 disabled:opacity-60"
               >
-                <Sparkles size={13} /> {summaryLoading ? 'Analyzing...' : 'Summarize & Tag'}
+                <Sparkles size={13} strokeWidth={1.5} /> {summaryLoading ? 'Analyzing...' : 'Summarize & Tag'}
               </button>
 
               {activeThread.status !== 'snoozed' && (
@@ -436,9 +440,9 @@ export function SocialInbox({
                     onUpdateThread({ ...activeThread, status: 'snoozed', unreadCount: 0 });
                     onToast('Thread Snoozed');
                   }}
-                  className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1"
+                  className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[12px] font-medium text-[#4B5563] dark:text-[#D1D5DB] hover:bg-[#F3F4F6] dark:hover:bg-white/[0.06] flex items-center gap-1"
                 >
-                  <Clock size={12} /> Snooze
+                  <Clock size={12} strokeWidth={1.5} /> Snooze
                 </button>
               )}
 
@@ -448,9 +452,9 @@ export function SocialInbox({
                     onUpdateThread({ ...activeThread, status: 'resolved', unreadCount: 0 });
                     onToast('Thread Marked Resolved');
                   }}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                  className="px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 rounded-lg text-[12px] font-medium flex items-center gap-1"
                 >
-                  <CheckCircle2 size={12} /> Resolve
+                  <CheckCircle2 size={12} strokeWidth={1.5} /> Resolve
                 </button>
               ) : (
                 <button
@@ -458,9 +462,9 @@ export function SocialInbox({
                     onUpdateThread({ ...activeThread, status: 'open' });
                     onToast('Thread Reopened');
                   }}
-                  className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                  className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[12px] font-medium text-[#4B5563] dark:text-[#D1D5DB] flex items-center gap-1"
                 >
-                  <RotateCcw size={12} /> Reopen
+                  <RotateCcw size={12} strokeWidth={1.5} /> Reopen
                 </button>
               )}
             </div>
@@ -468,28 +472,28 @@ export function SocialInbox({
 
           {/* AI Summary Strip */}
           {activeThread.summary && (
-            <div className="px-6 py-2.5 bg-indigo-50/70 dark:bg-indigo-950/30 border-b border-indigo-200/70 dark:border-indigo-900 text-xs text-slate-800 dark:text-slate-200">
-              <span className="font-bold text-[#4F46E5] mr-2">AI Summary:</span>
+            <div className="px-5 py-2 bg-[#06B6D4]/[0.06] border-b border-[#06B6D4]/20 text-[12px] text-[#111827] dark:text-[#E5E7EB]">
+              <span className="font-semibold text-[#0891B2] dark:text-[#22D3EE] mr-2">AI Summary:</span>
               {activeThread.summary}
             </div>
           )}
 
           {/* Conversation Stream */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-6 space-y-3.5 custom-scrollbar">
             {activeThread.messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-lg rounded-2xl px-4 py-3 text-xs leading-relaxed border ${
+                  className={`max-w-lg rounded-[12px] px-4 py-2.5 text-[12px] leading-relaxed border ${
                     msg.isInternalNote
-                      ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200'
+                      ? 'bg-[#F97316]/[0.08] border-[#F97316]/30 text-[#9A3412] dark:text-[#FDBA74]'
                       : msg.isMe
-                      ? 'bg-[#4F46E5] border-[#4F46E5] text-white'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100'
+                      ? 'bg-[#111827] dark:bg-white border-[#111827] dark:border-white text-white dark:text-[#090A0D]'
+                      : 'bg-white dark:bg-[#13161D] border-[#E5E7EB] dark:border-white/[0.08] text-[#111827] dark:text-[#F3F4F6]'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-4 mb-1 text-[10px] opacity-75">
-                    <span className="font-semibold">{msg.senderName}</span>
-                    <span className="tabular-nums">
+                  <div className="flex items-center justify-between gap-4 mb-1 text-[10px] opacity-70">
+                    <span className="font-medium">{msg.senderName}</span>
+                    <span className="font-mono tabular-nums">
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -500,7 +504,7 @@ export function SocialInbox({
           </div>
 
           {/* Reply & AI Smart Reply Composer */}
-          <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <div className="p-4 bg-white dark:bg-[#0E1015] border-t border-[#E5E7EB] dark:border-white/[0.08] space-y-3">
             {aiReplies && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {(
@@ -514,12 +518,12 @@ export function SocialInbox({
                     key={opt.key}
                     type="button"
                     onClick={() => setReplyText(aiReplies[opt.key])}
-                    className="text-left p-2.5 bg-[#F8FAFC] dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors"
+                    className="text-left p-2.5 bg-[#F8F9FB] dark:bg-[#13161D] hover:border-[#06B6D4] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] transition-colors"
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#4F46E5]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#0891B2] dark:text-[#22D3EE]">
                       {opt.label} Smart Reply
                     </p>
-                    <p className="mt-1 text-[11px] text-slate-700 dark:text-slate-300 line-clamp-2">
+                    <p className="mt-1 text-[11px] text-[#4B5563] dark:text-[#D1D5DB] line-clamp-2">
                       {aiReplies[opt.key]}
                     </p>
                   </button>
@@ -537,10 +541,10 @@ export function SocialInbox({
                     ? 'Write an internal team note (visible only to your agency/team)...'
                     : `Reply to ${activeContact.name} on ${PLATFORM_META[activeThread.platform].label}...`
                 }
-                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none resize-none ${
+                className={`w-full px-3.5 py-2.5 rounded-[10px] border text-[12px] outline-none resize-none text-[#111827] dark:text-[#F3F4F6] ${
                   isInternalNote
-                    ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800'
-                    : 'bg-[#F8FAFC] dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-[#4F46E5]'
+                    ? 'bg-[#F97316]/[0.06] border-[#F97316]/35'
+                    : 'bg-[#F8F9FB] dark:bg-[#13161D] border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4]'
                 }`}
               />
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -549,41 +553,172 @@ export function SocialInbox({
                     type="button"
                     onClick={handleGenerateAiReplies}
                     disabled={aiLoading}
-                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-[#4F46E5] dark:text-indigo-300 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                    className="px-2.5 py-1.5 bg-[#06B6D4]/10 hover:bg-[#06B6D4]/15 border border-[#06B6D4]/25 text-[#0891B2] dark:text-[#22D3EE] rounded-lg text-[12px] font-medium flex items-center gap-1.5"
                   >
-                    <Sparkles size={13} className="text-amber-500" />
+                    <Sparkles size={13} strokeWidth={1.5} />
                     {aiLoading ? 'Generating...' : 'AI Smart Reply'}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIsInternalNote(!isInternalNote)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 ${
+                    className={`px-2.5 py-1.5 rounded-lg text-[12px] font-medium border flex items-center gap-1.5 transition-colors ${
                       isInternalNote
-                        ? 'bg-amber-100 border-amber-300 text-amber-900'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                        ? 'bg-[#F97316]/10 border-[#F97316]/30 text-[#C2410C] dark:text-[#FB923C]'
+                        : 'bg-white dark:bg-[#13161D] border-[#E5E7EB] dark:border-white/[0.08] text-[#4B5563] dark:text-[#D1D5DB]'
                     }`}
                   >
-                    <StickyNote size={13} /> {isInternalNote ? 'Internal Team Note' : 'Public Reply'}
+                    <StickyNote size={13} strokeWidth={1.5} /> {isInternalNote ? 'Internal Team Note' : 'Public Reply'}
                   </button>
                 </div>
 
                 <button
                   type="submit"
                   disabled={!replyText.trim()}
-                  className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] disabled:opacity-40 rounded-lg text-[12px] font-semibold flex items-center gap-1.5"
                 >
-                  <Send size={13} /> {isInternalNote ? 'Save Team Note' : 'Send Reply'}
+                  <Send size={13} strokeWidth={1.5} /> {isInternalNote ? 'Save Team Note' : 'Send Reply'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-xs text-slate-500">
-          Select a conversation thread to reply.
+        <div className="flex-1 flex items-center justify-center p-6">
+          <EmptyStatePanel
+            icon={Inbox}
+            title="No conversation selected"
+            description="Select a message thread from the left column to review context and reply."
+          />
         </div>
       )}
+
+      {/* THREAD & CONTACT INSPECTOR DRAWER */}
+      <InspectorDrawer
+        open={inspectorOpen && Boolean(activeContact && activeThread)}
+        onClose={() => setInspectorOpen(false)}
+        title={activeContact?.name || 'Thread Context'}
+        subtitle={activeContact ? `${activeContact.title || 'Contact'} · ${activeContact.company || 'Independent'}` : undefined}
+        headerActions={
+          activeContact && (
+            <button
+              type="button"
+              onClick={() => {
+                setInspectorOpen(false);
+                onOpenContactInCrm(activeContact.id);
+              }}
+              className="px-2.5 py-1 border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] hover:border-[#06B6D4] flex items-center gap-1"
+            >
+              Open CRM <ExternalLink size={11} strokeWidth={1.5} />
+            </button>
+          )
+        }
+      >
+        {activeContact && activeThread && (
+          <div className="space-y-5 text-[12px]">
+            <div className="grid grid-cols-3 gap-2.5 tabular-nums">
+              <div className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                <p className="text-[11px] text-[#6B7280]">Lead Score</p>
+                <p className="mt-1 text-[18px] font-semibold text-[#0891B2] dark:text-[#22D3EE]">
+                  {activeContact.leadScore}
+                </p>
+              </div>
+              <div className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                <p className="text-[11px] text-[#6B7280]">Est. LTV</p>
+                <p className="mt-1 text-[18px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                  ${activeContact.ltv.toLocaleString()}
+                </p>
+              </div>
+              <div className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                <p className="text-[11px] text-[#6B7280]">Status</p>
+                <div className="mt-1.5">
+                  <StatusBadge
+                    tone={
+                      activeThread.status === 'resolved'
+                        ? 'emerald'
+                        : activeThread.status === 'snoozed'
+                        ? 'orange'
+                        : 'cyan'
+                    }
+                  >
+                    {activeThread.status}
+                  </StatusBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] flex items-center gap-1.5">
+                <Building2 size={12} strokeWidth={1.5} /> Account Details
+              </p>
+              <div className="space-y-1 text-[#4B5563] dark:text-[#D1D5DB]">
+                <p><span className="text-[#6B7280]">Email:</span> {activeContact.email}</p>
+                <p className="font-mono text-[11px]"><span className="font-sans text-[12px] text-[#6B7280]">Handle:</span> {activeContact.handle}</p>
+                <p><span className="text-[#6B7280]">Lifecycle:</span> {activeContact.lifecycleStage}</p>
+              </div>
+            </div>
+
+            {linkedDeal && (
+              <div className="p-3.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] flex items-center gap-1.5">
+                  <Briefcase size={12} strokeWidth={1.5} /> Linked Deal
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-[#111827] dark:text-[#F3F4F6]">{linkedDeal.title}</span>
+                  <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    ${linkedDeal.value.toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-[11px] font-mono text-[#6B7280] tabular-nums">
+                  {linkedDeal.stage.replace('_', ' ')} · {linkedDeal.probability}% · Close {linkedDeal.expectedCloseDate}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] flex items-center gap-1.5">
+                <Tag size={12} strokeWidth={1.5} /> CRM Tags
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {activeContact.tags.length === 0 ? (
+                  <span className="text-[#6B7280]">No tags applied yet.</span>
+                ) : (
+                  activeContact.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-0.5 rounded-md bg-[#F3F4F6] dark:bg-white/[0.06] border border-[#E5E7EB] dark:border-white/[0.08] text-[11px] text-[#4B5563] dark:text-[#D1D5DB]"
+                    >
+                      {tag}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280]">
+                Recent Interactions ({activeContact.interactionHistory.length})
+              </p>
+              <div className="space-y-2">
+                {activeContact.interactionHistory.slice(0, 6).map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-2.5 bg-white dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg"
+                  >
+                    <div className="flex items-center justify-between text-[10px] text-[#6B7280] mb-1">
+                      <span className="uppercase font-medium">{item.type}</span>
+                      <span className="font-mono tabular-nums">
+                        {new Date(item.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-[#4B5563] dark:text-[#D1D5DB]">{item.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </InspectorDrawer>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { SocialPost, ContentCategory, Platform } from '../../types';
 import { PlatformTag, SocialLogo } from '../common/PlatformMeta';
+import { StatusBadge, EmptyStatePanel } from '../common/DesignPrimitives';
 
 interface VisualSchedulerProps {
   workspaceId: string;
@@ -71,7 +72,6 @@ export function VisualScheduler({
   const [slotTime, setSlotTime] = useState('09:00');
   const [slotCatId, setSlotCatId] = useState(wsCategories[0]?.id || '');
 
-  // November 2026 calendar cells (Starts on Sunday Nov 1, 2026 -> 30 days)
   const monthDays = useMemo(() => {
     return Array.from({ length: 30 }, (_, i) => {
       const dayNum = i + 1;
@@ -80,7 +80,6 @@ export function VisualScheduler({
     });
   }, []);
 
-  // Week view: Nov 9 - Nov 15, 2026
   const weekDays = useMemo(() => {
     return [9, 10, 11, 12, 13, 14, 15].map((dayNum, idx) => ({
       dayNum,
@@ -107,7 +106,7 @@ export function VisualScheduler({
   }, [wsPosts, listStatusFilter, listCatFilter]);
 
   const getCategoryColor = (catId?: string) =>
-    wsCategories.find((c) => c.id === catId)?.color || '#4F46E5';
+    wsCategories.find((c) => c.id === catId)?.color || '#06B6D4';
 
   const getCategoryName = (catId?: string) =>
     wsCategories.find((c) => c.id === catId)?.name || 'General';
@@ -165,21 +164,28 @@ export function VisualScheduler({
     onToast('Recurring Slot Added', `${slotDay} ${slotTime} → ${targetCat.name}`);
   };
 
+  const statusTone = (status: SocialPost['status']) => {
+    if (status === 'published') return 'emerald' as const;
+    if (status === 'pending_approval') return 'orange' as const;
+    if (status === 'scheduled' || status === 'approved') return 'cyan' as const;
+    return 'neutral' as const;
+  };
+
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#F8FAFC] dark:bg-[#090D16]">
+    <div className="h-full flex flex-col overflow-hidden bg-[#F8F9FB] dark:bg-[#090A0D]">
       {/* Header Toolbar */}
-      <div className="px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="px-6 py-4 bg-white dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div>
-          <h1 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
+          <h1 className="text-[18px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em]">
             Visual Content Scheduler
           </h1>
-          <p className="text-[11px] text-slate-500">
-            Drag & drop posts across dates, preview your 3×3 Instagram Grid, or manage weekly recurring category slots.
+          <p className="mt-0.5 text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+            Drag posts across dates, sequence your 3×3 Instagram Grid, or configure weekly recurring category slots.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex bg-[#F3F4F6] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] p-0.5 rounded-lg text-[12px] font-medium">
             {(
               [
                 { id: 'calendar', label: 'Calendar', icon: Calendar },
@@ -193,13 +199,13 @@ export function VisualScheduler({
                 <button
                   key={item.id}
                   onClick={() => setView(item.id)}
-                  className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+                  className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors ${
                     view === item.id
-                      ? 'bg-white dark:bg-slate-900 text-[#4F46E5] dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                      : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
                   }`}
                 >
-                  <Icon size={13} />
+                  <Icon size={13} strokeWidth={1.5} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -208,46 +214,54 @@ export function VisualScheduler({
 
           <button
             onClick={onComposeNew}
-            className="px-3.5 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg text-[12px] font-semibold flex items-center gap-1.5 transition-colors"
           >
-            <Plus size={14} /> Schedule Post
+            <Plus size={13} strokeWidth={1.75} /> Schedule Post
           </button>
         </div>
       </div>
 
-      {/* VIEW 1: CALENDAR VIEW (MONTH & WEEK WITH DRAG-AND-DROP) */}
+      {/* VIEW 1: CALENDAR VIEW */}
       {view === 'calendar' && (
         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
                 November 2026
               </h2>
-              <span className="text-[11px] text-slate-500">
-                Tip: Drag any post card onto another date cell to reschedule.
+              <span className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                Drag any post card onto a date cell to reschedule.
               </span>
             </div>
 
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-3 text-[11px]">
                 {wsCategories.slice(0, 4).map((cat) => (
-                  <span key={cat.id} className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                    <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: cat.color }} />
+                  <span key={cat.id} className="flex items-center gap-1.5 font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
                     {cat.name}
                   </span>
                 ))}
               </div>
 
-              <div className="inline-flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-0.5 rounded-lg text-xs font-semibold">
+              <div className="inline-flex bg-[#F3F4F6] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] p-0.5 rounded-lg text-[11px] font-medium">
                 <button
                   onClick={() => setCalendarScale('month')}
-                  className={`px-3 py-1 rounded-md ${calendarScale === 'month' ? 'bg-[#4F46E5] text-white' : 'text-slate-500'}`}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    calendarScale === 'month'
+                      ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                      : 'text-[#6B7280] dark:text-[#9CA3AF] border border-transparent'
+                  }`}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarScale('week')}
-                  className={`px-3 py-1 rounded-md ${calendarScale === 'week' ? 'bg-[#4F46E5] text-white' : 'text-slate-500'}`}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    calendarScale === 'week'
+                      ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                      : 'text-[#6B7280] dark:text-[#9CA3AF] border border-transparent'
+                  }`}
                 >
                   Week
                 </button>
@@ -256,13 +270,15 @@ export function VisualScheduler({
           </div>
 
           {calendarScale === 'month' ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-              <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF] divide-x divide-[#E5E7EB] dark:divide-white/[0.08]">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                  <div key={d} className="px-3 py-2.5 text-center">{d}</div>
+                  <div key={d} className="px-3 py-2 text-center">
+                    {d}
+                  </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="grid grid-cols-7 divide-x divide-y divide-[#E5E7EB] dark:divide-white/[0.08]">
                 {monthDays.map(({ dayNum, dateStr }) => {
                   const dayPosts = wsPosts.filter((p) => p.scheduledAt.startsWith(dateStr));
                   const isToday = dayNum === 13;
@@ -278,24 +294,26 @@ export function VisualScheduler({
                       onDrop={() => handleDropOnDate(dateStr)}
                       className={`min-h-[126px] p-2 transition-colors ${
                         isOver
-                          ? 'bg-indigo-50 dark:bg-indigo-950/50 ring-2 ring-inset ring-[#4F46E5]'
+                          ? 'bg-[#06B6D4]/[0.07] ring-1 ring-inset ring-[#06B6D4]'
                           : isToday
-                          ? 'bg-indigo-50/30 dark:bg-indigo-950/20'
+                          ? 'bg-[#06B6D4]/[0.03]'
                           : ''
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <span
-                          className={`text-[11px] font-bold tabular-nums ${
+                          className={`text-[11px] font-mono font-semibold tabular-nums ${
                             isToday
-                              ? 'px-1.5 py-0.5 rounded bg-[#4F46E5] text-white'
-                              : 'text-slate-500'
+                              ? 'px-1.5 py-0.5 rounded bg-[#06B6D4] text-[#090A0D]'
+                              : 'text-[#6B7280] dark:text-[#9CA3AF]'
                           }`}
                         >
                           {dayNum}
                         </span>
                         {dayPosts.length > 0 && (
-                          <span className="text-[10px] font-mono text-slate-400">{dayPosts.length}</span>
+                          <span className="text-[10px] font-mono text-[#9CA3AF] dark:text-[#6B7280] tabular-nums">
+                            {dayPosts.length}
+                          </span>
                         )}
                       </div>
 
@@ -308,33 +326,33 @@ export function VisualScheduler({
                               draggable
                               onDragStart={() => setDraggedPostId(post.id)}
                               onClick={() => onEditInStudio(post)}
-                              className="p-2 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-800/95 hover:border-[#4F46E5] hover:-translate-y-0.5 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all duration-150"
+                              className="p-2 rounded-lg border border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] hover:border-[#06B6D4] cursor-grab active:cursor-grabbing transition-colors"
                             >
                               <div className="flex items-center justify-between gap-1 text-[10px]">
-                                <span className="font-bold uppercase tracking-tight text-slate-500 flex items-center gap-1 min-w-0">
+                                <span className="flex items-center gap-1 min-w-0">
                                   <span
                                     className="w-1.5 h-1.5 rounded-full shrink-0"
                                     style={{ backgroundColor: catColor }}
                                   />
                                   <span className="inline-flex items-center gap-1">
                                     {post.platforms.slice(0, 3).map((pl) => (
-                                      <SocialLogo key={pl} platform={pl} size={12} />
+                                      <SocialLogo key={pl} platform={pl} size={14} />
                                     ))}
                                   </span>
                                 </span>
                                 <span
-                                  className={`font-semibold shrink-0 ${
+                                  className={`font-medium shrink-0 ${
                                     post.status === 'pending_approval'
-                                      ? 'text-amber-600'
+                                      ? 'text-[#F97316]'
                                       : post.status === 'published'
-                                      ? 'text-emerald-600'
-                                      : 'text-[#4F46E5] dark:text-indigo-400'
+                                      ? 'text-emerald-600 dark:text-emerald-400'
+                                      : 'text-[#0891B2] dark:text-[#22D3EE]'
                                   }`}
                                 >
                                   {post.status === 'pending_approval' ? 'Pending' : post.status}
                                 </span>
                               </div>
-                              <p className="mt-1 text-[11px] text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
+                              <p className="mt-1 text-[11px] text-[#111827] dark:text-[#E5E7EB] line-clamp-2 leading-snug">
                                 {post.content}
                               </p>
                             </div>
@@ -347,8 +365,7 @@ export function VisualScheduler({
               </div>
             </div>
           ) : (
-            /* Week View */
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-7 rounded-[12px] border border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#13161D] divide-y md:divide-y-0 md:divide-x divide-[#E5E7EB] dark:divide-white/[0.08] overflow-hidden">
               {weekDays.map(({ dayNum, dayLabel, dateStr }) => {
                 const dayPosts = wsPosts.filter((p) => p.scheduledAt.startsWith(dateStr));
                 const isOver = dragOverDateKey === dateStr;
@@ -361,34 +378,41 @@ export function VisualScheduler({
                     }}
                     onDragLeave={() => setDragOverDateKey(null)}
                     onDrop={() => handleDropOnDate(dateStr)}
-                    className={`bg-white dark:bg-slate-900 border rounded-xl p-3 min-h-[380px] flex flex-col ${
-                      isOver ? 'border-[#4F46E5] bg-indigo-50/40' : 'border-slate-200 dark:border-slate-800'
+                    className={`p-3 min-h-[380px] flex flex-col transition-colors ${
+                      isOver ? 'bg-[#06B6D4]/[0.07] ring-1 ring-inset ring-[#06B6D4]' : ''
                     }`}
                   >
-                    <div className="pb-2 mb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">{dayLabel}</span>
-                      <span className="text-xs font-mono text-slate-400">Nov {dayNum}</span>
+                    <div className="pb-2 mb-2.5 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between">
+                      <span className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6]">{dayLabel}</span>
+                      <span className="text-[11px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">Nov {dayNum}</span>
                     </div>
-                    <div className="space-y-2.5 flex-1">
+                    <div className="space-y-2 flex-1">
                       {dayPosts.map((post) => (
                         <div
                           key={post.id}
                           draggable
                           onDragStart={() => setDraggedPostId(post.id)}
                           onClick={() => onEditInStudio(post)}
-                          className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-slate-800/80 hover:border-[#4F46E5] hover:-translate-y-0.5 hover:shadow-sm cursor-grab space-y-1.5 transition-all duration-150"
+                          className="p-2.5 rounded-lg border border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] hover:border-[#06B6D4] cursor-grab space-y-1.5 transition-colors"
                         >
                           {post.media?.[0] && (
-                            <img src={post.media[0]} alt="" className="w-full h-20 object-cover rounded-lg" />
+                            <img src={post.media[0]} alt="" className="w-full h-20 object-cover rounded-md" />
                           )}
-                          <p className="text-[10px] font-bold text-[#4F46E5] dark:text-indigo-400 flex items-center gap-1.5">
-                            <span
-                              className="w-2 h-2 rounded-xs shrink-0"
-                              style={{ backgroundColor: getCategoryColor(post.categoryId) }}
-                            />
-                            {getCategoryName(post.categoryId)}
-                          </p>
-                          <p className="text-[11px] text-slate-800 dark:text-slate-100 line-clamp-3">{post.content}</p>
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="text-[10px] font-medium text-[#4B5563] dark:text-[#9CA3AF] flex items-center gap-1.5 truncate">
+                              <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ backgroundColor: getCategoryColor(post.categoryId) }}
+                              />
+                              {getCategoryName(post.categoryId)}
+                            </p>
+                            <div className="flex items-center gap-1">
+                              {post.platforms.slice(0, 2).map((pl) => (
+                                <SocialLogo key={pl} platform={pl} size={14} />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-[#111827] dark:text-[#F3F4F6] line-clamp-3">{post.content}</p>
                         </div>
                       ))}
                     </div>
@@ -403,130 +427,144 @@ export function VisualScheduler({
       {/* VIEW 2: INSTAGRAM 3x3 VISUAL GRID VIEW */}
       {view === 'ig_grid' && (
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-5 flex justify-center">
-              {/* Sleek Phone Frame */}
-              <div className="w-full max-w-[360px] rounded-[34px] border-[7px] border-slate-900 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden">
-                <div className="px-5 py-2.5 flex items-center justify-between text-[10px] font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800">
-                  <span>{workspaceHandle}</span>
-                  <span>IG Visual Planner</span>
+          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-5 flex justify-center p-6 rounded-[12px] border border-[#E5E7EB] dark:border-white/[0.08] bg-[#F3F4F6]/60 dark:bg-[#0E1015] canvas-dot-grid">
+              <div className="w-full max-w-[340px] rounded-[28px] border-[5px] border-[#111827] dark:border-white/[0.15] bg-white dark:bg-[#13161D] overflow-hidden">
+                <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                  <span className="font-mono">{workspaceHandle}</span>
+                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">IG Visual Planner</span>
                 </div>
 
-                {/* IG Profile Strip */}
-                <div className="p-4 flex items-center gap-4 border-b border-slate-100 dark:border-slate-800">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 p-0.5 shrink-0">
-                    <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center font-display font-extrabold text-sm">
-                      IG
-                    </div>
+                {/* Real Workspace Metrics */}
+                <div className="p-4 flex items-center gap-4 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                  <div className="w-12 h-12 rounded-full border border-[#E5E7EB] dark:border-white/[0.15] bg-[#F8F9FB] dark:bg-[#0E1015] flex items-center justify-center shrink-0">
+                    <SocialLogo platform="instagram" size={20} />
                   </div>
-                  <div className="grid grid-cols-3 gap-3 flex-1 text-center text-xs tabular-nums">
+                  <div className="grid grid-cols-3 gap-2 flex-1 text-center text-[12px] tabular-nums">
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white">248</p>
-                      <p className="text-[10px] text-slate-400">Posts</p>
+                      <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">{igPosts.length}</p>
+                      <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">IG Queue</p>
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white">48.2k</p>
-                      <p className="text-[10px] text-slate-400">Followers</p>
+                      <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">{wsPosts.length}</p>
+                      <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">Total Posts</p>
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white">312</p>
-                      <p className="text-[10px] text-slate-400">Following</p>
+                      <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">{wsCategories.length}</p>
+                      <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">Categories</p>
                     </div>
                   </div>
                 </div>
 
-                {/* 3x3 Grid Tiles */}
-                <div className="grid grid-cols-3 gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5">
-                  {igPosts.map((post, idx) => (
-                    <div
-                      key={post.id}
-                      draggable
-                      onDragStart={() => setDraggedIgPostId(post.id)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => handleSwapIgGrid(post.id)}
-                      className="relative aspect-square bg-slate-200 dark:bg-slate-800 overflow-hidden group cursor-grab active:cursor-grabbing"
-                    >
-                      {post.media?.[0] ? (
-                        <img src={post.media[0]} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full p-2 flex items-center justify-center text-[10px] text-center text-slate-600 dark:text-slate-300 bg-indigo-50 dark:bg-slate-800">
-                          {post.content.slice(0, 40)}...
-                        </div>
-                      )}
-                      <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-slate-950/75 text-white text-[9px] font-mono font-bold">
-                        #{idx + 1}
-                      </span>
-                      <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between text-white">
-                        <p className="text-[10px] line-clamp-3 leading-tight">{post.content}</p>
-                        <div className="flex items-center justify-between gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleShiftIgTile(idx, -1)}
-                            disabled={idx === 0}
-                            className="p-1 rounded bg-white/20 hover:bg-white/30 disabled:opacity-30"
-                            title="Move earlier"
-                          >
-                            <ArrowLeft size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onEditInStudio(post)}
-                            className="text-[10px] font-bold underline"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleShiftIgTile(idx, 1)}
-                            disabled={idx === igPosts.length - 1}
-                            className="p-1 rounded bg-white/20 hover:bg-white/30 disabled:opacity-30"
-                            title="Move later"
-                          >
-                            <ArrowRight size={11} />
-                          </button>
+                {igPosts.length === 0 ? (
+                  <div className="p-8 text-center text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+                    No Instagram posts queued yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-0.5 bg-[#E5E7EB] dark:bg-white/[0.08] p-0.5">
+                    {igPosts.map((post, idx) => (
+                      <div
+                        key={post.id}
+                        draggable
+                        onDragStart={() => setDraggedIgPostId(post.id)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => handleSwapIgGrid(post.id)}
+                        className="relative aspect-square bg-[#F3F4F6] dark:bg-[#0E1015] overflow-hidden group cursor-grab active:cursor-grabbing"
+                      >
+                        {post.media?.[0] ? (
+                          <img src={post.media[0]} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full p-2 flex items-center justify-center text-[10px] text-center text-[#4B5563] dark:text-[#9CA3AF]">
+                            {post.content.slice(0, 40)}...
+                          </div>
+                        )}
+                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/75 text-white text-[9px] font-mono font-semibold tabular-nums">
+                          #{idx + 1}
+                        </span>
+                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between text-white">
+                          <p className="text-[10px] line-clamp-3 leading-tight">{post.content}</p>
+                          <div className="flex items-center justify-between gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleShiftIgTile(idx, -1)}
+                              disabled={idx === 0}
+                              className="p-1 rounded bg-white/15 hover:bg-white/25 disabled:opacity-30"
+                              title="Move earlier"
+                            >
+                              <ArrowLeft size={11} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onEditInStudio(post)}
+                              className="text-[10px] font-semibold underline"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleShiftIgTile(idx, 1)}
+                              disabled={idx === igPosts.length - 1}
+                              className="p-1 rounded bg-white/15 hover:bg-white/25 disabled:opacity-30"
+                              title="Move later"
+                            >
+                              <ArrowRight size={11} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="lg:col-span-7 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 space-y-4">
               <div>
-                <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em] tabular-nums">
                   3×3 Aesthetic Grid Sequence ({igPosts.length} Instagram Posts)
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Drag and drop tiles directly on the phone preview (or use arrow buttons) to balance colors & grid rhythm before publishing.
+                <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF] mt-0.5">
+                  Drag tiles directly on the phone preview or use arrows to balance visual rhythm before publishing.
                 </p>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {igPosts.map((post, idx) => (
-                  <div key={post.id} className="py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <GripVertical size={15} className="text-slate-300 shrink-0" />
-                      <span className="font-mono text-xs font-bold text-[#4F46E5] w-6 shrink-0">#{idx + 1}</span>
-                      {post.media?.[0] && (
-                        <img src={post.media[0]} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-100 truncate">{post.content}</p>
-                        <p className="text-[11px] text-slate-400 tabular-nums">
-                          {new Date(post.scheduledAt).toLocaleDateString()} · {post.status.replace('_', ' ')}
-                        </p>
+              {igPosts.length === 0 ? (
+                <EmptyStatePanel
+                  icon={Grid3X3}
+                  title="No Instagram posts scheduled"
+                  description="Create an Instagram post in Content Studio to preview and sequence your 3×3 grid."
+                  actionLabel="Schedule Post"
+                  onAction={onComposeNew}
+                />
+              ) : (
+                <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.06]">
+                  {igPosts.map((post, idx) => (
+                    <div key={post.id} className="py-2.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <GripVertical size={14} strokeWidth={1.5} className="text-[#9CA3AF] shrink-0" />
+                        <span className="font-mono text-[11px] font-semibold text-[#0891B2] dark:text-[#22D3EE] w-6 shrink-0 tabular-nums">
+                          #{idx + 1}
+                        </span>
+                        {post.media?.[0] && (
+                          <img src={post.media[0]} alt="" className="w-9 h-9 rounded-md object-cover shrink-0 border border-[#E5E7EB] dark:border-white/[0.08]" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] truncate">{post.content}</p>
+                          <p className="text-[11px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">
+                            {new Date(post.scheduledAt).toLocaleDateString()} · {post.status.replace('_', ' ')}
+                          </p>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => onEditInStudio(post)}
+                        className="px-2.5 py-1 border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[11px] font-medium text-[#4B5563] dark:text-[#D1D5DB] hover:border-[#06B6D4]"
+                      >
+                        Edit
+                      </button>
                     </div>
-                    <button
-                      onClick={() => onEditInStudio(post)}
-                      className="px-2.5 py-1 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:border-[#4F46E5]"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -536,15 +574,15 @@ export function VisualScheduler({
       {view === 'list' && (
         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex flex-wrap bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl text-xs font-semibold">
+            <div className="inline-flex flex-wrap bg-[#F3F4F6] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] p-0.5 rounded-lg text-[11px] font-medium">
               {['all', 'scheduled', 'pending_approval', 'approved', 'published', 'draft'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setListStatusFilter(st)}
-                  className={`px-3 py-1.5 rounded-lg capitalize ${
+                  className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
                     listStatusFilter === st
-                      ? 'bg-[#4F46E5] text-white'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                      : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
                   }`}
                 >
                   {st.replace('_', ' ')}
@@ -555,7 +593,7 @@ export function VisualScheduler({
             <select
               value={listCatFilter}
               onChange={(e) => setListCatFilter(e.target.value)}
-              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+              className="px-2.5 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
             >
               <option value="all">All Categories</option>
               {wsCategories.map((c) => (
@@ -564,98 +602,123 @@ export function VisualScheduler({
             </select>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredListPosts.map((post) => (
-                <div key={post.id} className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                  <div className="flex items-start gap-3.5 min-w-0">
-                    {post.media?.[0] && (
-                      <img src={post.media[0]} alt="" className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0" />
-                    )}
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className="w-2.5 h-2.5 rounded-xs shrink-0"
-                          style={{ backgroundColor: getCategoryColor(post.categoryId) }}
+          <div className="bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+            {filteredListPosts.length === 0 ? (
+              <div className="p-6">
+                <EmptyStatePanel
+                  icon={Calendar}
+                  title="No posts match your filter"
+                  description="Schedule a new post or switch status filters to view queued items."
+                  actionLabel="Schedule Post"
+                  onAction={onComposeNew}
+                />
+              </div>
+            ) : (
+              <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.06]">
+                {filteredListPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] transition-colors"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      {post.media?.[0] && (
+                        <img
+                          src={post.media[0]}
+                          alt=""
+                          className="w-11 h-11 rounded-lg object-cover border border-[#E5E7EB] dark:border-white/[0.08] shrink-0"
                         />
-                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                          {getCategoryName(post.categoryId)}
-                        </span>
-                        {post.platforms.map((pl: Platform) => (
-                          <PlatformTag key={pl} platform={pl} showFull={false} />
-                        ))}
-                        {post.isEvergreen && (
-                          <span className="text-[10px] font-bold text-[#4F46E5] flex items-center gap-0.5">
-                            <Repeat size={11} /> Evergreen
+                      )}
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: getCategoryColor(post.categoryId) }}
+                          />
+                          <span className="text-[11px] font-medium text-[#4B5563] dark:text-[#D1D5DB]">
+                            {getCategoryName(post.categoryId)}
                           </span>
-                        )}
+                          {post.platforms.map((pl: Platform) => (
+                            <PlatformTag key={pl} platform={pl} showFull={false} />
+                          ))}
+                          <StatusBadge tone={statusTone(post.status)}>
+                            {post.status.replace('_', ' ')}
+                          </StatusBadge>
+                          {post.isEvergreen && (
+                            <span className="text-[10px] font-medium text-[#0891B2] dark:text-[#22D3EE] flex items-center gap-0.5">
+                              <Repeat size={11} strokeWidth={1.5} /> Evergreen
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] line-clamp-2">
+                          {post.content}
+                        </p>
+                        <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono tabular-nums">
+                          {new Date(post.scheduledAt).toLocaleString()}
+                        </p>
                       </div>
-                      <p className="text-xs font-medium text-slate-900 dark:text-white line-clamp-2">{post.content}</p>
-                      <p className="text-[11px] text-slate-500 font-mono tabular-nums">
-                        {new Date(post.scheduledAt).toLocaleString()} · Status: {post.status.replace('_', ' ').toUpperCase()}
-                      </p>
                     </div>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    {post.status === 'pending_approval' && (
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                      {post.status === 'pending_approval' && (
+                        <button
+                          onClick={() => {
+                            onUpdatePost({ ...post, status: 'scheduled' });
+                            onToast('Post Approved & Scheduled');
+                          }}
+                          className="px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 rounded-lg text-[11px] font-medium flex items-center gap-1"
+                        >
+                          <CheckCircle2 size={12} strokeWidth={1.5} /> Approve
+                        </button>
+                      )}
                       <button
                         onClick={() => {
-                          onUpdatePost({ ...post, status: 'scheduled' });
-                          onToast('Post Approved & Scheduled');
+                          setRescheduleTarget(post);
+                          setRescheduleInput(post.scheduledAt.slice(0, 16));
                         }}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1"
+                        className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[11px] font-medium text-[#4B5563] dark:text-[#D1D5DB] hover:border-[#06B6D4]"
                       >
-                        <CheckCircle2 size={12} /> Approve
+                        Reschedule
                       </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setRescheduleTarget(post);
-                        setRescheduleInput(post.scheduledAt.slice(0, 16));
-                      }}
-                      className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:border-[#4F46E5]"
-                    >
-                      Reschedule
-                    </button>
-                    <button
-                      onClick={() => onEditInStudio(post)}
-                      className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:border-[#4F46E5] flex items-center gap-1"
-                    >
-                      <Edit3 size={12} /> Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        onDeletePost(post.id);
-                        onToast('Post Deleted');
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg"
-                      title="Delete post"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                      <button
+                        onClick={() => onEditInStudio(post)}
+                        className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[11px] font-medium text-[#4B5563] dark:text-[#D1D5DB] hover:border-[#06B6D4] flex items-center gap-1"
+                      >
+                        <Edit3 size={12} strokeWidth={1.5} /> Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          onDeletePost(post.id);
+                          onToast('Post Deleted');
+                        }}
+                        className="p-1.5 text-[#9CA3AF] hover:text-rose-500 rounded-lg"
+                        title="Delete post"
+                      >
+                        <Trash2 size={14} strokeWidth={1.5} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* VIEW 4: WEEKLY RECURRING SCHEDULE MATRIX */}
       {view === 'matrix' && (
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-          {/* Add Slot Form */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
           <form
             onSubmit={handleAddMatrixSlot}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-wrap items-end gap-4"
+            className="bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-4 flex flex-wrap items-end gap-3"
           >
             <div>
-              <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Day of Week</label>
+              <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF] block mb-1">
+                Day of Week
+              </label>
               <select
                 value={slotDay}
                 onChange={(e) => setSlotDay(e.target.value)}
-                className="px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
               >
                 {DAYS_OF_WEEK.map((d) => (
                   <option key={d} value={d}>{d}</option>
@@ -663,20 +726,24 @@ export function VisualScheduler({
               </select>
             </div>
             <div>
-              <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Posting Time</label>
+              <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF] block mb-1">
+                Posting Time
+              </label>
               <input
                 type="time"
                 value={slotTime}
                 onChange={(e) => setSlotTime(e.target.value)}
-                className="px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono outline-none"
+                className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[12px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
               />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <label className="text-[11px] font-bold uppercase text-slate-500 block mb-1">Assign Content Category</label>
+              <label className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF] block mb-1">
+                Assign Content Category
+              </label>
               <select
                 value={slotCatId}
                 onChange={(e) => setSlotCatId(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
               >
                 {wsCategories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -685,14 +752,13 @@ export function VisualScheduler({
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+              className="px-3.5 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg text-[12px] font-semibold flex items-center gap-1.5"
             >
-              <Plus size={14} /> Add Recurring Slot
+              <Plus size={13} strokeWidth={1.75} /> Add Recurring Slot
             </button>
           </form>
 
-          {/* 7-Column Weekly Matrix */}
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-7 rounded-[12px] border border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#13161D] divide-y md:divide-y-0 md:divide-x divide-[#E5E7EB] dark:divide-white/[0.08] overflow-hidden">
             {DAYS_OF_WEEK.map((day) => {
               const slots = wsCategories
                 .flatMap((cat) =>
@@ -703,33 +769,32 @@ export function VisualScheduler({
                 .sort((a, b) => a.slot.time.localeCompare(b.slot.time));
 
               return (
-                <div
-                  key={day}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 min-h-[280px] flex flex-col"
-                >
-                  <div className="pb-2 mb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="font-display text-xs font-bold text-slate-900 dark:text-white">{day}</span>
-                    <span className="text-[10px] font-mono text-slate-400">{slots.length} slots</span>
+                <div key={day} className="p-3 min-h-[280px] flex flex-col">
+                  <div className="pb-2 mb-2.5 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between">
+                    <span className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6]">{day}</span>
+                    <span className="text-[10px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">
+                      {slots.length} slots
+                    </span>
                   </div>
 
                   <div className="space-y-2 flex-1">
                     {slots.length === 0 ? (
-                      <p className="text-[11px] text-slate-400 italic">No slots assigned</p>
+                      <p className="text-[11px] text-[#9CA3AF] dark:text-[#6B7280]">No slots assigned</p>
                     ) : (
                       slots.map(({ cat, slot, slotIdx }) => (
                         <div
                           key={`${cat.id}-${slotIdx}`}
-                          className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex items-start justify-between gap-2 hover:border-[#4F46E5] transition-colors"
+                          className="p-2.5 rounded-lg bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex items-start justify-between gap-2 hover:border-[#06B6D4] transition-colors"
                         >
                           <div className="min-w-0">
-                            <p className="text-[11px] font-mono font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <p className="text-[11px] font-mono font-semibold text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 tabular-nums">
                               <span
-                                className="w-2 h-2 rounded-xs shrink-0"
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
                                 style={{ backgroundColor: cat.color }}
                               />
                               {slot.time}
                             </p>
-                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate mt-0.5">
+                            <p className="text-[11px] text-[#4B5563] dark:text-[#9CA3AF] truncate mt-0.5">
                               {cat.name}
                             </p>
                           </div>
@@ -743,10 +808,10 @@ export function VisualScheduler({
                               });
                               onToast('Slot Removed', `${day} ${slot.time} removed from ${cat.name}.`);
                             }}
-                            className="text-slate-400 hover:text-rose-600 shrink-0"
+                            className="text-[#9CA3AF] hover:text-rose-500 shrink-0"
                             title="Remove recurring slot"
                           >
-                            <X size={13} />
+                            <X size={13} strokeWidth={1.5} />
                           </button>
                         </div>
                       ))
@@ -759,20 +824,25 @@ export function VisualScheduler({
         </div>
       )}
 
-      {/* Reschedule Modal for List View */}
+      {/* Reschedule Modal */}
       {rescheduleTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/60" onClick={() => setRescheduleTarget(null)} />
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setRescheduleTarget(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[12px] p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">Reschedule Post</h3>
-              <button onClick={() => setRescheduleTarget(null)} className="text-slate-400"><X size={16} /></button>
+              <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">Reschedule Post</h3>
+              <button
+                onClick={() => setRescheduleTarget(null)}
+                className="text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
+              >
+                <X size={16} strokeWidth={1.5} />
+              </button>
             </div>
             <input
               type="datetime-local"
               value={rescheduleInput}
               onChange={(e) => setRescheduleInput(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
+              className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg text-[12px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
             />
             <button
               onClick={() => {
@@ -780,9 +850,9 @@ export function VisualScheduler({
                 onToast('Post Rescheduled');
                 setRescheduleTarget(null);
               }}
-              className="w-full py-2 bg-[#4F46E5] text-white rounded-lg text-xs font-semibold"
+              className="w-full py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg text-[12px] font-semibold"
             >
-              Save New Date & Time
+              Save New Date &amp; Time
             </button>
           </div>
         </div>

@@ -25,7 +25,7 @@
         },
         "selectedPlan": {
           "type": "string",
-          "enum": ["bootstrap", "accelerate", "pro_agency", "pro50", "pro100", "pro150"]
+          "enum": ["bootstrap", "accelerate", "pro_agency", "lifetime", "pro50", "pro100", "pro150"]
         },
         "activeRole": {
           "type": "string",
@@ -44,7 +44,7 @@
     },
     "WorkspaceSnapshot": {
       "title": "WorkspaceSnapshot",
-      "description": "Cloud-synced social media management & Social CRM workspace state owned by a user",
+      "description": "Cloud-synced social media management, YouTube, AI SEO, RSS discovery, viral campaigns & Social CRM workspace state owned by a user",
       "type": "object",
       "properties": {
         "ownerId": {
@@ -63,7 +63,7 @@
         },
         "selectedPlan": {
           "type": "string",
-          "enum": ["bootstrap", "accelerate", "pro_agency", "pro50", "pro100", "pro150"]
+          "enum": ["bootstrap", "accelerate", "pro_agency", "lifetime", "pro50", "pro100", "pro150"]
         },
         "darkMode": {
           "type": "boolean"
@@ -112,6 +112,42 @@
           "type": "array",
           "description": "Content discovery trend alerts (max 100)"
         },
+        "youtubeChannels": {
+          "type": "array",
+          "description": "Connected workspace-scoped YouTube channels (max 100)"
+        },
+        "youtubeVideos": {
+          "type": "array",
+          "description": "YouTube video pipelines, scripts, metadata, and playlists (max 200)"
+        },
+        "seoArticles": {
+          "type": "array",
+          "description": "AI SEO blog articles and schema FAQ metadata (max 150)"
+        },
+        "cmsConnectors": {
+          "type": "array",
+          "description": "Direct CMS publishing connectors (max 50)"
+        },
+        "rssSources": {
+          "type": "array",
+          "description": "RSS, YouTube, and blog automation sources (max 150)"
+        },
+        "curatedItems": {
+          "type": "array",
+          "description": "Discovered viral posts and imported RSS items (max 200)"
+        },
+        "ecommerceFeeds": {
+          "type": "array",
+          "description": "Shopify and WooCommerce product feeds (max 50)"
+        },
+        "viralCampaigns": {
+          "type": "array",
+          "description": "Viral giveaways, UGC contests, and referral campaigns (max 100)"
+        },
+        "workspaceCredits": {
+          "type": "object",
+          "description": "Workspace-scoped AI credit consumption map"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -138,6 +174,15 @@
         "ads",
         "drafts",
         "discoveryAlerts",
+        "youtubeChannels",
+        "youtubeVideos",
+        "seoArticles",
+        "cmsConnectors",
+        "rssSources",
+        "curatedItems",
+        "ecommerceFeeds",
+        "viralCampaigns",
+        "workspaceCredits",
         "createdAt",
         "updatedAt"
       ]
@@ -223,6 +268,35 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "PlatformGovernanceConfig": {
+      "title": "PlatformGovernanceConfig",
+      "description": "Non-PII global AI model routing, per-plan module quotas, and feature flags readable by authenticated workspaces and writable only by Super Admin",
+      "type": "object",
+      "properties": {
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "aiGovernance": {
+          "type": "object",
+          "description": "Global AI governance settings and per-plan module quotas"
+        },
+        "featureFlags": {
+          "type": "array",
+          "description": "Global platform feature flags (max 50)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["updatedBy", "aiGovernance", "featureFlags", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -241,6 +315,10 @@
     "/adminState/{configId}": {
       "schema": { "$ref": "#/entities/PlatformAdminState" },
       "description": "Super Admin SaaS platform configuration and tenant directory"
+    },
+    "/platformConfig/{configId}": {
+      "schema": { "$ref": "#/entities/PlatformGovernanceConfig" },
+      "description": "Non-PII global quotas and feature flags propagated from Super Admin to customer workspaces"
     }
   }
 }

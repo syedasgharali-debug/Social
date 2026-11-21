@@ -27,6 +27,7 @@ import {
 import { Contact, Deal, DealStage, Interaction, Platform } from '../../types';
 import { aiService } from '../../services/aiService';
 import { ALL_PLATFORMS, PLATFORM_META, SocialLogo, ContactAvatar } from '../common/PlatformMeta';
+import { KpiMetricCard, InspectorDrawer, StatusBadge, EmptyStatePanel } from '../common/DesignPrimitives';
 
 interface SocialCRMProps {
   workspaceId: string;
@@ -45,9 +46,9 @@ interface SocialCRMProps {
 }
 
 const STAGES: { id: DealStage; label: string; prob: number; accent: string; dot: string }[] = [
-  { id: 'new_lead', label: 'New Lead', prob: 35, accent: 'text-slate-700 dark:text-slate-200', dot: 'bg-slate-400' },
-  { id: 'qualified', label: 'Qualified', prob: 60, accent: 'text-sky-700 dark:text-sky-400', dot: 'bg-sky-500' },
-  { id: 'proposal_sent', label: 'Proposal Sent', prob: 80, accent: 'text-[#4F46E5] dark:text-indigo-400', dot: 'bg-[#4F46E5]' },
+  { id: 'new_lead', label: 'New Lead', prob: 35, accent: 'text-[#4B5563] dark:text-[#9CA3AF]', dot: 'bg-[#9CA3AF]' },
+  { id: 'qualified', label: 'Qualified', prob: 60, accent: 'text-[#0891B2] dark:text-[#22D3EE]', dot: 'bg-[#06B6D4]' },
+  { id: 'proposal_sent', label: 'Proposal Sent', prob: 80, accent: 'text-[#EA580C] dark:text-[#FB923C]', dot: 'bg-[#F97316]' },
   { id: 'won', label: 'Closed Won', prob: 100, accent: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
   { id: 'lost', label: 'Lost', prob: 0, accent: 'text-rose-700 dark:text-rose-400', dot: 'bg-rose-500' },
 ];
@@ -740,132 +741,113 @@ export function SocialCRM({
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden relative bg-[#F8FAFC] dark:bg-[#090D16]">
+    <div className="h-full flex flex-col overflow-hidden relative bg-[#F8F9FB] dark:bg-[#090A0D]">
       {/* Executive CRM Header & KPI Strip */}
-      <div className="px-6 py-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 space-y-4 shrink-0">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="px-6 py-4 bg-white dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] space-y-4 shrink-0">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-[18px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em]">
               Social CRM &amp; Revenue Pipeline
             </h1>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
               Track social conversations to closed revenue across every connected channel.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex bg-[#F3F4F6] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] p-0.5 rounded-lg">
               <button
                 type="button"
                 onClick={() => setView('kanban')}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors tabular-nums ${
                   view === 'kanban'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
                 }`}
               >
-                <Kanban size={14} /> Pipeline ({wsDeals.length})
+                <Kanban size={13} strokeWidth={1.5} /> Pipeline ({wsDeals.length})
               </button>
               <button
                 type="button"
                 onClick={() => setView('table')}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors tabular-nums ${
                   view === 'table'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
                 }`}
               >
-                <TableIcon size={14} /> Contacts ({wsContacts.length})
+                <TableIcon size={13} strokeWidth={1.5} /> Contacts ({wsContacts.length})
               </button>
               <button
                 type="button"
                 onClick={() => setView('analytics')}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors ${
                   view === 'analytics'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.1]'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
                 }`}
               >
-                <BarChart3 size={14} /> Forecast
+                <BarChart3 size={13} strokeWidth={1.5} /> Forecast
               </button>
             </div>
 
             <button
               type="button"
               onClick={handleExportCsv}
-              className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors"
+              className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#13161D] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-lg text-[12px] font-medium text-[#4B5563] dark:text-[#D1D5DB] flex items-center gap-1.5 transition-colors"
             >
-              <Download size={14} /> Export CSV
+              <Download size={13} strokeWidth={1.5} /> Export CSV
             </button>
 
             <button
               type="button"
               onClick={() => setShowAddContact(true)}
-              className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 rounded-lg text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1.5 transition-colors"
+              className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#13161D] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-lg text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
             >
-              <Plus size={14} /> Add Contact
+              <Plus size={13} strokeWidth={1.5} /> Add Contact
             </button>
 
             <button
               type="button"
               onClick={() => openNewDealModal('qualified')}
-              className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-indigo-600/20 transition-colors"
+              className="px-3 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg text-[12px] font-semibold flex items-center gap-1.5 transition-colors"
             >
-              <Plus size={14} /> New Deal
+              <Plus size={13} strokeWidth={1.75} /> New Deal
             </button>
           </div>
         </div>
 
-        {/* Clean 4-Metric Pipeline Bar */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          <div className="px-4 py-3 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Open Pipeline</p>
-            <div className="mt-1 flex items-baseline justify-between gap-2">
-              <p className="font-display text-xl font-bold text-slate-900 dark:text-white tabular-nums">
-                ${pipelineMetrics.openPipeline.toLocaleString()}
-              </p>
-              <span className="text-[11px] text-slate-500 tabular-nums">{pipelineMetrics.openCount} active</span>
-            </div>
-          </div>
-
-          <div className="px-4 py-3 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Weighted Forecast</p>
-            <div className="mt-1 flex items-baseline justify-between gap-2">
-              <p className="font-display text-xl font-bold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
-                ${pipelineMetrics.weightedForecast.toLocaleString()}
-              </p>
-              <span className="text-[11px] text-slate-500">prob-adjusted</span>
-            </div>
-          </div>
-
-          <div className="px-4 py-3 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Closed Won</p>
-            <div className="mt-1 flex items-baseline justify-between gap-2">
-              <p className="font-display text-xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                ${pipelineMetrics.closedWon.toLocaleString()}
-              </p>
-              <span className="text-[11px] text-slate-500 tabular-nums">{pipelineMetrics.wonCount} won</span>
-            </div>
-          </div>
-
-          <div className="px-4 py-3 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Win Rate &amp; Avg Deal</p>
-            <div className="mt-1 flex items-baseline justify-between gap-2">
-              <p className="font-display text-xl font-bold text-slate-900 dark:text-white tabular-nums">
-                {pipelineMetrics.winRate}%
-              </p>
-              <span className="text-[11px] text-slate-500 tabular-nums">
-                avg ${pipelineMetrics.avgDealSize.toLocaleString()}
-              </span>
-            </div>
-          </div>
+        {/* 4-Metric Pipeline KPI Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiMetricCard
+            label="Open Pipeline"
+            value={`$${pipelineMetrics.openPipeline.toLocaleString()}`}
+            subtext={`${pipelineMetrics.openCount} active`}
+          />
+          <KpiMetricCard
+            label="Weighted Forecast"
+            value={`$${pipelineMetrics.weightedForecast.toLocaleString()}`}
+            subtext="prob-adjusted"
+            accent="cyan"
+          />
+          <KpiMetricCard
+            label="Closed Won"
+            value={`$${pipelineMetrics.closedWon.toLocaleString()}`}
+            subtext={`${pipelineMetrics.wonCount} won`}
+            accent="emerald"
+          />
+          <KpiMetricCard
+            label="Win Rate & Avg Deal"
+            value={`${pipelineMetrics.winRate}%`}
+            subtext={`avg $${pipelineMetrics.avgDealSize.toLocaleString()}`}
+          />
         </div>
 
         {/* Unified Search & Filter Row */}
         {view !== 'analytics' && (
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[220px] max-w-md">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={13} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
                 type="text"
                 value={search}
@@ -875,14 +857,14 @@ export function SocialCRM({
                     ? 'Search deals, contacts, companies, tags...'
                     : 'Search contacts, email, handle, company, tags...'
                 }
-                className="w-full pl-9 pr-8 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-[#4F46E5]"
+                className="w-full pl-8 pr-8 py-1.5 bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] text-[#111827] dark:text-[#F3F4F6] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] outline-none focus:border-[#06B6D4]"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
                   aria-label="Clear search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
                 >
                   <X size={13} />
                 </button>
@@ -893,7 +875,7 @@ export function SocialCRM({
               aria-label="Filter by social channel"
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value as Platform | 'all')}
-              className="px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-[#4F46E5]"
+              className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] font-medium text-[#4B5563] dark:text-[#D1D5DB] outline-none focus:border-[#06B6D4]"
             >
               <option value="all">All Channels</option>
               {ALL_PLATFORMS.map((p) => (
@@ -909,7 +891,7 @@ export function SocialCRM({
                   aria-label="Filter by lifecycle stage"
                   value={stageFilter}
                   onChange={(e) => setStageFilter(e.target.value)}
-                  className="px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-[#4F46E5]"
+                  className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] font-medium text-[#4B5563] dark:text-[#D1D5DB] outline-none focus:border-[#06B6D4]"
                 >
                   <option value="all">All Lifecycle Stages</option>
                   {LIFECYCLE_STAGES.map((st) => (
@@ -919,13 +901,13 @@ export function SocialCRM({
                   ))}
                 </select>
 
-                <div className="flex items-center gap-1.5 px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-300">
-                  <ArrowUpDown size={13} className="text-slate-400" />
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] text-[#4B5563] dark:text-[#D1D5DB]">
+                  <ArrowUpDown size={12} strokeWidth={1.5} className="text-[#9CA3AF]" />
                   <select
                     aria-label="Sort contacts"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="bg-transparent font-medium outline-none text-slate-800 dark:text-slate-200"
+                    className="bg-transparent font-medium outline-none text-[#111827] dark:text-[#F3F4F6]"
                   >
                     <option value="leadScore">Sort: Lead Score</option>
                     <option value="ltv">Sort: Est. LTV</option>
@@ -944,7 +926,7 @@ export function SocialCRM({
                   setPlatformFilter('all');
                   setStageFilter('all');
                 }}
-                className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline px-1.5"
+                className="text-[12px] font-medium text-[#0891B2] dark:text-[#22D3EE] hover:underline px-1.5"
               >
                 Reset filters
               </button>
@@ -957,7 +939,7 @@ export function SocialCRM({
       <div className="flex-1 overflow-auto p-6 custom-scrollbar">
         {/* VIEW 1: KANBAN PIPELINE */}
         {view === 'kanban' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 min-w-[960px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 min-w-[960px] rounded-[12px] border border-[#E5E7EB] dark:border-white/[0.08] bg-[#F3F4F6]/60 dark:bg-[#0E1015] divide-y md:divide-y-0 md:divide-x divide-[#E5E7EB] dark:divide-white/[0.08] overflow-hidden">
             {STAGES.map((stage) => {
               const stageDeals = filteredDeals.filter((d) => d.stage === stage.id);
               const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -987,42 +969,47 @@ export function SocialCRM({
                     setDragDealId(null);
                     setDragOverStage(null);
                   }}
-                  className={`rounded-xl p-3.5 flex flex-col min-h-[460px] border transition-colors ${
+                  className={`p-3 flex flex-col min-h-[480px] transition-colors ${
                     isDropTarget
-                      ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-[#4F46E5] border-dashed'
-                      : 'bg-slate-100/75 dark:bg-slate-900/60 border-slate-200/90 dark:border-slate-800'
+                      ? 'bg-[#06B6D4]/[0.06] ring-1 ring-inset ring-[#06B6D4] ring-offset-0'
+                      : ''
                   }`}
                 >
                   {/* Column Header */}
-                  <div className="flex items-start justify-between gap-2 pb-3 mb-3 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-start justify-between gap-2 pb-2.5 mb-2.5 border-b border-[#E5E7EB] dark:border-white/[0.08]">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">{stage.label}</p>
+                        <span className={`w-1.5 h-1.5 rounded-full ${stage.dot}`} />
+                        <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6]">{stage.label}</p>
+                        <span className="font-mono text-[11px] text-[#6B7280] tabular-nums">{stageDeals.length}</span>
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-500 tabular-nums">
-                        {stageDeals.length} {stageDeals.length === 1 ? 'deal' : 'deals'} · ${stageSum.toLocaleString()}
+                      <p className="mt-1 text-[11px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">
+                        ${stageSum.toLocaleString()}
+                        {stage.id !== 'won' && stage.id !== 'lost' && stageSum > 0 && (
+                          <span className="text-[#9CA3AF] dark:text-[#6B7280]"> · ${stageWeighted.toLocaleString()} wtd</span>
+                        )}
                       </p>
-                      {stage.id !== 'won' && stage.id !== 'lost' && stageSum > 0 && (
-                        <p className="text-[10px] text-slate-400 tabular-nums">
-                          Weighted ${stageWeighted.toLocaleString()}
-                        </p>
-                      )}
                     </div>
                     <button
                       type="button"
                       onClick={() => openNewDealModal(stage.id)}
                       title={`Add deal to ${stage.label}`}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#4F46E5] hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                      className="p-1 rounded-md text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] hover:bg-white dark:hover:bg-[#191D26] transition-colors"
                     >
-                      <Plus size={14} />
+                      <Plus size={13} strokeWidth={1.5} />
                     </button>
                   </div>
 
                   {/* Stage Cards */}
-                  <div className="space-y-2.5 flex-1">
+                  <div className="space-y-2 flex-1">
                     {stageDeals.length === 0 ? (
-                      <div className="h-24 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-[11px] text-slate-400">
+                      <div
+                        className={`h-24 rounded-lg border border-dashed flex items-center justify-center text-[11px] transition-colors ${
+                          isDropTarget
+                            ? 'border-[#06B6D4] text-[#0891B2] dark:text-[#22D3EE] bg-[#06B6D4]/[0.04]'
+                            : 'border-[#D1D5DB] dark:border-white/[0.08] text-[#9CA3AF] dark:text-[#6B7280]'
+                        }`}
+                      >
                         Drop deal here
                       </div>
                     ) : (
@@ -1047,12 +1034,12 @@ export function SocialCRM({
                                 openEditDealModal(deal);
                               }
                             }}
-                            className={`bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-3.5 hover:border-[#4F46E5] hover:shadow-md transition-all cursor-pointer group ${
-                              dragDealId === deal.id ? 'opacity-50' : ''
+                            className={`bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.18] rounded-[10px] p-3 transition-colors cursor-pointer group ${
+                              dragDealId === deal.id ? 'opacity-40' : ''
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <p className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                              <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6] leading-snug">
                                 {deal.title}
                               </p>
                               <button
@@ -1062,18 +1049,18 @@ export function SocialCRM({
                                   e.stopPropagation();
                                   openEditDealModal(deal);
                                 }}
-                                className="p-1 rounded-md text-slate-400 hover:text-[#4F46E5] hover:bg-slate-100 dark:hover:bg-slate-800 opacity-70 group-hover:opacity-100 shrink-0"
+                                className="p-1 rounded text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0 transition-opacity"
                               >
-                                <Pencil size={12} />
+                                <Pencil size={12} strokeWidth={1.5} />
                               </button>
                             </div>
 
                             <div className="mt-1.5 flex items-baseline justify-between gap-2 tabular-nums">
-                              <span className="font-display text-sm font-bold text-slate-900 dark:text-white">
+                              <span className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
                                 ${deal.value.toLocaleString()}
                               </span>
-                              <span className="text-[11px] text-slate-500">
-                                {deal.probability}% prob
+                              <span className="font-mono text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                                {deal.probability}%
                               </span>
                             </div>
 
@@ -1081,27 +1068,27 @@ export function SocialCRM({
                               <div className="mt-2.5 flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <ContactAvatar name={contact.name} src={contact.avatar} size="xs" />
-                                  <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
+                                  <span className="text-[11px] text-[#4B5563] dark:text-[#9CA3AF] truncate">
                                     {contact.name} · {contact.company}
                                   </span>
                                 </div>
                                 {contact.platforms[0] && (
-                                  <SocialLogo platform={contact.platforms[0]} size={13} className="shrink-0" />
+                                  <SocialLogo platform={contact.platforms[0]} size={16} className="shrink-0" />
                                 )}
                               </div>
                             ) : (
-                              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                              <p className="mt-2 text-[11px] text-[#EA580C] dark:text-[#FB923C]">
                                 Unassigned contact · click to link
                               </p>
                             )}
 
-                            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                            <div className="mt-2.5 pt-2 border-t border-[#E5E7EB] dark:border-white/[0.06] flex items-center justify-between gap-2">
                               <span
-                                className={`text-[10px] tabular-nums flex items-center gap-1 ${
-                                  overdue ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-slate-400'
+                                className={`text-[10px] font-mono tabular-nums flex items-center gap-1 ${
+                                  overdue ? 'text-[#F97316] font-semibold' : 'text-[#6B7280] dark:text-[#9CA3AF]'
                                 }`}
                               >
-                                <Calendar size={10} />
+                                <Calendar size={10} strokeWidth={1.5} />
                                 {overdue ? `Overdue ${deal.expectedCloseDate}` : deal.expectedCloseDate}
                               </span>
                               <select
@@ -1109,7 +1096,7 @@ export function SocialCRM({
                                 value={deal.stage}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleMoveDealStage(deal, e.target.value as DealStage)}
-                                className="text-[10px] font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-slate-700 dark:text-slate-300 outline-none focus:border-[#4F46E5]"
+                                className="text-[10px] font-medium bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded px-1.5 py-0.5 text-[#4B5563] dark:text-[#D1D5DB] outline-none focus:border-[#06B6D4]"
                               >
                                 {STAGES.map((s) => (
                                   <option key={s.id} value={s.id}>
@@ -1134,15 +1121,15 @@ export function SocialCRM({
           <div className="space-y-3">
             {/* Bulk Action Toolbar */}
             {selectedContactIds.length > 0 && (
-              <div className="px-4 py-2.5 bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="px-4 py-2 bg-[#06B6D4]/[0.06] border border-[#06B6D4]/30 rounded-[10px] flex flex-wrap items-center justify-between gap-3 text-[12px]">
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-[#4F46E5] dark:text-indigo-300 tabular-nums">
+                  <span className="font-semibold text-[#0891B2] dark:text-[#22D3EE] tabular-nums">
                     {selectedContactIds.length} selected
                   </span>
                   <button
                     type="button"
                     onClick={() => setSelectedContactIds([])}
-                    className="text-slate-500 hover:text-slate-800 dark:hover:text-white underline"
+                    className="text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] underline"
                   >
                     Clear
                   </button>
@@ -1158,7 +1145,7 @@ export function SocialCRM({
                         e.target.value = '';
                       }
                     }}
-                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
+                    className="px-2.5 py-1 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none"
                   >
                     <option value="" disabled>
                       Move Stage...
@@ -1176,11 +1163,11 @@ export function SocialCRM({
                       value={bulkTagInput}
                       onChange={(e) => setBulkTagInput(e.target.value)}
                       placeholder="Add tag..."
-                      className="w-28 px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
+                      className="w-28 px-2.5 py-1 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[12px] outline-none focus:border-[#06B6D4]"
                     />
                     <button
                       type="submit"
-                      className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                      className="px-2.5 py-1 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] hover:border-[#D1D5DB] dark:hover:border-white/[0.2] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6]"
                     >
                       Apply
                     </button>
@@ -1189,7 +1176,7 @@ export function SocialCRM({
                   <button
                     type="button"
                     onClick={handleExportCsv}
-                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50"
+                    className="px-2.5 py-1 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] hover:bg-[#F8F9FB] dark:hover:bg-[#191D26]"
                   >
                     Export Selected
                   </button>
@@ -1197,43 +1184,49 @@ export function SocialCRM({
                   <button
                     type="button"
                     onClick={handleBulkDelete}
-                    className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                    className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-[12px] font-medium flex items-center gap-1"
                   >
-                    <Trash2 size={12} /> Delete
+                    <Trash2 size={12} strokeWidth={1.5} /> Delete
                   </button>
                 </div>
               </div>
             )}
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 text-slate-500">
-                      <th className="py-3 pl-4 pr-2 w-10">
+            <div className="bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+              <div className="overflow-x-auto max-h-[calc(100vh-300px)] custom-scrollbar">
+                <table className="w-full text-left text-[12px] border-collapse">
+                  <thead className="sticky top-0 z-10 bg-[#F8F9FB] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                    <tr className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF]">
+                      <th className="py-2.5 pl-4 pr-2 w-10">
                         <input
                           type="checkbox"
                           checked={allFilteredSelected}
                           onChange={toggleSelectAll}
                           aria-label="Select all contacts"
-                          className="rounded border-slate-300 accent-[#4F46E5]"
+                          className="rounded border-[#D1D5DB] accent-[#06B6D4]"
                         />
                       </th>
-                      <th className="py-3 px-4 font-semibold">Contact</th>
-                      <th className="py-3 px-4 font-semibold">Company &amp; Role</th>
-                      <th className="py-3 px-4 font-semibold">Channels</th>
-                      <th className="py-3 px-4 font-semibold">Lifecycle Stage</th>
-                      <th className="py-3 px-4 font-semibold text-right">Deals</th>
-                      <th className="py-3 px-4 font-semibold text-right">Lead Score</th>
-                      <th className="py-3 px-4 font-semibold text-right">Est. LTV</th>
-                      <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                      <th className="py-2.5 px-3">Contact</th>
+                      <th className="py-2.5 px-3">Company &amp; Role</th>
+                      <th className="py-2.5 px-3">Channels</th>
+                      <th className="py-2.5 px-3">Lifecycle</th>
+                      <th className="py-2.5 px-3 text-right">Deals</th>
+                      <th className="py-2.5 px-3 text-right">Lead Score</th>
+                      <th className="py-2.5 px-3 text-right">Est. LTV</th>
+                      <th className="py-2.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
+                  <tbody className="divide-y divide-[#E5E7EB] dark:divide-white/[0.06] tabular-nums">
                     {filteredContacts.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-12 text-center text-slate-500">
-                          No contacts match your current filters.
+                        <td colSpan={9} className="p-6">
+                          <EmptyStatePanel
+                            icon={Building2}
+                            title="No contacts found"
+                            description="Add your first CRM contact or clear your active search filters."
+                            actionLabel="Add Contact"
+                            onAction={() => setShowAddContact(true)}
+                          />
                         </td>
                       </tr>
                     ) : (
@@ -1249,12 +1242,12 @@ export function SocialCRM({
                               setIsEditingContact(false);
                               setAiLeadInsight(null);
                             }}
-                            className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors ${
-                              checked ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''
+                            className={`h-11 group hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] cursor-pointer transition-colors ${
+                              checked ? 'bg-[#06B6D4]/[0.05]' : ''
                             }`}
                           >
                             <td
-                              className="py-3.5 pl-4 pr-2"
+                              className="py-2 pl-4 pr-2"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <input
@@ -1262,25 +1255,25 @@ export function SocialCRM({
                                 checked={checked}
                                 onChange={() => toggleSelectContact(c.id)}
                                 aria-label={`Select ${c.name}`}
-                                className="rounded border-slate-300 accent-[#4F46E5]"
+                                className="rounded border-[#D1D5DB] accent-[#06B6D4]"
                               />
                             </td>
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-3">
+                            <td className="py-2 px-3">
+                              <div className="flex items-center gap-2.5">
                                 <ContactAvatar name={c.name} src={c.avatar} size="sm" />
                                 <div className="min-w-0">
-                                  <p className="font-bold text-slate-900 dark:text-white truncate">{c.name}</p>
-                                  <p className="text-[11px] text-slate-500 truncate">
-                                    {c.handle} · {c.email}
+                                  <p className="font-medium text-[#111827] dark:text-[#F3F4F6] truncate">{c.name}</p>
+                                  <p className="text-[11px] font-mono text-[#6B7280] dark:text-[#9CA3AF] truncate">
+                                    {c.handle}
                                   </p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
-                              <p className="font-medium">{c.company || '—'}</p>
-                              <p className="text-[11px] text-slate-500">{c.title || '—'}</p>
+                            <td className="py-2 px-3 text-[#4B5563] dark:text-[#D1D5DB]">
+                              <p className="font-medium text-[#111827] dark:text-[#F3F4F6] truncate max-w-[180px]">{c.company || '—'}</p>
+                              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate max-w-[180px]">{c.title || '—'}</p>
                             </td>
-                            <td className="py-3.5 px-4">
+                            <td className="py-2 px-3">
                               <div className="flex items-center gap-1.5">
                                 {c.platforms.map((pl) => (
                                   <span key={pl} title={PLATFORM_META[pl].label}>
@@ -1290,7 +1283,7 @@ export function SocialCRM({
                               </div>
                             </td>
                             <td
-                              className="py-3.5 px-4"
+                              className="py-2 px-3"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <select
@@ -1301,7 +1294,7 @@ export function SocialCRM({
                                   onUpdateContact({ ...c, lifecycleStage: nextStage });
                                   onToast('Lifecycle Updated', `${c.name} moved to ${nextStage}.`);
                                 }}
-                                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-[#4F46E5]"
+                                className="bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md px-2 py-1 text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                               >
                                 {LIFECYCLE_STAGES.map((st) => (
                                   <option key={st} value={st}>
@@ -1310,52 +1303,52 @@ export function SocialCRM({
                                 ))}
                               </select>
                             </td>
-                            <td className="py-3.5 px-4 text-right">
+                            <td className="py-2 px-3 text-right">
                               {cDeals.length > 0 ? (
                                 <div>
-                                  <p className="font-bold text-slate-900 dark:text-white">
+                                  <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">
                                     ${cDealValue.toLocaleString()}
                                   </p>
-                                  <p className="text-[11px] text-slate-500">
+                                  <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
                                     {cDeals.length} {cDeals.length === 1 ? 'deal' : 'deals'}
                                   </p>
                                 </div>
                               ) : (
-                                <span className="text-slate-400">—</span>
+                                <span className="text-[#9CA3AF] dark:text-[#6B7280]">—</span>
                               )}
                             </td>
-                            <td className="py-3.5 px-4 text-right">
+                            <td className="py-2 px-3 text-right">
                               <div className="inline-flex items-center gap-2">
-                                <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                <div className="w-12 h-1.5 rounded-full bg-[#E5E7EB] dark:bg-white/[0.08] overflow-hidden">
                                   <div
                                     className={`h-full rounded-full ${
                                       c.leadScore >= 80
                                         ? 'bg-emerald-500'
                                         : c.leadScore >= 60
-                                        ? 'bg-[#4F46E5]'
-                                        : 'bg-amber-500'
+                                        ? 'bg-[#06B6D4]'
+                                        : 'bg-[#F97316]'
                                     }`}
                                     style={{ width: `${Math.min(100, c.leadScore)}%` }}
                                   />
                                 </div>
-                                <span className="font-bold text-slate-900 dark:text-white w-7 text-right">
+                                <span className="font-mono font-medium text-[#111827] dark:text-[#F3F4F6] w-6 text-right">
                                   {c.leadScore}
                                 </span>
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
+                            <td className="py-2 px-3 text-right font-semibold text-[#111827] dark:text-[#F3F4F6]">
                               ${c.ltv.toLocaleString()}
                             </td>
                             <td
-                              className="py-3.5 px-4 text-right"
+                              className="py-2 px-4 text-right"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="inline-flex items-center gap-1.5">
+                              <div className="inline-flex items-center gap-1 opacity-75 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                 <button
                                   type="button"
                                   onClick={() => onOpenInboxForContact(c.id)}
                                   title="Open in Unified Inbox"
-                                  className="px-2 py-1 rounded-md text-[#4F46E5] dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 font-semibold"
+                                  className="px-2 py-1 rounded-md text-[#0891B2] dark:text-[#22D3EE] hover:bg-[#06B6D4]/10 font-medium text-[11px]"
                                 >
                                   Inbox
                                 </button>
@@ -1363,7 +1356,7 @@ export function SocialCRM({
                                   type="button"
                                   onClick={() => openNewDealModal('qualified', c.id)}
                                   title="Create Deal for Contact"
-                                  className="px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
+                                  className="px-2 py-1 rounded-md text-[#4B5563] dark:text-[#9CA3AF] hover:bg-[#F3F4F6] dark:hover:bg-white/[0.06] font-medium text-[11px]"
                                 >
                                   + Deal
                                 </button>
@@ -1374,9 +1367,9 @@ export function SocialCRM({
                                     setIsEditingContact(true);
                                   }}
                                   aria-label={`Edit ${c.name}`}
-                                  className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  className="p-1 rounded-md text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] hover:bg-[#F3F4F6] dark:hover:bg-white/[0.06]"
                                 >
-                                  <Pencil size={13} />
+                                  <Pencil size={12} strokeWidth={1.5} />
                                 </button>
                               </div>
                             </td>
@@ -1393,22 +1386,22 @@ export function SocialCRM({
 
         {/* VIEW 3: FORECAST & SOCIAL ATTRIBUTION ANALYTICS */}
         {view === 'analytics' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Stage Funnel & Forecast */}
-            <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-5">
+            <div className="lg:col-span-7 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                  <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
                     Stage Breakdown &amp; Weighted Forecast
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
                     Gross pipeline vs. probability-adjusted expected revenue per stage
                   </p>
                 </div>
-                <TrendingUp size={18} className="text-[#4F46E5]" />
+                <TrendingUp size={16} strokeWidth={1.5} className="text-[#06B6D4]" />
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 {STAGES.map((stage) => {
                   const stageDeals = wsDeals.filter((d) => d.stage === stage.id);
                   const gross = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -1426,22 +1419,22 @@ export function SocialCRM({
 
                   return (
                     <div key={stage.id} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs tabular-nums">
+                      <div className="flex items-center justify-between text-[12px] tabular-nums">
                         <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
-                          <span className="font-semibold text-slate-900 dark:text-white">{stage.label}</span>
-                          <span className="text-slate-400">· {stageDeals.length} deals</span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${stage.dot}`} />
+                          <span className="font-medium text-[#111827] dark:text-[#F3F4F6]">{stage.label}</span>
+                          <span className="text-[#6B7280] dark:text-[#9CA3AF]">· {stageDeals.length} deals</span>
                         </div>
-                        <div className="text-right">
-                          <span className="font-bold text-slate-900 dark:text-white">
+                        <div className="text-right font-mono">
+                          <span className="font-semibold text-[#111827] dark:text-[#F3F4F6]">
                             ${gross.toLocaleString()}
                           </span>
-                          <span className="text-slate-400 ml-2 text-[11px]">
-                            (${weighted.toLocaleString()} weighted)
+                          <span className="text-[#6B7280] dark:text-[#9CA3AF] ml-2 text-[11px]">
+                            (${weighted.toLocaleString()} wtd)
                           </span>
                         </div>
                       </div>
-                      <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-[#F3F4F6] dark:bg-white/[0.06] overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${stage.dot}`}
                           style={{ width: `${pct}%` }}
@@ -1454,40 +1447,40 @@ export function SocialCRM({
             </div>
 
             {/* Social Channel Revenue Attribution */}
-            <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
+            <div className="lg:col-span-5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 space-y-3">
               <div>
-                <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
                   Social Channel Attribution
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
                   Pipeline and closed revenue originated by social network
                 </p>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.06]">
                 {channelAttribution.length === 0 ? (
-                  <p className="py-8 text-xs text-slate-500 text-center">
+                  <p className="py-8 text-[12px] text-[#6B7280] dark:text-[#9CA3AF] text-center">
                     Add contacts and deals to view channel attribution.
                   </p>
                 ) : (
                   channelAttribution.map((row) => (
                     <div
                       key={row.platform}
-                      className="py-3 flex items-center justify-between gap-3 text-xs tabular-nums"
+                      className="py-2.5 flex items-center justify-between gap-3 text-[12px] tabular-nums"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <SocialLogo platform={row.platform} size={18} />
+                        <SocialLogo platform={row.platform} size={16} />
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">
+                          <p className="font-medium text-[#111827] dark:text-[#F3F4F6]">
                             {PLATFORM_META[row.platform].label}
                           </p>
-                          <p className="text-[11px] text-slate-500">
+                          <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
                             {row.contactsCount} contacts · {row.dealsCount} deals
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-slate-900 dark:text-white">
+                      <div className="text-right font-mono">
+                        <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">
                           ${(row.openValue + row.wonValue).toLocaleString()}
                         </p>
                         <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
@@ -1501,38 +1494,38 @@ export function SocialCRM({
             </div>
 
             {/* Upcoming Closing Deals */}
-            <div className="lg:col-span-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="lg:col-span-12 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between">
                 <div>
-                  <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                  <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
                     Upcoming Closing Deals
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
                     Active deals ordered by expected close date with one-click close or edit
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => openNewDealModal('proposal_sent')}
-                  className="px-3 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg text-[12px] font-semibold flex items-center gap-1"
                 >
-                  <Plus size={13} /> Add Deal
+                  <Plus size={13} strokeWidth={1.75} /> Add Deal
                 </button>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs tabular-nums">
-                  <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500">
-                      <th className="py-2.5 pr-4 font-semibold">Deal</th>
-                      <th className="py-2.5 px-4 font-semibold">Contact</th>
-                      <th className="py-2.5 px-4 font-semibold">Stage</th>
-                      <th className="py-2.5 px-4 font-semibold">Close Date</th>
-                      <th className="py-2.5 px-4 font-semibold text-right">Value</th>
-                      <th className="py-2.5 pl-4 font-semibold text-right">Quick Action</th>
+                <table className="w-full text-left text-[12px] tabular-nums border-collapse">
+                  <thead className="bg-[#F8F9FB] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                    <tr className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7280] dark:text-[#9CA3AF]">
+                      <th className="py-2.5 pl-5 pr-4">Deal</th>
+                      <th className="py-2.5 px-4">Contact</th>
+                      <th className="py-2.5 px-4">Stage</th>
+                      <th className="py-2.5 px-4">Close Date</th>
+                      <th className="py-2.5 px-4 text-right">Value</th>
+                      <th className="py-2.5 pl-4 pr-5 text-right">Quick Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-[#E5E7EB] dark:divide-white/[0.06]">
                     {wsDeals
                       .filter((d) => d.stage !== 'won' && d.stage !== 'lost')
                       .sort((a, b) => a.expectedCloseDate.localeCompare(b.expectedCloseDate))
@@ -1541,37 +1534,39 @@ export function SocialCRM({
                         const stageMeta = STAGES.find((s) => s.id === deal.stage);
                         const overdue = isOverdue(deal);
                         return (
-                          <tr key={deal.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                            <td className="py-3 pr-4 font-bold text-slate-900 dark:text-white">
+                          <tr key={deal.id} className="h-11 hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] transition-colors">
+                            <td className="py-2 pl-5 pr-4 font-medium text-[#111827] dark:text-[#F3F4F6]">
                               {deal.title}
                             </td>
-                            <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                            <td className="py-2 px-4 text-[#4B5563] dark:text-[#9CA3AF]">
                               {contact ? `${contact.name} · ${contact.company}` : 'Unassigned'}
                             </td>
-                            <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-200">
-                              {stageMeta?.label} ({deal.probability}%)
+                            <td className="py-2 px-4">
+                              <StatusBadge tone={deal.stage === 'proposal_sent' ? 'orange' : 'cyan'}>
+                                {stageMeta?.label} · {deal.probability}%
+                              </StatusBadge>
                             </td>
-                            <td className={`py-3 px-4 ${overdue ? 'text-amber-600 font-semibold' : 'text-slate-500'}`}>
+                            <td className={`py-2 px-4 font-mono text-[11px] ${overdue ? 'text-[#F97316] font-semibold' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}>
                               {deal.expectedCloseDate} {overdue ? '(Overdue)' : ''}
                             </td>
-                            <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                            <td className="py-2 px-4 text-right font-mono font-semibold text-[#111827] dark:text-[#F3F4F6]">
                               ${deal.value.toLocaleString()}
                             </td>
-                            <td className="py-3 pl-4 text-right">
-                              <div className="inline-flex items-center gap-2">
+                            <td className="py-2 pl-4 pr-5 text-right">
+                              <div className="inline-flex items-center gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => openEditDealModal(deal)}
-                                  className="px-2.5 py-1 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  className="px-2.5 py-1 border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[11px] font-medium text-[#4B5563] dark:text-[#D1D5DB] hover:bg-[#F3F4F6] dark:hover:bg-white/[0.06]"
                                 >
                                   Edit
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleMoveDealStage(deal, 'won')}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1"
+                                  className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 rounded-md text-[11px] font-medium inline-flex items-center gap-1"
                                 >
-                                  <CheckCircle2 size={11} /> Mark Won
+                                  <CheckCircle2 size={11} strokeWidth={1.5} /> Mark Won
                                 </button>
                               </div>
                             </td>
@@ -1586,128 +1581,104 @@ export function SocialCRM({
         )}
       </div>
 
-      {/* CONTACT & DEALS SLIDE-OVER DRAWER */}
-      {drawerContact && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="flex-1 bg-slate-950/40 backdrop-blur-[1px]"
-            onClick={() => {
-              setDrawerContactId(null);
-              setIsEditingContact(false);
-            }}
-          />
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col h-full">
-            {/* Drawer Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <ContactAvatar name={drawerContact.name} src={drawerContact.avatar} size="md" />
-                <div className="min-w-0">
-                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-white truncate">
-                    {drawerContact.name}
-                  </h3>
-                  <p className="text-xs text-slate-500 truncate">
-                    {drawerContact.title} · {drawerContact.company}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingContact((prev) => !prev)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-colors ${
-                    isEditingContact
-                      ? 'border-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/60 text-[#4F46E5] dark:text-indigo-300'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <Pencil size={12} /> {isEditingContact ? 'Cancel' : 'Edit'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDrawerContactId(null);
-                    setIsEditingContact(false);
-                  }}
-                  aria-label="Close contact drawer"
-                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+      {/* CONTACT & DEALS SLIDE-OVER INSPECTOR DRAWER */}
+      <InspectorDrawer
+        open={Boolean(drawerContact)}
+        onClose={() => {
+          setDrawerContactId(null);
+          setIsEditingContact(false);
+        }}
+        title={drawerContact?.name || 'Contact'}
+        subtitle={drawerContact ? `${drawerContact.title || 'Contact'} · ${drawerContact.company || 'Independent'}` : undefined}
+        headerActions={
+          drawerContact && (
+            <button
+              type="button"
+              onClick={() => setIsEditingContact((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-md text-[12px] font-medium flex items-center gap-1 border transition-colors ${
+                isEditingContact
+                  ? 'border-[#06B6D4]/40 bg-[#06B6D4]/10 text-[#0891B2] dark:text-[#22D3EE]'
+                  : 'border-[#E5E7EB] dark:border-white/[0.1] text-[#4B5563] dark:text-[#D1D5DB] hover:bg-[#F3F4F6] dark:hover:bg-white/[0.06]'
+              }`}
+            >
+              <Pencil size={12} strokeWidth={1.5} /> {isEditingContact ? 'Cancel' : 'Edit'}
+            </button>
+          )
+        }
+      >
+        {drawerContact && (
+          <div className="space-y-5">
               {/* Inline Edit Contact Form */}
               {isEditingContact ? (
-                <form onSubmit={handleSaveContactProfile} className="space-y-3.5 text-xs">
+                <form onSubmit={handleSaveContactProfile} className="space-y-3.5 text-[12px]">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Full Name</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Full Name</label>
                       <input
                         required
                         value={editContactForm.name}
                         onChange={(e) => setEditContactForm({ ...editContactForm, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Company</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Company</label>
                       <input
                         value={editContactForm.company}
                         onChange={(e) => setEditContactForm({ ...editContactForm, company: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Role / Title</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Role / Title</label>
                       <input
                         value={editContactForm.title}
                         onChange={(e) => setEditContactForm({ ...editContactForm, title: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Email</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Email</label>
                       <input
                         type="email"
                         value={editContactForm.email}
                         onChange={(e) => setEditContactForm({ ...editContactForm, email: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Social Handle</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Social Handle</label>
                       <input
                         value={editContactForm.handle}
                         onChange={(e) => setEditContactForm({ ...editContactForm, handle: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none font-mono focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Est. LTV ($)</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Est. LTV ($)</label>
                       <input
                         type="number"
                         min={0}
                         value={editContactForm.ltv}
                         onChange={(e) => setEditContactForm({ ...editContactForm, ltv: Number(e.target.value) })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none tabular-nums focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none tabular-nums focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Lead Score (0–100)</label>
+                      <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Lead Score (0–100)</label>
                       <input
                         type="number"
                         min={0}
                         max={100}
                         value={editContactForm.leadScore}
                         onChange={(e) => setEditContactForm({ ...editContactForm, leadScore: Number(e.target.value) })}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none tabular-nums focus:border-[#4F46E5]"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none tabular-nums focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                    <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
                       Connected Social Channels
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -1728,11 +1699,11 @@ export function SocialCRM({
                             }}
                             className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-medium flex items-center gap-1.5 transition-colors ${
                               active
-                                ? 'border-[#4F46E5] bg-indigo-50/70 dark:bg-indigo-950/50 text-slate-900 dark:text-white'
-                                : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                ? 'border-[#06B6D4] bg-[#06B6D4]/10 text-[#111827] dark:text-[#F3F4F6]'
+                                : 'border-[#E5E7EB] dark:border-white/[0.08] text-[#6B7280] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26]'
                             }`}
                           >
-                            <SocialLogo platform={pl} size={13} />
+                            <SocialLogo platform={pl} size={14} />
                             <span className="truncate">{PLATFORM_META[pl].label}</span>
                           </button>
                         );
@@ -1752,14 +1723,14 @@ export function SocialCRM({
                             setIsEditingContact(false);
                             onToast('Contact Deleted', `Removed ${name} and associated deals.`);
                           }}
-                          className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold"
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium"
                         >
                           Confirm Delete
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteContactId(null)}
-                          className="px-2.5 py-2 text-slate-500 hover:text-slate-800"
+                          className="px-2.5 py-1.5 text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
                         >
                           Cancel
                         </button>
@@ -1768,15 +1739,15 @@ export function SocialCRM({
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteContactId(drawerContact.id)}
-                        className="px-3 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-semibold flex items-center gap-1"
+                        className="px-3 py-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg font-medium flex items-center gap-1"
                       >
-                        <Trash2 size={13} /> Delete Contact
+                        <Trash2 size={13} strokeWidth={1.5} /> Delete Contact
                       </button>
                     )}
 
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg font-semibold"
+                      className="px-4 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg font-semibold"
                     >
                       Save Profile
                     </button>
@@ -1789,30 +1760,30 @@ export function SocialCRM({
                     <button
                       type="button"
                       onClick={() => onOpenInboxForContact(drawerContact.id)}
-                      className="flex-1 py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      className="flex-1 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <MessageSquare size={14} /> Open in Inbox
+                      <MessageSquare size={13} strokeWidth={1.5} /> Open in Inbox
                     </button>
                     <button
                       type="button"
                       onClick={handleRunAiScore}
                       disabled={aiScoreLoading}
-                      className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-800 dark:text-white flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+                      className="flex-1 py-2 border border-[#E5E7EB] dark:border-white/[0.1] hover:border-[#D1D5DB] dark:hover:border-white/[0.2] bg-white dark:bg-[#191D26] rounded-lg text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
                     >
-                      <Sparkles size={14} className="text-[#4F46E5]" />
+                      <Sparkles size={13} strokeWidth={1.5} className="text-[#06B6D4]" />
                       {aiScoreLoading ? 'Scoring...' : 'AI Lead Score'}
                     </button>
                   </div>
 
                   {/* Contact Details Line */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[#4B5563] dark:text-[#9CA3AF]">
                     <span className="inline-flex items-center gap-1.5">
-                      <Mail size={13} className="text-slate-400" /> {drawerContact.email}
+                      <Mail size={13} strokeWidth={1.5} className="text-[#9CA3AF]" /> {drawerContact.email}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <Building2 size={13} className="text-slate-400" /> {drawerContact.company || 'Independent'}
+                      <Building2 size={13} strokeWidth={1.5} className="text-[#9CA3AF]" /> {drawerContact.company || 'Independent'}
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 font-mono text-[11px]">
                       {drawerContact.platforms.map((pl) => (
                         <SocialLogo key={pl} platform={pl} size={14} />
                       ))}
@@ -1821,21 +1792,21 @@ export function SocialCRM({
                   </div>
 
                   {/* Key Metrics Grid */}
-                  <div className="grid grid-cols-3 gap-2.5 text-xs">
-                    <div className="p-3 bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-800 rounded-lg">
-                      <p className="text-[11px] font-medium text-slate-500">Lead Score</p>
-                      <p className="mt-1 font-display text-lg font-bold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
+                  <div className="grid grid-cols-3 gap-2.5 text-[12px]">
+                    <div className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                      <p className="text-[11px] font-medium text-[#6B7280] dark:text-[#9CA3AF]">Lead Score</p>
+                      <p className="mt-1 text-[18px] font-semibold text-[#0891B2] dark:text-[#22D3EE] tabular-nums">
                         {drawerContact.leadScore}/100
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-800 rounded-lg">
-                      <p className="text-[11px] font-medium text-slate-500">Est. LTV</p>
-                      <p className="mt-1 font-display text-lg font-bold text-slate-900 dark:text-white tabular-nums">
+                    <div className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                      <p className="text-[11px] font-medium text-[#6B7280] dark:text-[#9CA3AF]">Est. LTV</p>
+                      <p className="mt-1 text-[18px] font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums">
                         ${drawerContact.ltv.toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-800 rounded-lg">
-                      <p className="text-[11px] font-medium text-slate-500">Stage</p>
+                    <div className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                      <p className="text-[11px] font-medium text-[#6B7280] dark:text-[#9CA3AF]">Stage</p>
                       <select
                         value={drawerContact.lifecycleStage}
                         onChange={(e) => {
@@ -1846,7 +1817,7 @@ export function SocialCRM({
                           });
                           onToast('Lifecycle Updated', `${drawerContact.name} moved to ${nextStage}.`);
                         }}
-                        className="mt-1 w-full bg-transparent font-bold text-slate-900 dark:text-white outline-none text-xs"
+                        className="mt-1.5 w-full bg-transparent font-semibold text-[#111827] dark:text-[#F3F4F6] outline-none text-[12px]"
                       >
                         {LIFECYCLE_STAGES.map((st) => (
                           <option key={st} value={st}>
@@ -1859,34 +1830,34 @@ export function SocialCRM({
 
                   {/* AI Lead Intelligence Output */}
                   {aiLeadInsight && (
-                    <div className="p-4 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-xl space-y-2.5 text-xs">
+                    <div className="p-4 bg-[#06B6D4]/[0.06] border border-[#06B6D4]/25 rounded-[10px] space-y-2.5 text-[12px]">
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-[#4F46E5] dark:text-indigo-300">
+                        <p className="font-semibold text-[#0891B2] dark:text-[#22D3EE] tabular-nums">
                           AI Lead Intelligence · {aiLeadInsight.score}/100
                         </p>
                         <button
                           type="button"
                           onClick={() => setAiLeadInsight(null)}
-                          className="text-slate-400 hover:text-slate-600"
+                          className="text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
                         >
                           <X size={13} />
                         </button>
                       </div>
-                      <p className="text-slate-700 dark:text-slate-200 leading-relaxed">{aiLeadInsight.reasoning}</p>
-                      <p className="font-semibold text-slate-900 dark:text-white">
+                      <p className="text-[#4B5563] dark:text-[#D1D5DB] leading-relaxed">{aiLeadInsight.reasoning}</p>
+                      <p className="font-medium text-[#111827] dark:text-[#F3F4F6]">
                         Next best action: {aiLeadInsight.nextBestAction}
                       </p>
-                      <div className="p-3 bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-800 rounded-lg space-y-2">
-                        <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <div className="p-3 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg space-y-2">
+                        <p className="text-[11px] text-[#4B5563] dark:text-[#D1D5DB] leading-relaxed">
                           “{aiLeadInsight.followUpMessage}”
                         </p>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => handleCopyFollowUp(aiLeadInsight.followUpMessage)}
-                            className="px-2.5 py-1 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1"
+                            className="px-2.5 py-1 border border-[#E5E7EB] dark:border-white/[0.1] rounded-md text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] inline-flex items-center gap-1"
                           >
-                            {copiedDm ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                            {copiedDm ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
                             {copiedDm ? 'Copied' : 'Copy DM'}
                           </button>
                           <button
@@ -1895,7 +1866,7 @@ export function SocialCRM({
                               handleCopyFollowUp(aiLeadInsight.followUpMessage);
                               onOpenInboxForContact(drawerContact.id);
                             }}
-                            className="px-2.5 py-1 bg-[#4F46E5] text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1"
+                            className="px-2.5 py-1 bg-[#111827] text-white dark:bg-white dark:text-[#090A0D] rounded-md text-[11px] font-semibold inline-flex items-center gap-1"
                           >
                             <Send size={11} /> Copy &amp; Open Inbox
                           </button>
@@ -1904,28 +1875,28 @@ export function SocialCRM({
                     </div>
                   )}
 
-                  {/* Linked Deals Section (Shows ALL Deals for Contact) */}
+                  {/* Linked Deals Section */}
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <Briefcase size={13} className="text-[#4F46E5]" /> Linked Deals ({drawerDeals.length})
+                      <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5">
+                        <Briefcase size={13} strokeWidth={1.5} className="text-[#06B6D4]" /> Linked Deals ({drawerDeals.length})
                       </p>
                       <button
                         type="button"
                         onClick={() => openNewDealModal('qualified', drawerContact.id)}
-                        className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                        className="text-[12px] font-medium text-[#0891B2] dark:text-[#22D3EE] hover:underline inline-flex items-center gap-1"
                       >
                         <Plus size={12} /> Add Deal
                       </button>
                     </div>
 
                     {drawerDeals.length === 0 ? (
-                      <div className="p-3.5 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-500 flex items-center justify-between">
+                      <div className="p-3.5 rounded-lg border border-dashed border-[#D1D5DB] dark:border-white/[0.1] text-[12px] text-[#6B7280] flex items-center justify-between">
                         <span>No deals attached to {drawerContact.name} yet.</span>
                         <button
                           type="button"
                           onClick={() => openNewDealModal('qualified', drawerContact.id)}
-                          className="font-semibold text-[#4F46E5] hover:underline"
+                          className="font-medium text-[#0891B2] dark:text-[#22D3EE] hover:underline"
                         >
                           Create one
                         </button>
@@ -1935,43 +1906,43 @@ export function SocialCRM({
                         {drawerDeals.map((d) => (
                           <div
                             key={d.id}
-                            className="p-3.5 bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-lg space-y-2 text-xs"
+                            className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] space-y-2 text-[12px]"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="font-bold text-slate-900 dark:text-white">{d.title}</p>
-                                <p className="text-[11px] text-slate-500 tabular-nums">
+                                <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">{d.title}</p>
+                                <p className="text-[11px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">
                                   Close {d.expectedCloseDate} · {d.probability}% prob
                                 </p>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-[#4F46E5] dark:text-indigo-400 tabular-nums mr-1">
+                                <span className="font-mono font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums mr-1">
                                   ${d.value.toLocaleString()}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => openEditDealModal(d)}
                                   aria-label="Edit deal"
-                                  className="p-1 rounded text-slate-400 hover:text-[#4F46E5]"
+                                  className="p-1 rounded text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
                                 >
-                                  <Pencil size={12} />
+                                  <Pencil size={12} strokeWidth={1.5} />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteDealConfirm(d)}
                                   aria-label="Delete deal"
-                                  className="p-1 rounded text-slate-400 hover:text-rose-600"
+                                  className="p-1 rounded text-[#9CA3AF] hover:text-rose-500"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={12} strokeWidth={1.5} />
                                 </button>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 dark:border-slate-700">
-                              <span className="text-[11px] text-slate-500">Pipeline stage</span>
+                            <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB] dark:border-white/[0.06]">
+                              <span className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">Pipeline stage</span>
                               <select
                                 value={d.stage}
                                 onChange={(e) => handleMoveDealStage(d, e.target.value as DealStage)}
-                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs font-semibold outline-none focus:border-[#4F46E5]"
+                                className="bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded px-2 py-1 text-[11px] font-medium outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                               >
                                 {STAGES.map((s) => (
                                   <option key={s.id} value={s.id}>
@@ -1988,21 +1959,21 @@ export function SocialCRM({
 
                   {/* Tags Manager */}
                   <div className="space-y-2">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Tag size={13} className="text-slate-400" /> Contact Tags
+                    <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5">
+                      <Tag size={13} strokeWidth={1.5} className="text-[#9CA3AF]" /> Contact Tags
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                       {drawerContact.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-md font-medium"
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#F3F4F6] dark:bg-white/[0.06] border border-[#E5E7EB] dark:border-white/[0.08] text-[#4B5563] dark:text-[#D1D5DB] rounded-md font-medium"
                         >
                           {tag}
                           <button
                             type="button"
                             onClick={() => handleRemoveTag(tag)}
                             aria-label={`Remove ${tag}`}
-                            className="text-slate-400 hover:text-rose-600"
+                            className="text-[#9CA3AF] hover:text-rose-500"
                           >
                             ×
                           </button>
@@ -2014,7 +1985,7 @@ export function SocialCRM({
                           value={newTagInput}
                           onChange={(e) => setNewTagInput(e.target.value)}
                           placeholder="+ Add tag"
-                          className="w-24 px-2 py-1 bg-transparent border-b border-slate-300 dark:border-slate-700 text-xs outline-none focus:border-[#4F46E5]"
+                          className="w-24 px-2 py-1 bg-transparent border-b border-[#D1D5DB] dark:border-white/[0.15] text-[11px] outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                         />
                       </form>
                     </div>
@@ -2022,7 +1993,7 @@ export function SocialCRM({
 
                   {/* Editable CRM Notes */}
                   <div>
-                    <label className="text-xs font-bold text-slate-900 dark:text-white block mb-1.5">
+                    <label className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6] block mb-1.5">
                       CRM Notes
                     </label>
                     <textarea
@@ -2030,26 +2001,26 @@ export function SocialCRM({
                       value={drawerContact.notes}
                       onChange={(e) => onUpdateContact({ ...drawerContact, notes: e.target.value })}
                       placeholder="Add account context, budget signals, or renewal dates..."
-                      className="w-full p-3 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-700 dark:text-slate-200 outline-none focus:border-[#4F46E5]"
+                      className="w-full p-2.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[12px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                     />
                   </div>
 
                   {/* Log New Activity + Social Interaction History */}
                   <div className="space-y-3">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
                       Activity Timeline ({drawerContact.interactionHistory.length})
                     </p>
 
                     <form
                       onSubmit={handleLogActivity}
-                      className="p-3 bg-[#F8FAFC] dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg space-y-2 text-xs"
+                      className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] space-y-2 text-[12px]"
                     >
                       <div className="grid grid-cols-2 gap-2">
                         <select
                           aria-label="Interaction type"
                           value={activityType}
                           onChange={(e) => setActivityType(e.target.value as Interaction['type'])}
-                          className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md outline-none"
+                          className="px-2.5 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md outline-none text-[#111827] dark:text-[#F3F4F6]"
                         >
                           <option value="dm">Direct Message</option>
                           <option value="email">Email Touchpoint</option>
@@ -2060,7 +2031,7 @@ export function SocialCRM({
                           aria-label="Interaction platform"
                           value={activityPlatform}
                           onChange={(e) => setActivityPlatform(e.target.value as Platform)}
-                          className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md outline-none"
+                          className="px-2.5 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md outline-none text-[#111827] dark:text-[#F3F4F6]"
                         >
                           {ALL_PLATFORMS.map((pl) => (
                             <option key={pl} value={pl}>
@@ -2075,11 +2046,11 @@ export function SocialCRM({
                           value={activityContent}
                           onChange={(e) => setActivityContent(e.target.value)}
                           placeholder="Log a call summary, DM, or touchpoint..."
-                          className="flex-1 px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-[#4F46E5]"
+                          className="flex-1 px-2.5 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                         />
                         <button
                           type="submit"
-                          className="px-3 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-md font-semibold shrink-0"
+                          className="px-3 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-md font-semibold shrink-0"
                         >
                           Log
                         </button>
@@ -2088,23 +2059,23 @@ export function SocialCRM({
 
                     <div className="space-y-2">
                       {drawerContact.interactionHistory.length === 0 ? (
-                        <p className="text-xs text-slate-500">No recorded interactions yet.</p>
+                        <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">No recorded interactions yet.</p>
                       ) : (
                         drawerContact.interactionHistory.map((item) => (
                           <div
                             key={item.id}
-                            className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-lg text-xs"
+                            className="p-3 bg-white dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px] text-[12px]"
                           >
-                            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                              <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                            <div className="flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mb-1">
+                              <span className="inline-flex items-center gap-1.5 font-medium text-[#111827] dark:text-[#D1D5DB]">
                                 {item.platform && <SocialLogo platform={item.platform} size={13} />}
                                 {item.platform ? PLATFORM_META[item.platform].label : 'Social'} · {item.type.toUpperCase()}
                               </span>
-                              <span className="tabular-nums">
+                              <span className="font-mono tabular-nums">
                                 {new Date(item.timestamp).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="text-slate-700 dark:text-slate-200 leading-relaxed">{item.content}</p>
+                            <p className="text-[#4B5563] dark:text-[#D1D5DB] leading-relaxed">{item.content}</p>
                           </div>
                         ))
                       )}
@@ -2112,48 +2083,47 @@ export function SocialCRM({
                   </div>
                 </>
               )}
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </InspectorDrawer>
 
       {/* ADD CONTACT MODAL */}
       {showAddContact && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={() => setShowAddContact(false)} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAddContact(false)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[12px] p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+              <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
                 Add CRM Contact
               </h3>
               <button
                 type="button"
                 onClick={() => setShowAddContact(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
               >
-                <X size={18} />
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
-            <form onSubmit={handleCreateContact} className="mt-4 space-y-3 text-xs">
+            <form onSubmit={handleCreateContact} className="mt-4 space-y-3 text-[12px]">
               <input
                 required
                 placeholder="Full Name *"
                 value={contactForm.name}
                 onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
               />
               <div className="grid grid-cols-2 gap-2.5">
                 <input
                   placeholder="Company"
                   value={contactForm.company}
                   onChange={(e) => setContactForm({ ...contactForm, company: e.target.value })}
-                  className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                 />
                 <input
                   placeholder="Role / Title"
                   value={contactForm.title}
                   onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                  className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2.5">
@@ -2162,13 +2132,13 @@ export function SocialCRM({
                   placeholder="Work Email"
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                  className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                 />
                 <input
                   placeholder="@handle"
                   value={contactForm.handle}
                   onChange={(e) => setContactForm({ ...contactForm, handle: e.target.value })}
-                  className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none font-mono focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2.5">
@@ -2180,7 +2150,7 @@ export function SocialCRM({
                       lifecycleStage: e.target.value as Contact['lifecycleStage'],
                     })
                   }
-                  className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                  className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none text-[#111827] dark:text-[#F3F4F6]"
                 >
                   {LIFECYCLE_STAGES.map((st) => (
                     <option key={st} value={st}>
@@ -2194,11 +2164,11 @@ export function SocialCRM({
                   placeholder="Estimated LTV ($)"
                   value={contactForm.ltv}
                   onChange={(e) => setContactForm({ ...contactForm, ltv: Number(e.target.value) })}
-                  className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none tabular-nums focus:border-[#4F46E5]"
+                  className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none tabular-nums focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                 />
               </div>
               <div>
-                <p className="font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Social Channels</p>
+                <p className="font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">Social Channels</p>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
                   {ALL_PLATFORMS.map((pl) => {
                     const selected = contactForm.platforms.includes(pl);
@@ -2217,8 +2187,8 @@ export function SocialCRM({
                         }}
                         className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center gap-1.5 ${
                           selected
-                            ? 'border-[#4F46E5] bg-indigo-50/70 dark:bg-indigo-950/50 text-slate-900 dark:text-white'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-500'
+                            ? 'border-[#06B6D4] bg-[#06B6D4]/10 text-[#111827] dark:text-[#F3F4F6]'
+                            : 'border-[#E5E7EB] dark:border-white/[0.08] text-[#6B7280]'
                         }`}
                       >
                         <SocialLogo platform={pl} size={13} />
@@ -2233,19 +2203,19 @@ export function SocialCRM({
                 placeholder="CRM notes..."
                 value={contactForm.notes}
                 onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
               />
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddContact(false)}
-                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold"
+                  className="flex-1 py-2 border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg font-medium text-[#4B5563] dark:text-[#D1D5DB]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-[2] py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg font-semibold"
+                  className="flex-[2] py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg font-semibold"
                 >
                   Save Contact
                 </button>
@@ -2259,15 +2229,15 @@ export function SocialCRM({
       {showDealModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
+            className="absolute inset-0 bg-black/40"
             onClick={() => {
               setShowDealModal(false);
               setEditingDeal(null);
             }}
           />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">
+          <div className="relative w-full max-w-md bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[12px] p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+              <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
                 {editingDeal ? 'Edit Pipeline Deal' : 'Create Pipeline Deal'}
               </h3>
               <button
@@ -2276,30 +2246,30 @@ export function SocialCRM({
                   setShowDealModal(false);
                   setEditingDeal(null);
                 }}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
               >
-                <X size={18} />
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveDeal} className="mt-4 space-y-3.5 text-xs">
+            <form onSubmit={handleSaveDeal} className="mt-4 space-y-3.5 text-[12px]">
               <div>
-                <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Deal Title</label>
+                <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Deal Title</label>
                 <input
                   required
                   placeholder="e.g. Acme Growth Annual Plan"
                   value={dealForm.title}
                   onChange={(e) => setDealForm({ ...dealForm, title: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Linked Contact</label>
+                <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Linked Contact</label>
                 {wsContacts.length === 0 ? (
-                  <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2">
+                  <div className="p-2.5 rounded-lg bg-[#F97316]/10 border border-[#F97316]/25 text-[#C2410C] dark:text-[#FB923C] flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-1.5">
-                      <AlertCircle size={13} /> No contacts in this workspace yet.
+                      <AlertCircle size={13} strokeWidth={1.5} /> No contacts in this workspace yet.
                     </span>
                     <button
                       type="button"
@@ -2307,7 +2277,7 @@ export function SocialCRM({
                         setShowDealModal(false);
                         setShowAddContact(true);
                       }}
-                      className="font-bold underline shrink-0"
+                      className="font-semibold underline shrink-0"
                     >
                       Add Contact
                     </button>
@@ -2316,7 +2286,7 @@ export function SocialCRM({
                   <select
                     value={dealForm.contactId}
                     onChange={(e) => setDealForm({ ...dealForm, contactId: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                   >
                     {wsContacts.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -2329,18 +2299,18 @@ export function SocialCRM({
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Deal Value ($)</label>
+                  <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Deal Value ($)</label>
                   <input
                     type="number"
                     min={0}
                     required
                     value={dealForm.value}
                     onChange={(e) => setDealForm({ ...dealForm, value: Number(e.target.value) })}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none tabular-nums focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none tabular-nums focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Probability (%)</label>
+                  <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Probability (%)</label>
                   <input
                     type="number"
                     min={0}
@@ -2348,14 +2318,14 @@ export function SocialCRM({
                     required
                     value={dealForm.probability}
                     onChange={(e) => setDealForm({ ...dealForm, probability: Number(e.target.value) })}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none tabular-nums focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none tabular-nums focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Stage</label>
+                  <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Stage</label>
                   <select
                     value={dealForm.stage}
                     onChange={(e) => {
@@ -2367,7 +2337,7 @@ export function SocialCRM({
                         probability: stageMeta?.prob ?? dealForm.probability,
                       });
                     }}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                   >
                     {STAGES.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -2377,12 +2347,12 @@ export function SocialCRM({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">Expected Close</label>
+                  <label className="block font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">Expected Close</label>
                   <input
                     type="date"
                     value={dealForm.expectedCloseDate}
                     onChange={(e) => setDealForm({ ...dealForm, expectedCloseDate: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg outline-none focus:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6]"
                   />
                 </div>
               </div>
@@ -2392,9 +2362,9 @@ export function SocialCRM({
                   <button
                     type="button"
                     onClick={() => handleDeleteDealConfirm(editingDeal)}
-                    className="px-3 py-2.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-semibold inline-flex items-center gap-1"
+                    className="px-3 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg font-medium inline-flex items-center gap-1"
                   >
-                    <Trash2 size={13} /> Delete
+                    <Trash2 size={13} strokeWidth={1.5} /> Delete
                   </button>
                 )}
                 <div className="flex gap-2 flex-1 justify-end">
@@ -2404,13 +2374,13 @@ export function SocialCRM({
                       setShowDealModal(false);
                       setEditingDeal(null);
                     }}
-                    className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold"
+                    className="px-4 py-2 border border-[#E5E7EB] dark:border-white/[0.1] rounded-lg font-medium text-[#4B5563] dark:text-[#D1D5DB]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg font-semibold"
+                    className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-lg font-semibold"
                   >
                     {editingDeal ? 'Save Changes' : 'Create Deal'}
                   </button>

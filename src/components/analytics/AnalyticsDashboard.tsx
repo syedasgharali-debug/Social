@@ -28,6 +28,7 @@ import {
 import { AppState, Platform, DiscoveryAlert } from '../../types';
 import { aiService } from '../../services/aiService';
 import { ALL_PLATFORMS, PLATFORM_META, PlatformTag } from '../common/PlatformMeta';
+import { KpiMetricCard, StatusBadge, EmptyStatePanel } from '../common/DesignPrimitives';
 
 interface AnalyticsDashboardProps {
   state: AppState;
@@ -61,7 +62,7 @@ export function AnalyticsDashboard({
     state.workspaces.find((w) => w.id === state.activeWorkspaceId) || state.workspaces[0];
   const [reportBrandName, setReportBrandName] = useState(activeWorkspace.name);
   const [reportClientName, setReportClientName] = useState('Executive Marketing Stakeholder');
-  const [reportAccent, setReportAccent] = useState('#4F46E5');
+  const [reportAccent, setReportAccent] = useState('#06B6D4');
   const [reportSections, setReportSections] = useState({
     followers: true,
     engagement: true,
@@ -295,496 +296,514 @@ export function AnalyticsDashboard({
   };
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6 custom-scrollbar">
-      {/* Header Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Analytics & White-Label Reports
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Track follower growth, engagement rate, impressions, optimal posting windows, and client PDF exports.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5">
-            <Filter size={13} className="text-slate-400" />
-            <select
-              aria-label="Filter analytics by social platform"
-              value={platformFilter}
-              onChange={(e) => setPlatformFilter(e.target.value as Platform | 'all')}
-              className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
-            >
-              <option value="all">All 10 Networks</option>
-              {ALL_PLATFORMS.map((p) => (
-                <option key={p} value={p}>
-                  {PLATFORM_META[p].label}
-                </option>
-              ))}
-            </select>
+    <div className="h-full overflow-y-auto p-6 bg-[#F8F9FB] dark:bg-[#090A0D] custom-scrollbar">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Controls */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-[#E5E7EB] dark:border-white/[0.08] pb-5">
+          <div>
+            <p className="text-[11px] font-medium text-[#06B6D4] uppercase tracking-[0.04em]">
+              Cross-Channel Intelligence &amp; White-Label Exports
+            </p>
+            <h1 className="text-[22px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em] mt-1">
+              Analytics &amp; White-Label Reports
+            </h1>
+            <p className="text-[13px] text-[#4B5563] dark:text-[#9CA3AF] mt-1">
+              Track follower growth, engagement rate, impressions, optimal posting windows, and client PDF exports.
+            </p>
           </div>
 
-          <div className="inline-flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
-            {(['7d', '30d', '90d'] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                  range === r
-                    ? 'bg-[#4F46E5] text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] px-3 py-1.5">
+              <Filter size={13} strokeWidth={1.5} className="text-[#6B7280]" />
+              <select
+                aria-label="Filter analytics by social platform"
+                value={platformFilter}
+                onChange={(e) => setPlatformFilter(e.target.value as Platform | 'all')}
+                className="bg-transparent text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none cursor-pointer"
               >
-                {r.toUpperCase()}
-              </button>
-            ))}
+                <option value="all">All 10 Networks</option>
+                {ALL_PLATFORMS.map((p) => (
+                  <option key={p} value={p}>
+                    {PLATFORM_META[p].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="inline-flex bg-[#F3F4F6] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] p-0.5">
+              {(['7d', '30d', '90d'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  className={`px-2.5 py-1 rounded-[6px] text-[11px] font-medium font-mono transition-colors ${
+                    range === r
+                      ? 'bg-[#FFFFFF] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.08]'
+                      : 'text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
+                  }`}
+                >
+                  {r.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleExportCsv}
+              className="px-3 py-2 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[8px] text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
+            >
+              <Download size={13} strokeWidth={1.5} /> CSV
+            </button>
+
+            <button
+              onClick={() => {
+                setReportBrandName(activeWorkspace.name);
+                setShowPdfModal(true);
+              }}
+              className="px-3.5 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] text-[12px] font-medium flex items-center gap-1.5 transition-colors"
+            >
+              <FileText size={13} strokeWidth={1.5} /> Export Branded PDF Report
+            </button>
           </div>
-
-          <button
-            onClick={handleExportCsv}
-            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
-          >
-            <Download size={14} /> CSV
-          </button>
-
-          <button
-            onClick={() => {
-              setReportBrandName(activeWorkspace.name);
-              setShowPdfModal(true);
-            }}
-            className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-indigo-600/20"
-          >
-            <FileText size={14} /> Export Branded PDF Report
-          </button>
         </div>
-      </div>
 
-      {/* KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            label: 'Total Audience',
-            value: kpis.totalFollowers.toLocaleString(),
-            sub:
+        {/* KPI Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiMetricCard
+            label="Total Audience"
+            value={kpis.totalFollowers.toLocaleString()}
+            sub={
               kpis.connectedCount > 0
                 ? `Across ${kpis.connectedCount} connected profile${kpis.connectedCount === 1 ? '' : 's'}`
-                : 'No social profiles connected yet',
-          },
-          {
-            label: `Total Impressions (${range})`,
-            value: kpis.reach.toLocaleString(),
-            sub: `${kpis.clicks.toLocaleString()} link clicks · ${kpis.publishedCount} published post${kpis.publishedCount === 1 ? '' : 's'}`,
-          },
-          {
-            label: 'Avg. Engagement Rate',
-            value: `${kpis.engRate}%`,
-            sub: `${kpis.engagement.toLocaleString()} likes, comments & saves`,
-          },
-          {
-            label: 'CRM Pipeline Attributed',
-            value: `$${kpis.pipelineValue.toLocaleString()}`,
-            sub: `$${kpis.wonValue.toLocaleString()} won · ${kpis.avgRoas}x Ad ROAS`,
-          },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"
-          >
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{card.label}</p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-              {card.value}
-            </p>
-            <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
-              {card.sub}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Recharts Row: Connected Audience + Post Impressions & Engagement Rate */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Audience by Profile</h3>
-              <p className="text-xs text-slate-500">Live followers from connected accounts</p>
-            </div>
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
-              {kpis.totalFollowers.toLocaleString()} total
-            </span>
-          </div>
-          {audienceByProfile.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
-              <Users size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Connect an account to see live analytics
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500 max-w-xs">
-                Once you connect your social profiles, audience totals and per-channel follower breakdowns appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={audienceByProfile}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="followers" fill="#4F46E5" radius={[6, 6, 0, 0]} name="Followers" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+                : 'No social profiles connected yet'
+            }
+          />
+          <KpiMetricCard
+            label={`Total Impressions (${range})`}
+            value={kpis.reach.toLocaleString()}
+            sub={`${kpis.clicks.toLocaleString()} link clicks · ${kpis.publishedCount} published post${kpis.publishedCount === 1 ? '' : 's'}`}
+          />
+          <KpiMetricCard
+            label="Avg. Engagement Rate"
+            value={`${kpis.engRate}%`}
+            sub={`${kpis.engagement.toLocaleString()} likes, comments & saves`}
+          />
+          <KpiMetricCard
+            label="CRM Pipeline Attributed"
+            value={`$${kpis.pipelineValue.toLocaleString()}`}
+            sub={`$${kpis.wonValue.toLocaleString()} won · ${kpis.avgRoas}x Ad ROAS`}
+          />
         </div>
 
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Impressions & Engagement Rate (%)
-              </h3>
-              <p className="text-xs text-slate-500">Bar volume = Impressions · Amber line = Engagement Rate</p>
+        {/* Recharts Row: Connected Audience + Post Impressions & Engagement Rate */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-5 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
+                  Audience by Profile
+                </h3>
+                <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">Live followers from connected accounts</p>
+              </div>
+              <span className="text-[12px] font-mono font-medium text-[#4B5563] dark:text-[#9CA3AF] tabular-nums">
+                {kpis.totalFollowers.toLocaleString()} total
+              </span>
             </div>
-            <span className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
-              Avg {kpis.engRate}% ER
-            </span>
-          </div>
-          {engagementSeries.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
-              <BarChart3 size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                No published post metrics in this range
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500 max-w-sm">
-                Publish posts from Content Studio or Visual Scheduler to track real impressions, clicks, and engagement rates.
-              </p>
-            </div>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={engagementSeries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    tick={{ fontSize: 11, fill: '#F59E0B' }}
-                    axisLine={false}
-                    tickLine={false}
-                    unit="%"
-                  />
-                  <Tooltip />
-                  <Bar yAxisId="left" dataKey="impressions" fill="#4F46E5" radius={[4, 4, 0, 0]} name="Impressions" />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="engRate"
-                    stroke="#F59E0B"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: '#F59E0B' }}
-                    name="Engagement Rate %"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Best Times to Post Heatmap + AI Analyst / Discovery Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Best Times to Post Heatmap */}
-        <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Clock size={15} className="text-[#4F46E5]" /> Best Times to Post Heatmap
-              </h3>
-              <p className="text-xs text-slate-500">Calculated dynamically from your published post engagement</p>
-            </div>
-            {activeHeatCell && (
-              <div className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-[11px] font-bold text-[#4F46E5] dark:text-indigo-300 tabular-nums">
-                Peak: {activeHeatCell.day} {activeHeatCell.hour} ({activeHeatCell.score}/100)
+            {audienceByProfile.length === 0 ? (
+              <div className="border border-dashed border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                <EmptyStatePanel
+                  icon={Users}
+                  title="Connect an account to see live analytics"
+                  description="Once you connect your social profiles, audience totals and per-channel follower breakdowns appear here."
+                />
+              </div>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={audienceByProfile}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.18)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#13161D',
+                        borderColor: 'rgba(255,255,255,0.12)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#F3F4F6',
+                      }}
+                    />
+                    <Bar dataKey="followers" fill="#06B6D4" radius={[4, 4, 0, 0]} name="Followers" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             )}
           </div>
 
-          {!heatmapData.hasData ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl px-6">
-              <Clock size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                No posting window data yet
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500 max-w-xs">
-                Publish posts across different days and times to compute your real optimal posting heatmap.
-              </p>
+          <div className="lg:col-span-7 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
+                  Impressions &amp; Engagement Rate (%)
+                </h3>
+                <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+                  Cyan bars = Impressions · Orange line = Engagement Rate
+                </p>
+              </div>
+              <StatusBadge tone="cyan">Avg {kpis.engRate}% ER</StatusBadge>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[420px] space-y-1.5">
-                <div className="grid grid-cols-7 gap-1.5 text-[10px] font-bold uppercase text-slate-400">
-                  <div />
-                  {HEATMAP_HOURS.map((hr) => (
-                    <div key={hr} className="text-center font-mono">{hr}</div>
+            {engagementSeries.length === 0 ? (
+              <div className="border border-dashed border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                <EmptyStatePanel
+                  icon={BarChart3}
+                  title="No published post metrics in this range"
+                  description="Publish posts from Content Studio or Visual Scheduler to track real impressions, clicks, and engagement rates."
+                />
+              </div>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={engagementSeries}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.18)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 11, fill: '#F97316' }}
+                      axisLine={false}
+                      tickLine={false}
+                      unit="%"
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#13161D',
+                        borderColor: 'rgba(255,255,255,0.12)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#F3F4F6',
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="impressions" fill="#06B6D4" radius={[4, 4, 0, 0]} name="Impressions" />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="engRate"
+                      stroke="#F97316"
+                      strokeWidth={2}
+                      dot={{ r: 3.5, fill: '#F97316' }}
+                      name="Engagement Rate %"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Best Times to Post Heatmap + AI Analyst / Discovery Alerts */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Best Times to Post Heatmap */}
+          <div className="lg:col-span-6 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em] flex items-center gap-1.5">
+                  <Clock size={15} strokeWidth={1.5} className="text-[#06B6D4]" /> Best Times to Post Heatmap
+                </h3>
+                <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+                  Calculated dynamically from your published post engagement
+                </p>
+              </div>
+              {activeHeatCell && (
+                <StatusBadge tone="cyan">
+                  Peak: {activeHeatCell.day} {activeHeatCell.hour} ({activeHeatCell.score}/100)
+                </StatusBadge>
+              )}
+            </div>
+
+            {!heatmapData.hasData ? (
+              <div className="border border-dashed border-[#E5E7EB] dark:border-white/[0.08] rounded-[10px]">
+                <EmptyStatePanel
+                  icon={Clock}
+                  title="No posting window data yet"
+                  description="Publish posts across different days and times to compute your real optimal posting heatmap."
+                />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[420px] space-y-1.5">
+                  <div className="grid grid-cols-7 gap-1.5 text-[10px] font-mono uppercase text-[#6B7280]">
+                    <div />
+                    {HEATMAP_HOURS.map((hr) => (
+                      <div key={hr} className="text-center">{hr}</div>
+                    ))}
+                  </div>
+                  {HEATMAP_DAYS.map((day, dIdx) => (
+                    <div key={day} className="grid grid-cols-7 gap-1.5 items-center">
+                      <span className="text-[12px] font-medium text-[#4B5563] dark:text-[#9CA3AF]">{day}</span>
+                      {HEATMAP_HOURS.map((hr, hIdx) => {
+                        const score = heatmapData.scores[dIdx][hIdx];
+                        const isPeak = score >= 90;
+                        const isSelected = activeHeatCell?.day === day && activeHeatCell?.hour === hr;
+                        const bgClass = isPeak
+                          ? 'bg-[#F97316] text-white'
+                          : score >= 75
+                          ? 'bg-[#06B6D4] text-[#090A0D]'
+                          : score >= 55
+                          ? 'bg-[#06B6D4]/25 text-[#111827] dark:text-[#F3F4F6]'
+                          : 'bg-[#F3F4F6] dark:bg-[#0E1015] text-[#6B7280] border border-[#E5E7EB] dark:border-white/[0.06]';
+                        return (
+                          <button
+                            key={hr}
+                            type="button"
+                            onClick={() => setSelectedHeatCell({ day, hour: hr, score })}
+                            title={`${day} ${hr}: Engagement Score ${score}/100`}
+                            className={`h-9 rounded-[6px] text-[11px] font-mono font-semibold tabular-nums transition-colors ${bgClass} ${
+                              isSelected ? 'ring-2 ring-[#111827] dark:ring-[#F3F4F6]' : ''
+                            }`}
+                          >
+                            {score}
+                          </button>
+                        );
+                      })}
+                    </div>
                   ))}
                 </div>
-                {HEATMAP_DAYS.map((day, dIdx) => (
-                  <div key={day} className="grid grid-cols-7 gap-1.5 items-center">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{day}</span>
-                    {HEATMAP_HOURS.map((hr, hIdx) => {
-                      const score = heatmapData.scores[dIdx][hIdx];
-                      const isPeak = score >= 90;
-                      const isSelected = activeHeatCell?.day === day && activeHeatCell?.hour === hr;
-                      const bgClass =
-                        score >= 90
-                          ? 'bg-amber-500 text-white'
-                          : score >= 75
-                          ? 'bg-[#4F46E5] text-white'
-                          : score >= 55
-                          ? 'bg-indigo-200 dark:bg-indigo-900/70 text-indigo-950 dark:text-indigo-100'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500';
-                      return (
-                        <button
-                          key={hr}
-                          type="button"
-                          onClick={() => setSelectedHeatCell({ day, hour: hr, score })}
-                          title={`${day} ${hr}: Engagement Score ${score}/100`}
-                          className={`h-9 rounded-lg text-[11px] font-mono font-bold transition-transform hover:scale-[1.03] ${bgClass} ${
-                            isSelected ? 'ring-2 ring-slate-900 dark:ring-white' : ''
-                          }`}
-                        >
-                          {score}
-                          {isPeak ? '★' : ''}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* AI Analyst & Discovery Spike Alerts */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles size={15} className="text-[#4F46E5]" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">AI Performance Analyst</h3>
-              </div>
-              <div className="flex gap-1.5">
-                {['Summarize ROAS', 'Pipeline ROI'].map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => handleAskAnalyst(preset)}
-                    className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-semibold text-slate-600 dark:text-slate-300"
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleAskAnalyst();
-              }}
-              className="flex gap-2"
-            >
-              <input
-                type="text"
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                placeholder="Ask about ROAS, pipeline, or best performing posts..."
-                className="flex-1 px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
-              />
-              <button
-                type="submit"
-                disabled={aiLoading}
-                className="px-3.5 py-2 bg-[#4F46E5] text-white rounded-lg text-xs font-semibold flex items-center gap-1"
-              >
-                <Send size={12} /> {aiLoading ? '...' : 'Ask'}
-              </button>
-            </form>
-            {aiAnswer && (
-              <p className="mt-3 p-3 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
-                {aiAnswer}
-              </p>
             )}
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Bell size={14} className="text-amber-500" /> Content Discovery Alerts
-              </h3>
-              <button
-                onClick={onTriggerSpikeAlert}
-                className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-md text-[11px] font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1"
-              >
-                <TrendingUp size={12} /> Monitor Spikes
-              </button>
-            </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
-              {wsAlerts.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-500">
-                  No discovery alerts yet. Use Live Trend Radar to scan real-time news in your niche.
+          {/* AI Analyst & Discovery Spike Alerts */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={15} strokeWidth={1.5} className="text-[#06B6D4]" />
+                  <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
+                    AI Performance Analyst
+                  </h3>
                 </div>
-              ) : (
-                wsAlerts.map((alert) => (
-                  <div key={alert.id} className="p-3.5 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                        {alert.keyword} ({alert.velocity})
-                      </p>
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white">{alert.title}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => onCreateDraftFromAlert(alert)}
-                        className="px-2.5 py-1 bg-[#4F46E5] text-white rounded text-[11px] font-semibold flex items-center gap-1"
-                      >
-                        <Plus size={11} /> Draft
-                      </button>
-                      {!alert.acknowledged && (
-                        <button
-                          onClick={() => onAcknowledgeAlert(alert.id)}
-                          className="text-[10px] text-slate-400 hover:text-slate-700"
-                        >
-                          Dismiss
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
+                <div className="flex gap-1.5">
+                  {['Summarize ROAS', 'Pipeline ROI'].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => handleAskAnalyst(preset)}
+                      className="px-2.5 py-1 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[6px] text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] transition-colors"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAskAnalyst();
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  type="text"
+                  value={aiQuery}
+                  onChange={(e) => setAiQuery(e.target.value)}
+                  placeholder="Ask about ROAS, pipeline, or best performing posts..."
+                  className="flex-1 px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[12px] text-[#111827] dark:text-[#F3F4F6] placeholder:text-[#6B7280] outline-none focus:border-[#06B6D4]"
+                />
+                <button
+                  type="submit"
+                  disabled={aiLoading}
+                  className="px-3.5 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] text-[12px] font-medium flex items-center gap-1.5 transition-colors"
+                >
+                  <Send size={12} strokeWidth={1.5} /> {aiLoading ? '...' : 'Ask'}
+                </button>
+              </form>
+              {aiAnswer && (
+                <p className="mt-3 p-3 rounded-[8px] bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#06B6D4]/25 text-[12px] text-[#111827] dark:text-[#F3F4F6] leading-relaxed">
+                  {aiAnswer}
+                </p>
               )}
+            </div>
+
+            <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between">
+                <h3 className="text-[13px] font-semibold text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5">
+                  <Bell size={14} strokeWidth={1.5} className="text-[#F97316]" /> Content Discovery Alerts
+                </h3>
+                <button
+                  onClick={onTriggerSpikeAlert}
+                  className="px-2.5 py-1 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#F97316]/50 rounded-[6px] text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1 transition-colors"
+                >
+                  <TrendingUp size={12} strokeWidth={1.5} className="text-[#F97316]" /> Monitor Spikes
+                </button>
+              </div>
+              <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] max-h-48 overflow-y-auto">
+                {wsAlerts.length === 0 ? (
+                  <div className="p-6 text-center text-[12px] text-[#6B7280]">
+                    No discovery alerts yet. Use Live Trend Radar to scan real-time news in your niche.
+                  </div>
+                ) : (
+                  wsAlerts.map((alert) => (
+                    <div key={alert.id} className="p-3.5 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-mono font-medium text-[#F97316]">
+                          {alert.keyword} ({alert.velocity})
+                        </p>
+                        <p className="text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] mt-0.5">{alert.title}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => onCreateDraftFromAlert(alert)}
+                          className="px-2.5 py-1 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[6px] text-[11px] font-medium flex items-center gap-1 transition-colors"
+                        >
+                          <Plus size={11} strokeWidth={1.5} /> Draft
+                        </button>
+                        {!alert.acknowledged && (
+                          <button
+                            onClick={() => onAcknowledgeAlert(alert.id)}
+                            className="text-[11px] text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
+                          >
+                            Dismiss
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Top Performing Posts Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Top Performing Posts</h3>
-            <p className="text-xs text-slate-500">Ranked by organic reach, engagements, and click-through rate</p>
+        {/* Top Performing Posts Table */}
+        <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
+                Top Performing Posts
+              </h3>
+              <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+                Ranked by organic reach, engagements, and click-through rate
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-5 font-semibold">Post Content</th>
-                <th className="py-3 px-5 font-semibold">Networks</th>
-                <th className="py-3 px-5 font-semibold text-right">Impressions</th>
-                <th className="py-3 px-5 font-semibold text-right">Engagements</th>
-                <th className="py-3 px-5 font-semibold text-right">ER %</th>
-                <th className="py-3 px-5 font-semibold text-right">Link Clicks</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
-              {topPosts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-10 px-5 text-center text-slate-500">
-                    No published posts yet. Published posts with recorded analytics will appear here.
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[12px]">
+              <thead>
+                <tr className="border-b border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] text-[11px] text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-[0.04em]">
+                  <th className="py-2.5 px-4 font-medium">Post Content</th>
+                  <th className="py-2.5 px-4 font-medium">Networks</th>
+                  <th className="py-2.5 px-4 font-medium text-right">Impressions</th>
+                  <th className="py-2.5 px-4 font-medium text-right">Engagements</th>
+                  <th className="py-2.5 px-4 font-medium text-right">ER %</th>
+                  <th className="py-2.5 px-4 font-medium text-right">Link Clicks</th>
                 </tr>
-              ) : (
-                topPosts.map((post) => {
-                  const reach = post.analytics?.reach || 0;
-                  const eng = post.analytics?.engagement || 0;
-                  const er = reach > 0 ? ((eng / reach) * 100).toFixed(1) : '0.0';
-                  return (
-                    <tr key={post.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <td className="py-3.5 px-5 max-w-md">
-                        <div className="flex items-center gap-3">
-                          {post.media?.[0] && (
-                            <img src={post.media[0]} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                          )}
-                          <span className="font-medium text-slate-900 dark:text-white line-clamp-2">
-                            {post.content}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-5">
-                        <div className="flex flex-wrap gap-2">
-                          {post.platforms.map((pl) => (
-                            <PlatformTag key={pl} platform={pl} showFull={false} />
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-semibold text-slate-900 dark:text-white">
-                        {reach.toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-semibold text-slate-900 dark:text-white">
-                        {eng.toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                        {er}%
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-semibold text-[#4F46E5] dark:text-indigo-400">
-                        {(post.analytics?.clicks || 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] tabular-nums">
+                {topPosts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-0">
+                      <EmptyStatePanel
+                        icon={BarChart3}
+                        title="No published posts yet"
+                        description="Published posts with recorded analytics will appear here."
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  topPosts.map((post) => {
+                    const reach = post.analytics?.reach || 0;
+                    const eng = post.analytics?.engagement || 0;
+                    const er = reach > 0 ? ((eng / reach) * 100).toFixed(1) : '0.0';
+                    return (
+                      <tr key={post.id} className="h-[44px] hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] transition-colors">
+                        <td className="py-2.5 px-4 max-w-md">
+                          <div className="flex items-center gap-3">
+                            {post.media?.[0] && (
+                              <img src={post.media[0]} alt="" className="w-8 h-8 rounded-[6px] object-cover shrink-0 border border-[#E5E7EB] dark:border-white/[0.08]" />
+                            )}
+                            <span className="font-medium text-[#111827] dark:text-[#F3F4F6] line-clamp-2">
+                              {post.content}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <div className="flex flex-wrap gap-1.5">
+                            {post.platforms.map((pl) => (
+                              <PlatformTag key={pl} platform={pl} showFull={false} />
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-mono font-medium text-[#111827] dark:text-[#F3F4F6]">
+                          {reach.toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-mono font-medium text-[#111827] dark:text-[#F3F4F6]">
+                          {eng.toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                          {er}%
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-mono font-semibold text-[#06B6D4]">
+                          {(post.analytics?.clicks || 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* Export Branded PDF Report Preview Modal */}
       {showPdfModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/65" onClick={() => setShowPdfModal(false)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={() => setShowPdfModal(false)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] flex items-center justify-between">
               <div>
-                <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.01em]">
                   White-Label Branded PDF Report Builder
                 </h3>
-                <p className="text-xs text-slate-500">Customize client branding & sections before exporting.</p>
+                <p className="text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+                  Customize client branding &amp; sections before exporting.
+                </p>
               </div>
-              <button onClick={() => setShowPdfModal(false)} className="text-slate-400 hover:text-slate-700">
-                <X size={18} />
+              <button
+                onClick={() => setShowPdfModal(false)}
+                className="p-1 text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] rounded-md"
+              >
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 custom-scrollbar">
               {/* Customizer Controls */}
-              <div className="lg:col-span-4 space-y-4 text-xs">
+              <div className="lg:col-span-4 space-y-4 text-[12px]">
                 <div>
-                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Agency / Brand Header</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Agency / Brand Header</label>
                   <input
                     value={reportBrandName}
                     onChange={(e) => setReportBrandName(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Client / Recipient Name</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Client / Recipient Name</label>
                   <input
                     value={reportClientName}
                     onChange={(e) => setReportClientName(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Brand Accent Color</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1.5">Brand Accent Color</label>
                   <div className="flex gap-2">
-                    {['#4F46E5', '#0F172A', '#0EA5E9', '#10B981', '#D97706'].map((hex) => (
+                    {['#06B6D4', '#111827', '#0EA5E9', '#10B981', '#F97316'].map((hex) => (
                       <button
                         key={hex}
                         type="button"
                         onClick={() => setReportAccent(hex)}
-                        className={`w-7 h-7 rounded-md border-2 ${
-                          reportAccent === hex ? 'border-slate-900 dark:border-white scale-105' : 'border-transparent'
+                        className={`w-7 h-7 rounded-[6px] border-2 ${
+                          reportAccent === hex ? 'border-[#111827] dark:border-[#FFFFFF] scale-105' : 'border-transparent'
                         }`}
                         style={{ backgroundColor: hex }}
                       />
@@ -792,7 +811,7 @@ export function AnalyticsDashboard({
                   </div>
                 </div>
                 <div className="space-y-2 pt-2">
-                  <p className="font-bold text-slate-700 dark:text-slate-300">Included Report Modules</p>
+                  <p className="font-medium text-[#4B5563] dark:text-[#9CA3AF]">Included Report Modules</p>
                   {(
                     [
                       { key: 'followers', label: 'Follower Growth Summary' },
@@ -801,13 +820,14 @@ export function AnalyticsDashboard({
                       { key: 'topPosts', label: 'Top Performing Posts Table' },
                     ] as const
                   ).map((sec) => (
-                    <label key={sec.key} className="flex items-center gap-2 cursor-pointer text-slate-600 dark:text-slate-300">
+                    <label key={sec.key} className="flex items-center gap-2 cursor-pointer text-[#111827] dark:text-[#F3F4F6]">
                       <input
                         type="checkbox"
                         checked={reportSections[sec.key]}
                         onChange={(e) =>
                           setReportSections({ ...reportSections, [sec.key]: e.target.checked })
                         }
+                        className="accent-[#06B6D4]"
                       />
                       <span>{sec.label}</span>
                     </label>
@@ -816,55 +836,55 @@ export function AnalyticsDashboard({
               </div>
 
               {/* Live A4 Sheet Preview */}
-              <div className="lg:col-span-8 bg-slate-100 dark:bg-slate-950 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="bg-white text-slate-900 rounded-lg shadow-lg p-6 space-y-5">
+              <div className="lg:col-span-8 canvas-dot-grid bg-[#F8F9FB] dark:bg-[#090A0D] p-5 rounded-[12px] border border-[#E5E7EB] dark:border-white/[0.08]">
+                <div className="bg-[#FFFFFF] text-[#111827] rounded-[10px] border border-[#E5E7EB] p-6 space-y-5">
                   <div
-                    className="pb-4 flex items-end justify-between border-b-4"
+                    className="pb-4 flex items-end justify-between border-b-2"
                     style={{ borderBottomColor: reportAccent }}
                   >
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: reportAccent }}>
+                      <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.06em]" style={{ color: reportAccent }}>
                         {reportBrandName}
                       </p>
-                      <h4 className="font-display text-xl font-extrabold mt-0.5">
+                      <h4 className="text-[18px] font-semibold tracking-[-0.02em] mt-0.5">
                         Social Performance Executive Report
                       </h4>
                     </div>
-                    <div className="text-right text-[11px] text-slate-500">
+                    <div className="text-right text-[11px] text-[#6B7280] font-mono">
                       <p>Period: {range.toUpperCase()}</p>
                       <p>For: {reportClientName}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs tabular-nums">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px] tabular-nums">
                     {reportSections.followers && (
-                      <div className="p-3 rounded-lg border border-slate-200">
-                        <p className="text-[10px] uppercase text-slate-400 font-bold">Total Audience</p>
-                        <p className="text-lg font-extrabold mt-1" style={{ color: reportAccent }}>
+                      <div className="p-3 rounded-[8px] border border-[#E5E7EB]">
+                        <p className="text-[10px] uppercase text-[#6B7280] font-medium">Total Audience</p>
+                        <p className="text-[18px] font-semibold font-mono mt-1" style={{ color: reportAccent }}>
                           {kpis.totalFollowers.toLocaleString()}
                         </p>
                       </div>
                     )}
                     {reportSections.engagement && (
                       <>
-                        <div className="p-3 rounded-lg border border-slate-200">
-                          <p className="text-[10px] uppercase text-slate-400 font-bold">Impressions</p>
-                          <p className="text-lg font-extrabold mt-1" style={{ color: reportAccent }}>
+                        <div className="p-3 rounded-[8px] border border-[#E5E7EB]">
+                          <p className="text-[10px] uppercase text-[#6B7280] font-medium">Impressions</p>
+                          <p className="text-[18px] font-semibold font-mono mt-1" style={{ color: reportAccent }}>
                             {kpis.reach.toLocaleString()}
                           </p>
                         </div>
-                        <div className="p-3 rounded-lg border border-slate-200">
-                          <p className="text-[10px] uppercase text-slate-400 font-bold">Eng. Rate</p>
-                          <p className="text-lg font-extrabold mt-1" style={{ color: reportAccent }}>
+                        <div className="p-3 rounded-[8px] border border-[#E5E7EB]">
+                          <p className="text-[10px] uppercase text-[#6B7280] font-medium">Eng. Rate</p>
+                          <p className="text-[18px] font-semibold font-mono mt-1" style={{ color: reportAccent }}>
                             {kpis.engRate}%
                           </p>
                         </div>
                       </>
                     )}
                     {reportSections.heatmap && (
-                      <div className="p-3 rounded-lg border border-slate-200">
-                        <p className="text-[10px] uppercase text-slate-400 font-bold">Peak Window</p>
-                        <p className="text-lg font-extrabold mt-1" style={{ color: reportAccent }}>
+                      <div className="p-3 rounded-[8px] border border-[#E5E7EB]">
+                        <p className="text-[10px] uppercase text-[#6B7280] font-medium">Peak Window</p>
+                        <p className="text-[18px] font-semibold font-mono mt-1" style={{ color: reportAccent }}>
                           {activeHeatCell ? `${activeHeatCell.day} ${activeHeatCell.hour}` : 'N/A'}
                         </p>
                       </div>
@@ -873,17 +893,17 @@ export function AnalyticsDashboard({
 
                   {reportSections.topPosts && (
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                      <p className="text-[11px] font-medium uppercase tracking-[0.04em] text-[#6B7280] mb-2">
                         Top Performing Posts Snapshot
                       </p>
-                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg text-[11px]">
+                      <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-[8px] text-[11px]">
                         {topPosts.length === 0 ? (
-                          <p className="px-3 py-4 text-center text-slate-500">No published posts recorded yet.</p>
+                          <p className="px-3 py-4 text-center text-[#6B7280]">No published posts recorded yet.</p>
                         ) : (
                           topPosts.slice(0, 4).map((p) => (
                             <div key={p.id} className="px-3 py-2 flex items-center justify-between gap-3">
                               <span className="truncate font-medium">{p.content}</span>
-                              <span className="font-mono font-bold shrink-0">
+                              <span className="font-mono font-semibold shrink-0 tabular-nums">
                                 {(p.analytics?.reach || 0).toLocaleString()} reach
                               </span>
                             </div>
@@ -896,20 +916,20 @@ export function AnalyticsDashboard({
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap justify-end gap-2.5">
+            <div className="px-5 py-3.5 border-t border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowPdfModal(false)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold"
+                className="px-3.5 py-2 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[8px] text-[12px] font-medium text-[#4B5563] dark:text-[#9CA3AF] transition-colors"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={handleDownloadBrandedReport}
-                className="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                className="px-3.5 py-2 border border-[#E5E7EB] dark:border-white/[0.12] hover:border-[#06B6D4] bg-[#FFFFFF] dark:bg-[#13161D] text-[#111827] dark:text-[#F3F4F6] rounded-[8px] text-[12px] font-medium flex items-center gap-1.5 transition-colors"
               >
-                <Download size={13} /> Download Branded Report
+                <Download size={13} strokeWidth={1.5} /> Download Branded Report
               </button>
               <button
                 type="button"
@@ -917,9 +937,9 @@ export function AnalyticsDashboard({
                   window.print();
                   onToast('Print / Save PDF Opened', 'Choose "Save as PDF" in your browser print dialog.');
                 }}
-                className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] text-[12px] font-medium flex items-center gap-1.5 transition-colors"
               >
-                <Printer size={13} /> Print / Save as PDF
+                <Printer size={13} strokeWidth={1.5} /> Print / Save as PDF
               </button>
             </div>
           </div>

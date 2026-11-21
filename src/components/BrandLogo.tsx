@@ -28,11 +28,11 @@ export function BrandLogo({
   if (failed) {
     return (
       <span
-        className={`inline-flex items-center font-display text-base font-extrabold tracking-tight whitespace-nowrap shrink-0 ${
-          surface === 'dark' ? 'text-white' : 'text-slate-900 dark:text-white'
+        className={`inline-flex items-center font-display text-base font-semibold tracking-[-0.02em] whitespace-nowrap shrink-0 ${
+          surface === 'dark' ? 'text-[#F3F4F6]' : 'text-[#111827] dark:text-[#F3F4F6]'
         } ${className}`}
       >
-        Socialify<span className="text-[#4F46E5] dark:text-indigo-400 ml-0.5">AI</span>
+        Socialify<span className="text-[#06B6D4] ml-0.5">AI</span>
       </span>
     );
   }

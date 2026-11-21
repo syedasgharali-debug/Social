@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Calendar, Trash2, Edit3, Search, X } from 'lucide-react';
+import { Sparkles, Calendar, Trash2, Edit3, Search, X, FileText } from 'lucide-react';
 import { Draft, DraftStatus, Platform, ContentCategory } from '../../types';
 import { aiService } from '../../services/aiService';
 import { ALL_PLATFORMS, PLATFORM_META, PlatformTag } from '../common/PlatformMeta';
+import { EmptyStatePanel } from '../common/DesignPrimitives';
 
 interface DraftsWorkspaceProps {
   workspaceId: string;
@@ -93,12 +94,12 @@ export function DraftsWorkspace({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Bulk AI Content Studio Bar */}
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5">
+      <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-xl p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles size={16} className="text-[#4F46E5]" />
-          <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">
+          <Sparkles size={15} strokeWidth={1.5} className="text-cyan-600 dark:text-cyan-400" />
+          <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-[#111827] dark:text-[#F3F4F6]">
             AI Bulk Content & Campaign Generator
           </h3>
         </div>
@@ -109,20 +110,20 @@ export function DraftsWorkspace({
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Campaign topic or URL (e.g. Q1 Evergreen Launch)"
-              className="md:col-span-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
+              className="md:col-span-1 px-3.5 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-xs text-[#111827] dark:text-[#F3F4F6] outline-none transition-colors"
             />
             <input
               type="text"
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
               placeholder="Target audience"
-              className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
+              className="px-3.5 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-xs text-[#111827] dark:text-[#F3F4F6] outline-none transition-colors"
             />
             <div className="flex gap-2">
               <select
                 value={tone}
                 onChange={(e) => setTone(e.target.value)}
-                className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                className="flex-1 px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-xs font-medium text-[#111827] dark:text-[#F3F4F6] outline-none"
               >
                 <option value="Professional">Professional Tone</option>
                 <option value="Witty">Witty & Bold</option>
@@ -132,15 +133,15 @@ export function DraftsWorkspace({
               <button
                 type="submit"
                 disabled={bulkLoading || !topic.trim()}
-                className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shrink-0"
+                className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] disabled:opacity-50 rounded-lg text-xs font-medium shrink-0 transition-colors"
               >
                 {bulkLoading ? 'Generating...' : 'Generate 5 Drafts'}
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="font-semibold text-slate-500">Target Platforms:</span>
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="font-medium text-[#6B7280] dark:text-[#9CA3AF] mr-1">Target Platforms:</span>
             {ALL_PLATFORMS.map((p) => {
               const active = selectedPlatforms.includes(p);
               return (
@@ -148,10 +149,10 @@ export function DraftsWorkspace({
                   key={p}
                   type="button"
                   onClick={() => handleTogglePlatform(p)}
-                  className={`px-2.5 py-1 rounded-md border font-semibold transition-colors ${
+                  className={`px-2.5 py-1 rounded-md border font-medium transition-colors ${
                     active
-                      ? 'border-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/50 text-[#4F46E5] dark:text-indigo-300'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-500'
+                      ? 'border-[#06B6D4] bg-cyan-500/10 text-cyan-700 dark:text-cyan-300'
+                      : 'border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#D1D5DB] dark:hover:border-white/[0.15]'
                   }`}
                 >
                   {PLATFORM_META[p].label}
@@ -164,15 +165,15 @@ export function DraftsWorkspace({
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="inline-flex flex-wrap bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-1 rounded-lg text-xs font-semibold">
+        <div className="inline-flex flex-wrap bg-[#F3F4F6] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] p-1 rounded-lg text-xs font-medium">
           {(['all', 'idea', 'ai_draft', 'needs_review', 'ready'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
+              className={`px-3 py-1.5 rounded-md transition-colors tabular-nums ${
                 statusFilter === st
-                  ? 'bg-slate-900 dark:bg-[#4F46E5] text-white'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#FFFFFF] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.12]'
+                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
               }`}
             >
               {st === 'all' ? `All (${wsDrafts.length})` : STATUS_LABELS[st]}
@@ -181,121 +182,133 @@ export function DraftsWorkspace({
         </div>
 
         <div className="relative w-full sm:w-64">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={13} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter drafts..."
-            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
+            className="w-full pl-8 pr-3 py-2 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-xs text-[#111827] dark:text-[#F3F4F6] outline-none transition-colors"
           />
         </div>
       </div>
 
       {/* Draft Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredDrafts.map((draft) => (
-          <div
-            key={draft.id}
-            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
-          >
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-2.5">
-                <div className="flex flex-wrap gap-2">
-                  {draft.platforms.map((pl) => (
-                    <PlatformTag key={pl} platform={pl} showFull={false} />
-                  ))}
+      {filteredDrafts.length === 0 ? (
+        <EmptyStatePanel
+          icon={FileText}
+          title={wsDrafts.length === 0 ? 'No drafts yet' : 'No matching drafts'}
+          description={
+            wsDrafts.length === 0
+              ? 'Use the AI Bulk Generator above or save work-in-progress posts from the Content Studio to build your draft backlog.'
+              : 'Adjust your status filter or search query to view your other saved drafts.'
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredDrafts.map((draft) => (
+            <div
+              key={draft.id}
+              className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-xl p-5 flex flex-col justify-between transition-colors"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    {draft.platforms.map((pl) => (
+                      <PlatformTag key={pl} platform={pl} showFull={false} />
+                    ))}
+                  </div>
+                  <select
+                    aria-label="Draft Status"
+                    value={draft.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value as DraftStatus;
+                      onUpdateDraft({ ...draft, status: nextStatus });
+                      onToast('Draft Status Updated', `${draft.topic} marked as ${STATUS_LABELS[nextStatus]}.`);
+                    }}
+                    className="text-[11px] font-medium bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded px-2 py-0.5 text-[#111827] dark:text-[#F3F4F6] outline-none"
+                  >
+                    {(Object.keys(STATUS_LABELS) as DraftStatus[]).map((st) => (
+                      <option key={st} value={st}>
+                        {STATUS_LABELS[st]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  aria-label="Draft Status"
-                  value={draft.status}
-                  onChange={(e) => {
-                    const nextStatus = e.target.value as DraftStatus;
-                    onUpdateDraft({ ...draft, status: nextStatus });
-                    onToast('Draft Status Updated', `${draft.topic} marked as ${STATUS_LABELS[nextStatus]}.`);
-                  }}
-                  className="text-[11px] font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-0.5 text-slate-700 dark:text-slate-200 outline-none"
-                >
-                  {(Object.keys(STATUS_LABELS) as DraftStatus[]).map((st) => (
-                    <option key={st} value={st}>
-                      {STATUS_LABELS[st]}
-                    </option>
-                  ))}
-                </select>
+                <p className="text-xs font-semibold text-[#111827] dark:text-[#F3F4F6]">{draft.topic}</p>
+                <p className="mt-2 text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">{draft.content}</p>
               </div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white">{draft.topic}</p>
-              <p className="mt-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{draft.content}</p>
-            </div>
 
-            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onEditInComposer(draft)}
-                  className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
-                >
-                  <Edit3 size={12} /> Edit in Composer
-                </button>
+              <div className="mt-5 pt-3 border-t border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onEditInComposer(draft)}
+                    className="px-2.5 py-1.5 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] rounded-md text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1 transition-colors"
+                  >
+                    <Edit3 size={12} strokeWidth={1.5} /> Edit in Composer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSchedulingDraft(draft);
+                      setScheduleCatId(draft.categoryId || wsCategories[0]?.id || '');
+                    }}
+                    className="px-2.5 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-[11px] font-medium flex items-center gap-1 transition-colors"
+                  >
+                    <Calendar size={12} strokeWidth={1.5} /> Schedule
+                  </button>
+                </div>
                 <button
                   onClick={() => {
-                    setSchedulingDraft(draft);
-                    setScheduleCatId(draft.categoryId || wsCategories[0]?.id || '');
+                    onDeleteDraft(draft.id);
+                    onToast('Draft Removed');
                   }}
-                  className="px-2.5 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-md text-[11px] font-semibold flex items-center gap-1"
+                  aria-label="Delete draft"
+                  className="p-1.5 text-[#6B7280] hover:text-rose-600 dark:hover:text-rose-400 rounded-md transition-colors"
                 >
-                  <Calendar size={12} /> Schedule
+                  <Trash2 size={14} strokeWidth={1.5} />
                 </button>
               </div>
-              <button
-                onClick={() => {
-                  onDeleteDraft(draft.id);
-                  onToast('Draft Removed');
-                }}
-                aria-label="Delete draft"
-                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md"
-              >
-                <Trash2 size={14} />
-              </button>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Schedule Date/Time Picker Modal */}
       {schedulingDraft && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60" onClick={() => setSchedulingDraft(null)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSchedulingDraft(null)} />
+          <div className="relative w-full max-w-md bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-xl p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+              <h3 className="font-display text-sm font-semibold text-[#111827] dark:text-[#F3F4F6]">
                 Schedule Draft to Calendar
               </h3>
-              <button onClick={() => setSchedulingDraft(null)} className="text-slate-400 hover:text-slate-700">
-                <X size={18} />
+              <button onClick={() => setSchedulingDraft(null)} className="text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]">
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
             <div className="mt-4 space-y-3.5 text-xs">
-              <p className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300 line-clamp-3">
+              <p className="p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[#4B5563] dark:text-[#9CA3AF] line-clamp-3">
                 {schedulingDraft.content}
               </p>
               <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1">
                   Publish Date & Time
                 </label>
                 <input
                   type="datetime-local"
                   value={scheduleDate}
                   onChange={(e) => setScheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg font-mono text-[#111827] dark:text-[#F3F4F6] outline-none"
                 />
               </div>
               <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1">
                   Content Category Queue
                 </label>
                 <select
                   value={scheduleCatId}
                   onChange={(e) => setScheduleCatId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-[#111827] dark:text-[#F3F4F6] outline-none"
                 >
                   {wsCategories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -307,7 +320,7 @@ export function DraftsWorkspace({
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => setSchedulingDraft(null)}
-                  className="flex-1 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold"
+                  className="flex-1 py-2 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-lg font-medium text-[#4B5563] dark:text-[#9CA3AF]"
                 >
                   Cancel
                 </button>
@@ -320,7 +333,7 @@ export function DraftsWorkspace({
                     );
                     setSchedulingDraft(null);
                   }}
-                  className="flex-[2] py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg font-semibold"
+                  className="flex-[2] py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-lg font-medium transition-colors"
                 >
                   Confirm Schedule
                 </button>

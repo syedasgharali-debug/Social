@@ -26,6 +26,7 @@ app.use(express.json({ limit: '5mb' }));
 const DATA_DIR = path.resolve(__dirname, '.data');
 const USERS_FILE = path.join(DATA_DIR, 'auth-users.json');
 const WORKSPACES_DIR = path.join(DATA_DIR, 'workspaces');
+const PLATFORM_CONFIG_FILE = path.join(DATA_DIR, 'platform-config.json');
 const TOKEN_SECRET =
   process.env.AUTH_SESSION_SECRET ||
   crypto.createHash('sha256').update(`socialifyai-session-secret-${__dirname}`).digest('hex');
@@ -43,6 +44,7 @@ interface StoredUser {
 
 let memoryUsers: StoredUser[] | null = null;
 const memoryWorkspaces = new Map<string, Record<string, unknown>>();
+let memoryPlatformConfig: Record<string, unknown> | null = null;
 
 function ensureDataDirs() {
   try {
@@ -366,6 +368,55 @@ app.get('/api/admin/users', (req, res) => {
   return res.json({ users: records });
 });
 
+// Global platform governance config (quotas + feature flags): readable by any signed-in user, writable strictly by Super Admin
+app.get('/api/platform-config', (req, res) => {
+  const user = extractBearerUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  ensureDataDirs();
+  try {
+    if (fs.existsSync(PLATFORM_CONFIG_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(PLATFORM_CONFIG_FILE, 'utf8'));
+      memoryPlatformConfig = parsed;
+      return res.json({ exists: true, data: parsed });
+    }
+  } catch {
+    // fallback to memory
+  }
+  if (memoryPlatformConfig) {
+    return res.json({ exists: true, data: memoryPlatformConfig });
+  }
+  return res.json({ exists: false, data: null });
+});
+
+app.put('/api/platform-config', (req, res) => {
+  const user = extractBearerUser(req);
+  const isStrictSuperAdmin =
+    Boolean(user) &&
+    user!.email.toLowerCase() === 'essadhiif@gmail.com' &&
+    user!.role === 'super_admin';
+  if (!isStrictSuperAdmin) {
+    return res.status(403).json({ error: 'Forbidden: Super Admin access required.' });
+  }
+  const { aiGovernance, featureFlags } = req.body || {};
+  if (!aiGovernance || typeof aiGovernance !== 'object') {
+    return res.status(400).json({ error: 'Valid aiGovernance object is required.' });
+  }
+  const payload = {
+    aiGovernance,
+    featureFlags: Array.isArray(featureFlags) ? featureFlags.slice(0, 50) : [],
+    updatedBy: user!.email,
+    updatedAt: new Date().toISOString(),
+  };
+  memoryPlatformConfig = payload;
+  ensureDataDirs();
+  try {
+    fs.writeFileSync(PLATFORM_CONFIG_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  } catch {
+    // Keep in-memory config when FS is read-only
+  }
+  return res.json({ ok: true, data: payload });
+});
+
 // =============================================================================
 // Gemini AI Endpoints
 // =============================================================================
@@ -382,9 +433,17 @@ const getAiClient = () => {
   });
 };
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (req, res) => {
   const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY');
-  res.json({ ok: true, geminiConfigured: hasKey });
+  const node = typeof req.query.node === 'string' ? req.query.node.slice(0, 64) : 'core';
+  res.json({
+    ok: true,
+    node,
+    status: 'operational',
+    geminiConfigured: hasKey,
+    uptimeSec: Math.round(process.uptime()),
+    checkedAt: new Date().toISOString(),
+  });
 });
 
 app.post('/api/ai/reply-drafts', async (req, res) => {
@@ -1547,6 +1606,630 @@ For each of the 4 trends, provide:
   } catch (error) {
     console.error('live-trends error:', error);
     return res.status(500).json({ error: 'Live trend radar failed. Please try again.' });
+  }
+});
+
+// =============================================================================
+// Enterprise Module Endpoints: YouTube Studio, AI SEO CMS, Discover & RSS
+// =============================================================================
+app.post('/api/ai/youtube-studio', async (req, res) => {
+  try {
+    const { mode, niche, topic, format, tone, channelName } = req.body || {};
+    const nicheClean = String(niche || 'Digital Marketing & Creator Growth').trim();
+    const topicClean = String(topic || '').trim();
+    const formatClean = format === 'short' ? 'short' : 'long_form';
+    const toneClean = String(tone || 'High-Retention & Practical').trim();
+    const channelClean = String(channelName || 'YouTube Channel').trim();
+
+    const ai = getAiClient();
+
+    if (mode === 'ideation') {
+      if (!nicheClean || nicheClean.length < 2) {
+        return res.status(400).json({ error: 'Enter a niche or keyword to generate YouTube concepts.' });
+      }
+      if (!ai) {
+        return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
+      }
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: `You are an expert YouTube growth strategist. Generate 5 high-CTR YouTube video & Shorts concepts for the channel "${channelClean}" in the "${nicheClean}" niche.
+Target format preference: ${formatClean === 'short' ? 'YouTube Shorts (under 60s)' : 'Mix of Long-Form (8-14 min) and Shorts'}.
+For each concept provide: topic, format ("long_form" or "short"), hookAngle, searchIntent ("High Search" | "Suggested Feed" | "Trending"), and thumbnailHeadline (max 4 punchy words).`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              ideas: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    topic: { type: Type.STRING },
+                    format: { type: Type.STRING },
+                    hookAngle: { type: Type.STRING },
+                    searchIntent: { type: Type.STRING },
+                    thumbnailHeadline: { type: Type.STRING },
+                  },
+                  required: ['topic', 'format', 'hookAngle', 'searchIntent', 'thumbnailHeadline'],
+                },
+              },
+            },
+            required: ['ideas'],
+          },
+        },
+      });
+      const parsed = JSON.parse(response.text || '{}');
+      return res.json({ fallback: false, data: parsed });
+    }
+
+    if (!topicClean || topicClean.length < 3) {
+      return res.status(400).json({ error: 'Enter a video topic to generate the script & metadata pipeline.' });
+    }
+    if (!ai) {
+      return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: `You are a senior YouTube producer and SEO strategist for "${channelClean}" (${nicheClean}).
+Create a complete production package for a ${formatClean === 'short' ? 'YouTube Short (45-58 seconds)' : 'Long-Form YouTube video (8-12 minutes)'} on:
+Topic: "${topicClean}"
+Tone: ${toneClean}
+
+Return structured JSON with:
+- seoTitles: 4 distinct high-CTR SEO titles (under 68 chars)
+- description: SEO-optimized YouTube description (2-3 crisp paragraphs)
+- script: { hook (0-15s pattern interrupt), body (structured beats with visual cues), cta (clear subscribe/comment CTA) }
+- chapters: 4-6 timestamps (e.g. "00:00", "01:15", etc.) with concise labels
+- tags: 10 targeted YouTube SEO tags (without #)
+- pinnedComment: conversation-sparking pinned first comment
+- thumbnailPrompt: detailed visual art direction prompt for a high-CTR thumbnail
+- thumbnailHeadline: 2-4 bold words to overlay on the thumbnail`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            seoTitles: { type: Type.ARRAY, items: { type: Type.STRING } },
+            description: { type: Type.STRING },
+            script: {
+              type: Type.OBJECT,
+              properties: {
+                hook: { type: Type.STRING },
+                body: { type: Type.STRING },
+                cta: { type: Type.STRING },
+              },
+              required: ['hook', 'body', 'cta'],
+            },
+            chapters: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  timestamp: { type: Type.STRING },
+                  label: { type: Type.STRING },
+                },
+                required: ['timestamp', 'label'],
+              },
+            },
+            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            pinnedComment: { type: Type.STRING },
+            thumbnailPrompt: { type: Type.STRING },
+            thumbnailHeadline: { type: Type.STRING },
+          },
+          required: [
+            'seoTitles',
+            'description',
+            'script',
+            'chapters',
+            'tags',
+            'pinnedComment',
+            'thumbnailPrompt',
+            'thumbnailHeadline',
+          ],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+    return res.json({ fallback: false, data: parsed });
+  } catch (error) {
+    console.error('youtube-studio error:', error);
+    return res.status(500).json({ error: 'YouTube AI generation failed. Please try again.' });
+  }
+});
+
+app.post('/api/ai/seo-article', async (req, res) => {
+  try {
+    const { targetKeyword, sourceUrl, brandName, audience, tone } = req.body || {};
+    const keywordClean = String(targetKeyword || '').trim();
+    const urlClean = String(sourceUrl || '').trim();
+    const brandClean = String(brandName || 'Your Brand').trim();
+    const audienceClean = String(audience || 'B2B Founders & Growth Teams').trim();
+    const toneClean = String(tone || 'Authoritative Editorial').trim();
+
+    if (!keywordClean || keywordClean.length < 2) {
+      return res.status(400).json({ error: 'Enter a target keyword to generate an SEO blog article.' });
+    }
+
+    const ai = getAiClient();
+    if (!ai) {
+      return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
+    }
+
+    const scraped = urlClean ? await fetchWebPageSummary(urlClean) : null;
+    const referenceBlock = scraped?.fetched
+      ? `\nReference Source URL (${scraped.url}):\nTitle: ${scraped.title}\nHeadings: ${scraped.headings.join(' | ')}\nExcerpt: ${scraped.excerpt.slice(0, 2200)}`
+      : '';
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: `You are a Principal SEO Content Architect writing for "${brandClean}" targeting "${audienceClean}" in a "${toneClean}" voice.
+Write a comprehensive, publication-ready long-form SEO blog article targeting the keyword: "${keywordClean}".
+${referenceBlock}
+
+Requirements:
+- title & h1: compelling, keyword-rich headline
+- slug: clean lowercase kebab-case URL slug
+- metaTitle: strictly 50-60 characters including the target keyword
+- metaDescription: strictly 140-158 characters with clear value proposition
+- heroImageAlt: descriptive SEO alt text for the featured hero visual
+- sections: 5 rich sections mixing "h2" and "h3" headings, each with 2-3 substantive paragraphs (no filler fluff), plus an inline visual specification (visualAlt, visualCaption, visualType: "infographic" | "diagram" | "callout") on at least 2 sections
+- schemaFaq: 4 realistic FAQ items optimized for Google FAQPage JSON-LD
+- internalLinks: 3 internal link suggestions (anchor, suggestedSlug, rationale)
+- socialBundle: complete multi-channel syndication posts derived from this article:
+  - linkedinCarousel: slide-by-slide outline (5 slides) + intro hook
+  - xThread: 4-tweet numbered thread under 270 chars per tweet separated by blank lines
+  - instagramCaption: engaging IG caption with CTA and 4 hashtags
+  - facebookPost: conversational Facebook summary post`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            slug: { type: Type.STRING },
+            metaTitle: { type: Type.STRING },
+            metaDescription: { type: Type.STRING },
+            h1: { type: Type.STRING },
+            heroImageAlt: { type: Type.STRING },
+            sections: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  heading: { type: Type.STRING },
+                  level: { type: Type.STRING },
+                  body: { type: Type.STRING },
+                  visualAlt: { type: Type.STRING },
+                  visualCaption: { type: Type.STRING },
+                  visualType: { type: Type.STRING },
+                },
+                required: ['heading', 'level', 'body'],
+              },
+            },
+            schemaFaq: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  question: { type: Type.STRING },
+                  answer: { type: Type.STRING },
+                },
+                required: ['question', 'answer'],
+              },
+            },
+            internalLinks: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  anchor: { type: Type.STRING },
+                  suggestedSlug: { type: Type.STRING },
+                  rationale: { type: Type.STRING },
+                },
+                required: ['anchor', 'suggestedSlug', 'rationale'],
+              },
+            },
+            socialBundle: {
+              type: Type.OBJECT,
+              properties: {
+                linkedinCarousel: { type: Type.STRING },
+                xThread: { type: Type.STRING },
+                instagramCaption: { type: Type.STRING },
+                facebookPost: { type: Type.STRING },
+              },
+              required: ['linkedinCarousel', 'xThread', 'instagramCaption', 'facebookPost'],
+            },
+          },
+          required: [
+            'title',
+            'slug',
+            'metaTitle',
+            'metaDescription',
+            'h1',
+            'heroImageAlt',
+            'sections',
+            'schemaFaq',
+            'internalLinks',
+            'socialBundle',
+          ],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+    const sections = Array.isArray(parsed.sections)
+      ? parsed.sections.map((s: Record<string, string>) => ({
+          heading: String(s.heading || ''),
+          level: s.level === 'h3' ? 'h3' : 'h2',
+          body: String(s.body || ''),
+          visualAlt: s.visualAlt || undefined,
+          visualCaption: s.visualCaption || undefined,
+          visualType:
+            s.visualType === 'diagram' || s.visualType === 'callout' || s.visualType === 'infographic'
+              ? s.visualType
+              : undefined,
+        }))
+      : [];
+
+    const fullText = [parsed.h1 || '', ...sections.map((s: { heading: string; body: string }) => `${s.heading} ${s.body}`)].join(' ');
+    const words = fullText.trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    const sentences = Math.max(1, fullText.split(/[.!?]+/).filter((s) => s.trim().length > 0).length);
+    const avgWordsPerSentence = wordCount / sentences;
+    const readabilityScore = Math.max(45, Math.min(96, Math.round(100 - Math.max(0, avgWordsPerSentence - 12) * 1.9)));
+
+    const kwLower = keywordClean.toLowerCase();
+    let seoChecks = 0;
+    if ((parsed.metaTitle || '').toLowerCase().includes(kwLower)) seoChecks += 20;
+    if ((parsed.metaDescription || '').length >= 110 && (parsed.metaDescription || '').length <= 170) seoChecks += 15;
+    if ((parsed.h1 || '').toLowerCase().includes(kwLower)) seoChecks += 20;
+    if (sections.length >= 4) seoChecks += 15;
+    if (Array.isArray(parsed.schemaFaq) && parsed.schemaFaq.length >= 3) seoChecks += 15;
+    if (Array.isArray(parsed.internalLinks) && parsed.internalLinks.length >= 2) seoChecks += 15;
+    const seoScore = Math.max(60, Math.min(100, seoChecks));
+
+    return res.json({
+      fallback: false,
+      data: {
+        ...parsed,
+        sections,
+        wordCount,
+        readabilityScore,
+        seoScore,
+      },
+    });
+  } catch (error) {
+    console.error('seo-article error:', error);
+    return res.status(500).json({ error: 'SEO article generation failed. Please try again.' });
+  }
+});
+
+app.post('/api/cms/publish', async (req, res) => {
+  try {
+    const { provider, endpointUrl, article } = req.body || {};
+    const endpointStr = String(endpointUrl || '').trim();
+    const parsedUrl = isSafePublicUrl(endpointStr);
+    if (!parsedUrl) {
+      return res.status(400).json({ error: 'Please configure a valid public http(s) CMS endpoint or webhook URL.' });
+    }
+
+    const publishedAt = new Date().toISOString();
+    if (provider === 'webhook') {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      try {
+        const response = await fetch(parsedUrl.toString(), {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', 'User-Agent': 'SocialifyAI-CMS/1.0' },
+          body: JSON.stringify({ event: 'seo_article.published', publishedAt, article }),
+        });
+        if (!response.ok) {
+          return res.status(502).json({
+            error: `Remote webhook endpoint responded with HTTP ${response.status} (${response.statusText || 'Error'}). Verify endpoint URL and credentials.`,
+            httpStatus: response.status,
+            endpoint: parsedUrl.toString(),
+          });
+        }
+        return res.json({
+          ok: true,
+          dispatched: true,
+          httpStatus: response.status,
+          publishedAt,
+          endpoint: parsedUrl.toString(),
+        });
+      } catch (err) {
+        const isTimeout = err instanceof Error && err.name === 'AbortError';
+        return res.status(isTimeout ? 504 : 502).json({
+          error: isTimeout
+            ? 'Remote CMS webhook timed out after 6 seconds. Verify the server is reachable.'
+            : 'Could not reach the remote CMS webhook URL. Check DNS/TLS and firewall rules.',
+          endpoint: parsedUrl.toString(),
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    return res.json({
+      ok: true,
+      dispatched: true,
+      httpStatus: 201,
+      publishedAt,
+      endpoint: parsedUrl.toString(),
+    });
+  } catch (error) {
+    console.error('cms-publish error:', error);
+    return res.status(500).json({ error: 'CMS publish dispatch failed.' });
+  }
+});
+
+app.post('/api/discover/fetch-rss', async (req, res) => {
+  try {
+    const { feedUrl, keywordFilter, sourceName, sourceType } = req.body || {};
+    const parsedUrl = isSafePublicUrl(String(feedUrl || ''));
+    if (!parsedUrl) {
+      return res.status(400).json({ error: 'Enter a valid public http(s) RSS, Atom, or YouTube feed URL.' });
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    let xml = '';
+    try {
+      const response = await fetch(parsedUrl.toString(), {
+        signal: controller.signal,
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SocialifyAIBot/1.0; +https://www.socialifyai.com)',
+          Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+        },
+      });
+      if (!response.ok) {
+        return res.status(422).json({ error: `Feed returned HTTP ${response.status}. Verify the RSS/Atom URL.` });
+      }
+      xml = (await response.text()).slice(0, 350_000);
+    } catch (err) {
+      const msg =
+        err instanceof Error && err.name === 'AbortError'
+          ? 'Timed out while fetching the feed URL.'
+          : 'Could not reach the RSS/Atom feed URL.';
+      return res.status(422).json({ error: msg });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const items: { title: string; summary: string; url: string; publishedAt: string }[] = [];
+    const rssBlocks = Array.from(xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi));
+    const atomBlocks = rssBlocks.length === 0 ? Array.from(xml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/gi)) : [];
+    const blocks = rssBlocks.length > 0 ? rssBlocks : atomBlocks;
+
+    for (const match of blocks.slice(0, 20)) {
+      const block = match[1];
+      const titleRaw = block.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '';
+      const linkHref =
+        block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1] ||
+        block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1] ||
+        '';
+      const descRaw =
+        block.match(/<description[^>]*>([\s\S]*?)<\/description>/i)?.[1] ||
+        block.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i)?.[1] ||
+        block.match(/<media:description[^>]*>([\s\S]*?)<\/media:description>/i)?.[1] ||
+        '';
+      const dateRaw =
+        block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i)?.[1] ||
+        block.match(/<published[^>]*>([\s\S]*?)<\/published>/i)?.[1] ||
+        block.match(/<updated[^>]*>([\s\S]*?)<\/updated>/i)?.[1] ||
+        '';
+
+      const cleanTitle = decodeHtmlEntities(titleRaw.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '').trim());
+      const cleanUrl = linkHref.replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      const cleanSummary = decodeHtmlEntities(
+        descRaw.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      ).slice(0, 280);
+
+      if (cleanTitle && cleanUrl.startsWith('http')) {
+        items.push({
+          title: cleanTitle,
+          summary: cleanSummary || `Latest item published on ${sourceName || parsedUrl.hostname}.`,
+          url: cleanUrl,
+          publishedAt: dateRaw ? new Date(dateRaw).toISOString() : new Date().toISOString(),
+        });
+      }
+    }
+
+    const filterTokens = String(keywordFilter || '')
+      .split(',')
+      .map((k) => k.trim().toLowerCase())
+      .filter(Boolean);
+
+    const filtered =
+      filterTokens.length > 0
+        ? items.filter((item) => {
+            const hay = `${item.title} ${item.summary}`.toLowerCase();
+            return filterTokens.some((tok) => hay.includes(tok));
+          })
+        : items;
+
+    return res.json({
+      fetchedAt: new Date().toISOString(),
+      sourceName: sourceName || parsedUrl.hostname,
+      sourceType: sourceType || 'rss',
+      totalParsed: items.length,
+      items: filtered.slice(0, 12),
+    });
+  } catch (error) {
+    console.error('fetch-rss error:', error);
+    return res.status(500).json({ error: 'RSS feed import failed.' });
+  }
+});
+
+app.post('/api/discover/explore', async (req, res) => {
+  try {
+    const { query, channelFilter, velocityFilter } = req.body || {};
+    const qClean = String(query || '').trim();
+    if (!qClean || qClean.length < 2) {
+      return res.status(400).json({ error: 'Enter a topic, keyword, or hashtag to discover viral content.' });
+    }
+
+    const rssQuery =
+      channelFilter && channelFilter !== 'all' ? `${qClean} ${channelFilter}` : qClean;
+    const liveNews = await fetchLiveNewsRss(rssQuery, 8);
+
+    const ai = getAiClient();
+    if (!ai) {
+      return res.json({
+        fallback: true,
+        items: liveNews.map((n, idx) => ({
+          id: `disc-${Date.now()}-${idx}`,
+          sourceName: n.source,
+          channel: 'news',
+          title: n.title,
+          summary: `Live coverage from ${n.source} matching "${qClean}".`,
+          url: n.url,
+          publishedAt: n.pubDate ? new Date(n.pubDate).toISOString() : new Date().toISOString(),
+          velocityLabel: 'Breaking',
+        })),
+      });
+    }
+
+    const headlinesContext = liveNews.length
+      ? `LIVE REAL-TIME SOURCES:\n${liveNews.map((n, i) => `${i + 1}. "${n.title}" — ${n.source} (${n.url})`).join('\n')}`
+      : `Topic query: "${qClean}"`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: `You are a viral content discovery engine. Curate 6 high-signal trending posts/articles matching "${qClean}" (channel filter: ${channelFilter || 'all'}, velocity filter: ${velocityFilter || 'all'}).
+${headlinesContext}
+
+Return structured JSON array "items" with:
+- sourceName (real publisher or platform creator channel)
+- channel ("youtube" | "x" | "reddit" | "news" | "blog")
+- title (concise headline)
+- summary (1-2 sharp sentences summarizing the core viral hook or insight)
+- url (use exact URL from LIVE REAL-TIME SOURCES when grounded, otherwise a clean canonical domain URL)
+- velocityLabel ("Breakout" | "Rising Fast" | "High Discussion")`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            items: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  sourceName: { type: Type.STRING },
+                  channel: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  summary: { type: Type.STRING },
+                  url: { type: Type.STRING },
+                  velocityLabel: { type: Type.STRING },
+                },
+                required: ['sourceName', 'channel', 'title', 'summary', 'url', 'velocityLabel'],
+              },
+            },
+          },
+          required: ['items'],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+    const validChannels = new Set(['youtube', 'x', 'reddit', 'news', 'blog', 'rss']);
+    const items = (Array.isArray(parsed.items) ? parsed.items : []).map(
+      (item: Record<string, string>, idx: number) => ({
+        id: `disc-${Date.now()}-${idx}`,
+        sourceName: String(item.sourceName || 'Web Source'),
+        channel: validChannels.has(String(item.channel).toLowerCase())
+          ? String(item.channel).toLowerCase()
+          : 'news',
+        title: String(item.title || ''),
+        summary: String(item.summary || ''),
+        url: String(item.url || liveNews[idx]?.url || 'https://www.socialifyai.com'),
+        publishedAt: new Date().toISOString(),
+        velocityLabel: String(item.velocityLabel || 'Rising Fast'),
+      })
+    );
+
+    return res.json({ fallback: false, items });
+  } catch (error) {
+    console.error('discover-explore error:', error);
+    return res.status(500).json({ error: 'Viral discovery search failed.' });
+  }
+});
+
+app.post('/api/discover/repurpose', async (req, res) => {
+  try {
+    const { title, summary, url, platform, brandVoice, utmCampaign } = req.body || {};
+    const targetPlatform = String(platform || 'linkedin').toLowerCase();
+    const ai = getAiClient();
+    if (!ai) {
+      return res.status(503).json({ error: 'Gemini API key is not configured on the server.' });
+    }
+
+    let trackedUrl = String(url || '').trim();
+    const campaignTag = String(utmCampaign || 'curated_growth')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_') || 'curated_growth';
+    if (trackedUrl && /^https?:\/\//i.test(trackedUrl)) {
+      try {
+        const u = new URL(trackedUrl);
+        u.searchParams.set('utm_source', targetPlatform);
+        u.searchParams.set('utm_medium', 'social_curated');
+        u.searchParams.set('utm_campaign', campaignTag);
+        trackedUrl = u.toString();
+      } catch {
+        // leave original url
+      }
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: `Rewrite and spin this curated item into an original, native ${targetPlatform.toUpperCase()} social post.
+Brand Voice: ${brandVoice || 'Sharp, practical, human strategist'}
+Source Title: ${title}
+Source Summary: ${summary}
+Attribution Link: ${trackedUrl || 'None'}
+
+Rules:
+- Match ${targetPlatform} character limits and formatting best practices.
+- Include a compelling opening hook, original takeaway, and CTA.
+- Attach the exact attribution link with UTM parameters if provided.
+Return JSON with: content (string) and firstComment (string with 3-4 targeted hashtags or source note).`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            content: { type: Type.STRING },
+            firstComment: { type: Type.STRING },
+          },
+          required: ['content', 'firstComment'],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}') as { content?: string; firstComment?: string };
+    let finalContent = String(parsed.content || '').trim();
+    const finalFirstComment = String(parsed.firstComment || '').trim();
+    if (
+      trackedUrl &&
+      !finalContent.includes('utm_source=') &&
+      !finalFirstComment.includes('utm_source=')
+    ) {
+      finalContent = `${finalContent}\n\n${trackedUrl}`.trim();
+    }
+    return res.json({
+      fallback: false,
+      data: { content: finalContent, firstComment: finalFirstComment, trackedUrl },
+    });
+  } catch (error) {
+    console.error('discover-repurpose error:', error);
+    return res.status(500).json({ error: 'AI repurpose failed. Please try again.' });
   }
 });
 

@@ -43,6 +43,14 @@ function sanitizeLegacySeedData(state: AppState): AppState {
       n.rateLimitLabel.includes('54.0k / 100k')
   );
 
+  const existingNodeIds = new Set(state.apiHealthNodes.map((n) => n.id));
+  const mergedApiNodes = hasLegacyApiNumbers
+    ? DEFAULT_API_HEALTH
+    : [
+        ...state.apiHealthNodes,
+        ...DEFAULT_API_HEALTH.filter((n) => !existingNodeIds.has(n.id)),
+      ];
+
   return {
     ...state,
     workspaces,
@@ -57,11 +65,23 @@ function sanitizeLegacySeedData(state: AppState): AppState {
     ads: state.ads.filter((a) => !LEGACY_SEED_AD_IDS.has(a.id)),
     drafts: state.drafts.filter((d) => !LEGACY_SEED_DRAFT_IDS.has(d.id)),
     discoveryAlerts: state.discoveryAlerts.filter((a) => !LEGACY_SEED_ALERT_IDS.has(a.id)),
+    youtubeChannels: Array.isArray(state.youtubeChannels) ? state.youtubeChannels : [],
+    youtubeVideos: Array.isArray(state.youtubeVideos) ? state.youtubeVideos : [],
+    seoArticles: Array.isArray(state.seoArticles) ? state.seoArticles : [],
+    cmsConnectors: Array.isArray(state.cmsConnectors) ? state.cmsConnectors : [],
+    rssSources: Array.isArray(state.rssSources) ? state.rssSources : [],
+    curatedItems: Array.isArray(state.curatedItems) ? state.curatedItems : [],
+    ecommerceFeeds: Array.isArray(state.ecommerceFeeds) ? state.ecommerceFeeds : [],
+    viralCampaigns: Array.isArray(state.viralCampaigns) ? state.viralCampaigns : [],
+    workspaceCredits:
+      state.workspaceCredits && typeof state.workspaceCredits === 'object'
+        ? state.workspaceCredits
+        : {},
     tenants: state.tenants.filter((t) => !LEGACY_SEED_TENANT_IDS.has(t.id)),
     promoCodes: state.promoCodes.filter((p) => !LEGACY_SEED_PROMO_IDS.has(p.id)),
     invoices: state.invoices.filter((i) => !LEGACY_SEED_INVOICE_IDS.has(i.id)),
     auditLogs: state.auditLogs.filter((l) => !LEGACY_SEED_AUDIT_IDS.has(l.id)),
-    apiHealthNodes: hasLegacyApiNumbers ? DEFAULT_API_HEALTH : state.apiHealthNodes,
+    apiHealthNodes: mergedApiNodes,
   };
 }
 
@@ -103,6 +123,15 @@ function buildWorkspacePayload(state: AppState, ownerId: string, isCreate: boole
     ads: state.ads.slice(0, 100),
     drafts: state.drafts.slice(0, 200),
     discoveryAlerts: state.discoveryAlerts.slice(0, 100),
+    youtubeChannels: (state.youtubeChannels || []).slice(0, 100),
+    youtubeVideos: (state.youtubeVideos || []).slice(0, 200),
+    seoArticles: (state.seoArticles || []).slice(0, 150),
+    cmsConnectors: (state.cmsConnectors || []).slice(0, 50),
+    rssSources: (state.rssSources || []).slice(0, 150),
+    curatedItems: (state.curatedItems || []).slice(0, 200),
+    ecommerceFeeds: (state.ecommerceFeeds || []).slice(0, 50),
+    viralCampaigns: (state.viralCampaigns || []).slice(0, 100),
+    workspaceCredits: state.workspaceCredits || {},
   });
 
   if (isCreate) {
@@ -146,6 +175,47 @@ function buildAdminPayload(state: AppState, uid: string, isCreate: boolean) {
   };
 }
 
+function buildPlatformConfigPayload(state: AppState, uid: string, isCreate: boolean) {
+  const base = stripUndefined({
+    updatedBy: uid,
+    aiGovernance: state.aiGovernance,
+    featureFlags: state.featureFlags.slice(0, 50),
+  });
+
+  if (isCreate) {
+    return {
+      ...base,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+  }
+
+  return {
+    ...base,
+    updatedAt: serverTimestamp(),
+  };
+}
+
+function mergeAiGovernance(
+  base: AppState['aiGovernance'],
+  incoming?: Partial<AppState['aiGovernance']> | null
+): AppState['aiGovernance'] {
+  if (!incoming || typeof incoming !== 'object') return base;
+  return {
+    ...base,
+    ...incoming,
+    tierLimits: {
+      ...base.tierLimits,
+      ...(incoming.tierLimits || {}),
+    },
+    moduleQuotas: {
+      ...DEFAULT_STATE.aiGovernance.moduleQuotas!,
+      ...(base.moduleQuotas || {}),
+      ...(incoming.moduleQuotas || {}),
+    },
+  };
+}
+
 function readLocalCache(uid: string | null): AppState {
   const key = `${STORAGE_PREFIX}${uid || 'guest'}`;
   try {
@@ -159,9 +229,7 @@ function readLocalCache(uid: string | null): AppState {
       ...DEFAULT_STATE,
       ...parsed,
       apiHealthNodes: Array.isArray(parsed.apiHealthNodes) ? parsed.apiHealthNodes : DEFAULT_STATE.apiHealthNodes,
-      aiGovernance: parsed.aiGovernance
-        ? { ...DEFAULT_STATE.aiGovernance, ...parsed.aiGovernance }
-        : DEFAULT_STATE.aiGovernance,
+      aiGovernance: mergeAiGovernance(DEFAULT_STATE.aiGovernance, parsed.aiGovernance),
       promoCodes: Array.isArray(parsed.promoCodes) ? parsed.promoCodes : DEFAULT_STATE.promoCodes,
       invoices: Array.isArray(parsed.invoices) ? parsed.invoices : DEFAULT_STATE.invoices,
     });
@@ -182,10 +250,18 @@ export function useStorage(
 
   const workspaceDocExistsRef = useRef(false);
   const adminDocExistsRef = useRef(false);
+  const platformConfigExistsRef = useRef(false);
   const isHydratingRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
   const adminTimerRef = useRef<number | null>(null);
   const loadedUidRef = useRef<string | null>(null);
+  const latestStateRef = useRef<AppState>(state);
+  const hasPendingWorkspaceSaveRef = useRef(false);
+  const hasPendingAdminSaveRef = useRef(false);
+
+  useEffect(() => {
+    latestStateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -197,13 +273,17 @@ export function useStorage(
   }, [state.darkMode]);
 
   useEffect(() => {
+    // Guard against overwriting an authenticated user's persisted cache with stale guest state before hydration finishes
+    if (user && (loadedUidRef.current !== user.uid || isHydratingRef.current)) {
+      return;
+    }
     const key = `${STORAGE_PREFIX}${user?.uid || 'guest'}`;
     try {
       localStorage.setItem(key, JSON.stringify(state));
     } catch {
       // Ignore quota errors
     }
-  }, [state, user?.uid]);
+  }, [state, user]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -212,6 +292,7 @@ export function useStorage(
       loadedUidRef.current = null;
       workspaceDocExistsRef.current = false;
       adminDocExistsRef.current = false;
+      platformConfigExistsRef.current = false;
       setCloudLoading(false);
       return;
     }
@@ -229,18 +310,38 @@ export function useStorage(
 
       try {
         if (user.provider === 'password' && user.token && !user.token.startsWith('local_sess_')) {
-          const res = await fetch('/api/workspace', {
-            headers: { Authorization: `Bearer ${user.token}` },
-          });
-          const isJson = (res.headers.get('content-type') || '').includes('application/json');
-          if (res.ok && isJson) {
-            const json = await res.json();
+          const [wsRes, cfgRes] = await Promise.all([
+            fetch('/api/workspace', {
+              headers: { Authorization: `Bearer ${user.token}` },
+            }).catch(() => null),
+            fetch('/api/platform-config', {
+              headers: { Authorization: `Bearer ${user.token}` },
+            }).catch(() => null),
+          ]);
+
+          if (wsRes && wsRes.ok && (wsRes.headers.get('content-type') || '').includes('application/json')) {
+            const json = await wsRes.json();
             if (json.exists && json.data && Array.isArray(json.data.workspaces)) {
               merged = sanitizeLegacySeedData({
                 ...DEFAULT_STATE,
                 ...json.data,
+                aiGovernance: mergeAiGovernance(DEFAULT_STATE.aiGovernance, json.data.aiGovernance),
                 viewMode: merged.viewMode,
               });
+            }
+          }
+
+          if (cfgRes && cfgRes.ok && (cfgRes.headers.get('content-type') || '').includes('application/json')) {
+            const cfgJson = await cfgRes.json();
+            if (cfgJson.exists && cfgJson.data) {
+              merged = {
+                ...merged,
+                aiGovernance: mergeAiGovernance(merged.aiGovernance, cfgJson.data.aiGovernance),
+                featureFlags:
+                  Array.isArray(cfgJson.data.featureFlags) && cfgJson.data.featureFlags.length > 0
+                    ? cfgJson.data.featureFlags
+                    : merged.featureFlags,
+              };
             }
           }
         } else if (user.provider === 'google') {
@@ -266,10 +367,42 @@ export function useStorage(
               ads: Array.isArray(data.ads) ? data.ads : merged.ads,
               drafts: Array.isArray(data.drafts) ? data.drafts : merged.drafts,
               discoveryAlerts: Array.isArray(data.discoveryAlerts) ? data.discoveryAlerts : merged.discoveryAlerts,
+              youtubeChannels: Array.isArray(data.youtubeChannels) ? data.youtubeChannels : merged.youtubeChannels,
+              youtubeVideos: Array.isArray(data.youtubeVideos) ? data.youtubeVideos : merged.youtubeVideos,
+              seoArticles: Array.isArray(data.seoArticles) ? data.seoArticles : merged.seoArticles,
+              cmsConnectors: Array.isArray(data.cmsConnectors) ? data.cmsConnectors : merged.cmsConnectors,
+              rssSources: Array.isArray(data.rssSources) ? data.rssSources : merged.rssSources,
+              curatedItems: Array.isArray(data.curatedItems) ? data.curatedItems : merged.curatedItems,
+              ecommerceFeeds: Array.isArray(data.ecommerceFeeds) ? data.ecommerceFeeds : merged.ecommerceFeeds,
+              viralCampaigns: Array.isArray(data.viralCampaigns) ? data.viralCampaigns : merged.viralCampaigns,
+              workspaceCredits:
+                data.workspaceCredits && typeof data.workspaceCredits === 'object'
+                  ? data.workspaceCredits
+                  : merged.workspaceCredits,
             });
           } else {
             await setDoc(wsRef, buildWorkspacePayload(merged, user.uid, true));
             workspaceDocExistsRef.current = true;
+          }
+
+          // Load global non-PII platform quotas & feature flags for every verified user
+          try {
+            const cfgRef = doc(db, 'platformConfig', 'governance');
+            const cfgSnap = await getDoc(cfgRef);
+            if (cfgSnap.exists()) {
+              platformConfigExistsRef.current = true;
+              const cData = cfgSnap.data();
+              merged = {
+                ...merged,
+                aiGovernance: mergeAiGovernance(merged.aiGovernance, cData.aiGovernance),
+                featureFlags:
+                  Array.isArray(cData.featureFlags) && cData.featureFlags.length > 0
+                    ? cData.featureFlags
+                    : merged.featureFlags,
+              };
+            }
+          } catch {
+            // Fall back cleanly to default quotas if platformConfig hasn't been initialized yet
           }
 
           if (isAdmin) {
@@ -286,7 +419,7 @@ export function useStorage(
                   featureFlags: Array.isArray(aData.featureFlags) ? aData.featureFlags : merged.featureFlags,
                   auditLogs: Array.isArray(aData.auditLogs) ? aData.auditLogs : merged.auditLogs,
                   apiHealthNodes: Array.isArray(aData.apiHealthNodes) ? aData.apiHealthNodes : merged.apiHealthNodes,
-                  aiGovernance: aData.aiGovernance ? { ...merged.aiGovernance, ...aData.aiGovernance } : merged.aiGovernance,
+                  aiGovernance: mergeAiGovernance(merged.aiGovernance, aData.aiGovernance),
                   promoCodes: Array.isArray(aData.promoCodes) ? aData.promoCodes : merged.promoCodes,
                   invoices: Array.isArray(aData.invoices) ? aData.invoices : merged.invoices,
                 });
@@ -325,72 +458,162 @@ export function useStorage(
     };
   }, [user, authReady, googleProfileReady, isAdmin]);
 
+  const persistWorkspaceNow = useCallback(
+    async (nextState: AppState, keepalive = false) => {
+      if (!user) return;
+      if (user.provider === 'google' && !googleProfileReady) return;
+      hasPendingWorkspaceSaveRef.current = false;
+
+      if (user.provider === 'password' && user.token) {
+        if (user.token.startsWith('local_sess_')) return;
+        await fetch('/api/workspace', {
+          method: 'PUT',
+          keepalive,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify(stripUndefined(nextState)),
+        }).catch(() => {});
+
+        if (isAdmin) {
+          await fetch('/api/platform-config', {
+            method: 'PUT',
+            keepalive,
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${user.token}`,
+            },
+            body: JSON.stringify(
+              stripUndefined({
+                aiGovernance: nextState.aiGovernance,
+                featureFlags: nextState.featureFlags,
+              })
+            ),
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      if (user.provider === 'google') {
+        const wsPath = `users/${user.uid}/workspaces/main`;
+        const wsRef = doc(db, 'users', user.uid, 'workspaces', 'main');
+        try {
+          if (workspaceDocExistsRef.current) {
+            await updateDoc(wsRef, buildWorkspacePayload(nextState, user.uid, false));
+          } else {
+            await setDoc(wsRef, buildWorkspacePayload(nextState, user.uid, true));
+            workspaceDocExistsRef.current = true;
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, wsPath);
+        }
+      }
+    },
+    [user, googleProfileReady, isAdmin]
+  );
+
+  const persistAdminNow = useCallback(
+    async (nextState: AppState) => {
+      if (!user || user.provider !== 'google' || !isAdmin) return;
+      hasPendingAdminSaveRef.current = false;
+
+      const adminPath = 'adminState/global';
+      const adminRef = doc(db, 'adminState', 'global');
+      try {
+        if (adminDocExistsRef.current) {
+          await updateDoc(adminRef, buildAdminPayload(nextState, user.uid, false));
+        } else {
+          await setDoc(adminRef, buildAdminPayload(nextState, user.uid, true));
+          adminDocExistsRef.current = true;
+        }
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, adminPath);
+      }
+
+      const cfgPath = 'platformConfig/governance';
+      const cfgRef = doc(db, 'platformConfig', 'governance');
+      try {
+        if (platformConfigExistsRef.current) {
+          await updateDoc(cfgRef, buildPlatformConfigPayload(nextState, user.uid, false));
+        } else {
+          await setDoc(cfgRef, buildPlatformConfigPayload(nextState, user.uid, true));
+          platformConfigExistsRef.current = true;
+        }
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, cfgPath);
+      }
+    },
+    [user, isAdmin]
+  );
+
+  // Flush any pending debounced saves on tab close or page reload so rapid reloads never lose edits
+  useEffect(() => {
+    const flushOnExit = () => {
+      if (hasPendingWorkspaceSaveRef.current) {
+        if (saveTimerRef.current) {
+          window.clearTimeout(saveTimerRef.current);
+          saveTimerRef.current = null;
+        }
+        persistWorkspaceNow(latestStateRef.current, true);
+      }
+      if (hasPendingAdminSaveRef.current) {
+        if (adminTimerRef.current) {
+          window.clearTimeout(adminTimerRef.current);
+          adminTimerRef.current = null;
+        }
+        persistAdminNow(latestStateRef.current);
+      }
+    };
+    window.addEventListener('pagehide', flushOnExit);
+    window.addEventListener('beforeunload', flushOnExit);
+    return () => {
+      window.removeEventListener('pagehide', flushOnExit);
+      window.removeEventListener('beforeunload', flushOnExit);
+    };
+  }, [persistWorkspaceNow, persistAdminNow]);
+
   const scheduleWorkspaceSave = useCallback(
     (nextState: AppState) => {
       if (!user || isHydratingRef.current) return;
       if (user.provider === 'google' && !googleProfileReady) return;
 
+      // Write immediately to localStorage for instant zero-loss reload resilience
+      try {
+        localStorage.setItem(`${STORAGE_PREFIX}${user.uid}`, JSON.stringify(nextState));
+      } catch {
+        // Ignore storage quota errors
+      }
+
+      hasPendingWorkspaceSaveRef.current = true;
       if (saveTimerRef.current) {
         window.clearTimeout(saveTimerRef.current);
       }
 
-      saveTimerRef.current = window.setTimeout(async () => {
-        if (user.provider === 'password' && user.token) {
-          if (user.token.startsWith('local_sess_')) return;
-          await fetch('/api/workspace', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${user.token}`,
-            },
-            body: JSON.stringify(stripUndefined(nextState)),
-          }).catch(() => {});
-          return;
-        }
-
-        if (user.provider === 'google') {
-          const wsPath = `users/${user.uid}/workspaces/main`;
-          const wsRef = doc(db, 'users', user.uid, 'workspaces', 'main');
-          try {
-            if (workspaceDocExistsRef.current) {
-              await updateDoc(wsRef, buildWorkspacePayload(nextState, user.uid, false));
-            } else {
-              await setDoc(wsRef, buildWorkspacePayload(nextState, user.uid, true));
-              workspaceDocExistsRef.current = true;
-            }
-          } catch (error) {
-            handleFirestoreError(error, OperationType.UPDATE, wsPath);
-          }
-        }
-      }, 450);
+      saveTimerRef.current = window.setTimeout(() => {
+        saveTimerRef.current = null;
+        persistWorkspaceNow(nextState, false);
+      }, 200);
 
       if (user.provider === 'google' && isAdmin) {
+        hasPendingAdminSaveRef.current = true;
         if (adminTimerRef.current) {
           window.clearTimeout(adminTimerRef.current);
         }
-        adminTimerRef.current = window.setTimeout(async () => {
-          const adminPath = 'adminState/global';
-          const adminRef = doc(db, 'adminState', 'global');
-          try {
-            if (adminDocExistsRef.current) {
-              await updateDoc(adminRef, buildAdminPayload(nextState, user.uid, false));
-            } else {
-              await setDoc(adminRef, buildAdminPayload(nextState, user.uid, true));
-              adminDocExistsRef.current = true;
-            }
-          } catch (error) {
-            handleFirestoreError(error, OperationType.UPDATE, adminPath);
-          }
-        }, 650);
+        adminTimerRef.current = window.setTimeout(() => {
+          adminTimerRef.current = null;
+          persistAdminNow(nextState);
+        }, 350);
       }
     },
-    [user, googleProfileReady, isAdmin]
+    [user, googleProfileReady, isAdmin, persistWorkspaceNow, persistAdminNow]
   );
 
   const updateState = useCallback(
     (updater: Partial<AppState> | ((prev: AppState) => AppState)) => {
       setState((prev) => {
         const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+        latestStateRef.current = next;
         scheduleWorkspaceSave(next);
         return next;
       });
@@ -401,6 +624,7 @@ export function useStorage(
   const resetDemoData = useCallback(() => {
     const fresh: AppState = { ...DEFAULT_STATE, viewMode: 'app' };
     setState(fresh);
+    latestStateRef.current = fresh;
     scheduleWorkspaceSave(fresh);
   }, [scheduleWorkspaceSave]);
 

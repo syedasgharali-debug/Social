@@ -40,7 +40,7 @@ service cloud.firestore {
     }
 
     function isValidPlan(plan) {
-      return plan is string && plan in ['bootstrap', 'accelerate', 'pro_agency', 'pro50', 'pro100', 'pro150'];
+      return plan is string && plan in ['bootstrap', 'accelerate', 'pro_agency', 'lifetime', 'pro50', 'pro100', 'pro150'];
     }
 
     function isValidTeamRole(role) {
@@ -80,7 +80,9 @@ service cloud.firestore {
           'ownerId', 'activeWorkspaceId', 'activeRole', 'selectedPlan', 'darkMode',
           'workspaces', 'categories', 'connectedProfiles', 'teamMembers', 'contacts',
           'threads', 'deals', 'posts', 'ads', 'drafts', 'discoveryAlerts',
-          'createdAt', 'updatedAt'
+          'youtubeChannels', 'youtubeVideos', 'seoArticles', 'cmsConnectors',
+          'rssSources', 'curatedItems', 'ecommerceFeeds', 'viralCampaigns',
+          'workspaceCredits', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.ownerId)
         && data.ownerId == request.auth.uid
@@ -99,6 +101,15 @@ service cloud.firestore {
         && isBoundedMapList(data.ads, 100)
         && isBoundedMapList(data.drafts, 200)
         && isBoundedMapList(data.discoveryAlerts, 100)
+        && (!('youtubeChannels' in data) || isBoundedMapList(data.youtubeChannels, 100))
+        && (!('youtubeVideos' in data) || isBoundedMapList(data.youtubeVideos, 200))
+        && (!('seoArticles' in data) || isBoundedMapList(data.seoArticles, 150))
+        && (!('cmsConnectors' in data) || isBoundedMapList(data.cmsConnectors, 50))
+        && (!('rssSources' in data) || isBoundedMapList(data.rssSources, 150))
+        && (!('curatedItems' in data) || isBoundedMapList(data.curatedItems, 200))
+        && (!('ecommerceFeeds' in data) || isBoundedMapList(data.ecommerceFeeds, 50))
+        && (!('viralCampaigns' in data) || isBoundedMapList(data.viralCampaigns, 100))
+        && (!('workspaceCredits' in data) || data.workspaceCredits is map)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -129,6 +140,17 @@ service cloud.firestore {
         && data.aiGovernance is map
         && isBoundedMapList(data.promoCodes, 100)
         && isBoundedMapList(data.invoices, 200)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlatformGovernanceConfig(data) {
+      return data.keys().hasAll(['updatedBy', 'aiGovernance', 'featureFlags', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['updatedBy', 'aiGovernance', 'featureFlags', 'createdAt', 'updatedAt'])
+        && isValidId(data.updatedBy)
+        && data.updatedBy == request.auth.uid
+        && data.aiGovernance is map
+        && isBoundedMapList(data.featureFlags, 50)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -208,7 +230,9 @@ service cloud.firestore {
                 'activeWorkspaceId', 'activeRole', 'selectedPlan', 'darkMode',
                 'workspaces', 'categories', 'connectedProfiles', 'teamMembers',
                 'contacts', 'threads', 'deals', 'posts', 'ads', 'drafts',
-                'discoveryAlerts', 'updatedAt'
+                'discoveryAlerts', 'youtubeChannels', 'youtubeVideos',
+                'seoArticles', 'cmsConnectors', 'rssSources', 'curatedItems',
+                'ecommerceFeeds', 'viralCampaigns', 'workspaceCredits', 'updatedAt'
               ])
             )
           );
@@ -259,6 +283,31 @@ service cloud.firestore {
         && incoming().diff(existing()).affectedKeys().hasOnly([
           'updatedBy', 'tenants', 'featureFlags', 'auditLogs', 'apiHealthNodes',
           'aiGovernance', 'promoCodes', 'invoices', 'updatedAt'
+        ]);
+
+      allow delete: if isAdmin() && isValidId(configId);
+    }
+
+    // =========================================================================
+    // Collection: /platformConfig/{configId} (Non-PII Global Quotas & Flags)
+    // =========================================================================
+    match /platformConfig/{configId} {
+      allow get: if isVerifiedUser() && isValidId(configId);
+      allow list: if false;
+
+      allow create: if isAdmin()
+        && isValidId(configId)
+        && isValidPlatformGovernanceConfig(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isAdmin()
+        && isValidId(configId)
+        && isValidPlatformGovernanceConfig(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'updatedBy', 'aiGovernance', 'featureFlags', 'updatedAt'
         ]);
 
       allow delete: if isAdmin() && isValidId(configId);

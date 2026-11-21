@@ -66,31 +66,31 @@ export function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Building2 size={18} className="text-[#4F46E5]" />
-            <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-[#FFFFFF] dark:bg-[#13161D] rounded-xl border border-[#E5E7EB] dark:border-white/[0.12] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 size={16} strokeWidth={1.5} className="text-[#6B7280] dark:text-[#9CA3AF]" />
+            <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-[#111827] dark:text-[#F3F4F6]">
               Workspace & Team Settings
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+            className="p-1.5 rounded-lg hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors"
           >
-            <X size={18} />
+            <X size={16} strokeWidth={1.5} />
           </button>
         </div>
 
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
           {userProfile && (
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-lg bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <ContactAvatar name={userProfile.displayName} src={userProfile.photoURL} size="md" />
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{userProfile.displayName}</p>
-                  <p className="text-[11px] text-slate-500 truncate">{userProfile.email} · Verified Firebase Session</p>
+                  <p className="text-xs font-semibold text-[#111827] dark:text-[#F3F4F6] truncate">{userProfile.displayName}</p>
+                  <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate">{userProfile.email} · Verified Firebase Session</p>
                 </div>
               </div>
               {onSignOut && (
@@ -99,16 +99,16 @@ export function SettingsModal({
                     onClose();
                     onSignOut();
                   }}
-                  className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                  className="px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 text-xs font-medium flex items-center gap-1.5 shrink-0 transition-colors"
                 >
-                  <LogOut size={13} /> Sign Out
+                  <LogOut size={13} strokeWidth={1.5} /> Sign Out
                 </button>
               )}
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1.5">
                 Active Workspace Name
               </label>
               <input
@@ -121,11 +121,11 @@ export function SettingsModal({
                     ),
                   })
                 }
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none focus:border-[#4F46E5]"
+                className="w-full px-3.5 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-xs text-[#111827] dark:text-[#F3F4F6] outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1.5">
                 Active Subscription Tier
               </label>
               <select
@@ -135,7 +135,7 @@ export function SettingsModal({
                   onUpdateState({ selectedPlan: nextPlan });
                   onToast('Subscription Plan Updated', `Workspace upgraded to ${nextPlan.replace('_', ' ').toUpperCase()}.`);
                 }}
-                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none focus:border-[#4F46E5]"
+                className="w-full px-3.5 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] focus:border-[#06B6D4] rounded-lg text-xs text-[#111827] dark:text-[#F3F4F6] outline-none transition-colors"
               >
                 <option value="bootstrap">Starter ($99/mo · 10 profiles)</option>
                 <option value="accelerate">Growth ($199/mo · 25 profiles)</option>
@@ -146,7 +146,7 @@ export function SettingsModal({
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] mb-2.5 tabular-nums">
               Connected Social Channels ({activeWorkspace.connectedPlatforms.length} / {ALL_PLATFORMS.length})
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -157,17 +157,17 @@ export function SettingsModal({
                   <button
                     key={platform}
                     onClick={() => togglePlatform(platform)}
-                    className={`px-2.5 py-2 rounded-lg border text-[11px] font-semibold flex items-center justify-between gap-1.5 transition-all ${
+                    className={`px-2.5 py-2 rounded-lg border text-[11px] font-medium flex items-center justify-between gap-1.5 transition-colors ${
                       connected
-                        ? 'border-[#4F46E5] bg-indigo-50/70 dark:bg-indigo-950/50 text-slate-900 dark:text-white'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        ? 'border-[#06B6D4] bg-cyan-500/10 text-[#111827] dark:text-[#F3F4F6]'
+                        : 'border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#D1D5DB] dark:hover:border-white/[0.15]'
                     }`}
                   >
                     <span className="flex items-center gap-1.5 min-w-0">
-                      <SocialLogo platform={platform} size={15} />
+                      <SocialLogo platform={platform} size={14} />
                       <span className="truncate">{meta.label}</span>
                     </span>
-                    {connected && <Check size={12} className="text-[#4F46E5] shrink-0" />}
+                    {connected && <Check size={12} strokeWidth={1.5} className="text-cyan-600 dark:text-cyan-400 shrink-0" />}
                   </button>
                 );
               })}
@@ -175,7 +175,7 @@ export function SettingsModal({
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] mb-2.5">
               Team Role & Approval Permissions
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -188,44 +188,44 @@ export function SettingsModal({
                       onUpdateState({ activeRole: role });
                       onToast('Active Role Updated', `Permissions switched to ${role}.`);
                     }}
-                    className={`p-3 rounded-lg border text-left transition-all ${
+                    className={`p-3 rounded-lg border text-left transition-colors ${
                       active
-                        ? 'border-[#4F46E5] bg-indigo-50/50 dark:bg-indigo-950/40'
-                        : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        ? 'border-[#06B6D4] bg-cyan-500/10'
+                        : 'border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] hover:border-[#D1D5DB] dark:hover:border-white/[0.15]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">{role}</span>
-                      {active && <ShieldCheck size={14} className="text-[#4F46E5]" />}
+                      <span className="text-xs font-semibold text-[#111827] dark:text-[#F3F4F6]">{role}</span>
+                      {active && <ShieldCheck size={14} strokeWidth={1.5} className="text-cyan-600 dark:text-cyan-400" />}
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-500 leading-snug">{ROLE_PERMISSIONS[role]}</p>
+                    <p className="mt-1 text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-snug">{ROLE_PERMISSIONS[role]}</p>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="pt-4 border-t border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleExportBackup}
-                className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
+                className="px-3.5 py-2 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-lg text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
               >
-                <Download size={14} /> Export JSON Backup
+                <Download size={13} strokeWidth={1.5} /> Export JSON Backup
               </button>
               <button
                 onClick={() => {
                   onResetDemo();
                   onClose();
                 }}
-                className="px-3.5 py-2 border border-rose-200 dark:border-rose-900 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center gap-1.5"
+                className="px-3.5 py-2 border border-rose-500/30 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors"
               >
-                <RotateCcw size={14} /> Reset Workspace Data
+                <RotateCcw size={13} strokeWidth={1.5} /> Reset Workspace Data
               </button>
             </div>
             <button
               onClick={onClose}
-              className="px-5 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors"
+              className="px-5 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-lg text-xs font-medium transition-colors"
             >
               Done
             </button>

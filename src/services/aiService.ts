@@ -317,6 +317,178 @@ export const aiService = {
     }
     return { isLive: !json.fallback, data: json.data };
   },
+
+  async generateYouTubeIdeation(params: {
+    niche: string;
+    format: 'long_form' | 'short';
+    channelName: string;
+  }): Promise<{
+    ideas: {
+      topic: string;
+      format: 'long_form' | 'short';
+      hookAngle: string;
+      searchIntent: string;
+      thumbnailHeadline: string;
+    }[];
+  }> {
+    const res = await fetch('/api/ai/youtube-studio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'ideation', ...params }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'YouTube ideation failed.');
+    return json.data;
+  },
+
+  async generateYouTubePipeline(params: {
+    niche: string;
+    topic: string;
+    format: 'long_form' | 'short';
+    tone: string;
+    channelName: string;
+  }): Promise<{
+    seoTitles: string[];
+    description: string;
+    script: { hook: string; body: string; cta: string };
+    chapters: { timestamp: string; label: string }[];
+    tags: string[];
+    pinnedComment: string;
+    thumbnailPrompt: string;
+    thumbnailHeadline: string;
+  }> {
+    const res = await fetch('/api/ai/youtube-studio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'pipeline', ...params }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'YouTube script pipeline failed.');
+    return json.data;
+  },
+
+  async generateSeoArticle(params: {
+    targetKeyword: string;
+    sourceUrl?: string;
+    brandName: string;
+    audience: string;
+    tone: string;
+  }): Promise<{
+    title: string;
+    slug: string;
+    metaTitle: string;
+    metaDescription: string;
+    h1: string;
+    heroImageAlt: string;
+    sections: {
+      heading: string;
+      level: 'h2' | 'h3';
+      body: string;
+      visualAlt?: string;
+      visualCaption?: string;
+      visualType?: 'infographic' | 'diagram' | 'callout';
+    }[];
+    schemaFaq: { question: string; answer: string }[];
+    internalLinks: { anchor: string; suggestedSlug: string; rationale: string }[];
+    socialBundle: {
+      linkedinCarousel: string;
+      xThread: string;
+      instagramCaption: string;
+      facebookPost: string;
+    };
+    wordCount: number;
+    readabilityScore: number;
+    seoScore: number;
+  }> {
+    const res = await fetch('/api/ai/seo-article', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'SEO article generation failed.');
+    return json.data;
+  },
+
+  async publishArticleToCms(params: {
+    provider: string;
+    endpointUrl: string;
+    article: Record<string, unknown>;
+  }): Promise<{ ok: boolean; dispatched: boolean; httpStatus: number; publishedAt: string; note?: string }> {
+    const res = await fetch('/api/cms/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'CMS publish failed.');
+    return json;
+  },
+
+  async fetchRssFeed(params: {
+    feedUrl: string;
+    keywordFilter?: string;
+    sourceName?: string;
+    sourceType?: string;
+  }): Promise<{
+    fetchedAt: string;
+    sourceName: string;
+    totalParsed: number;
+    items: { title: string; summary: string; url: string; publishedAt: string }[];
+  }> {
+    const res = await fetch('/api/discover/fetch-rss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'RSS import failed.');
+    return json;
+  },
+
+  async exploreViralContent(params: {
+    query: string;
+    channelFilter: string;
+    velocityFilter: string;
+  }): Promise<{
+    items: {
+      id: string;
+      sourceName: string;
+      channel: 'youtube' | 'x' | 'reddit' | 'news' | 'blog' | 'rss';
+      title: string;
+      summary: string;
+      url: string;
+      publishedAt: string;
+      velocityLabel: string;
+    }[];
+  }> {
+    const res = await fetch('/api/discover/explore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Viral discovery search failed.');
+    return json;
+  },
+
+  async repurposeCuratedItem(params: {
+    title: string;
+    summary: string;
+    url?: string;
+    platform: Platform;
+    brandVoice: string;
+    utmCampaign?: string;
+  }): Promise<{ content: string; firstComment: string; trackedUrl: string }> {
+    const res = await fetch('/api/discover/repurpose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'AI repurpose failed.');
+    return json.data;
+  },
 };
 
 export interface CompetitorIntelResult {

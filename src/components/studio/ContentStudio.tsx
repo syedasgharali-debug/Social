@@ -22,6 +22,7 @@ import {
   Hash,
   X,
   Upload,
+  Globe,
 } from 'lucide-react';
 import {
   SocialPost,
@@ -34,6 +35,7 @@ import { ALL_PLATFORMS, PLATFORM_META, PlatformTag, SocialLogo } from '../common
 import { CANVA_TEMPLATES, MEDIA_LIBRARY } from '../../data/defaultState';
 import { aiService } from '../../services/aiService';
 import { DraftsWorkspace } from './DraftsWorkspace';
+import { StatusBadge } from '../common/DesignPrimitives';
 
 export interface ComposerPreset {
   categoryId?: string;
@@ -333,27 +335,23 @@ export function ContentStudio({
     activeEditorTab === 'x' ? 280 : activeEditorTab === 'instagram' ? 2200 : 3000;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#F8FAFC] dark:bg-[#090D16]">
+    <div className="h-full flex flex-col overflow-hidden bg-[#F8F9FB] dark:bg-[#090A0D]">
       {/* Studio Top Bar */}
-      <div className="px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="px-6 py-3 bg-white dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="font-display text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              Content Studio & Post Composer
-              {editingPost && (
-                <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold uppercase">
-                  Editing Post
-                </span>
-              )}
+            <h1 className="text-[16px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em] flex items-center gap-2">
+              Content Studio &amp; Post Composer
+              {editingPost && <StatusBadge label="Editing Post" tone="orange" />}
             </h1>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[12px] text-[#4B5563] dark:text-[#9CA3AF]">
               Compose once, tailor copy per network, preview pixel-accurate mobile feeds, and queue to categories.
             </p>
           </div>
           {editingPost && (
             <button
               onClick={onClearEditingPost}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white underline"
+              className="text-[12px] font-medium text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] underline"
             >
               Exit Edit Mode
             </button>
@@ -361,26 +359,26 @@ export function ContentStudio({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold">
+          <div className="inline-flex bg-[#F3F4F6] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] p-0.5 rounded-md text-[12px] font-medium">
             <button
               onClick={() => setStudioMode('composer')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
+              className={`px-3 py-1 rounded transition-colors ${
                 studioMode === 'composer'
-                  ? 'bg-white dark:bg-slate-900 text-[#4F46E5] dark:text-indigo-400 shadow-xs'
-                  : 'text-slate-500'
+                  ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.08]'
+                  : 'text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
               }`}
             >
               Split-Screen Composer
             </button>
             <button
               onClick={() => setStudioMode('drafts')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
+              className={`px-3 py-1 rounded transition-colors ${
                 studioMode === 'drafts'
-                  ? 'bg-white dark:bg-slate-900 text-[#4F46E5] dark:text-indigo-400 shadow-xs'
-                  : 'text-slate-500'
+                  ? 'bg-white dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.08]'
+                  : 'text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] border border-transparent'
               }`}
             >
-              Drafts & Bulk AI ({drafts.filter((d) => d.workspaceId === workspaceId).length})
+              Drafts &amp; Bulk AI ({drafts.filter((d) => d.workspaceId === workspaceId).length})
             </button>
           </div>
         </div>
@@ -414,23 +412,23 @@ export function ContentStudio({
         /* Split-Screen Composer */
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
           {/* LEFT COLUMN: Editor Controls */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="flex-1 flex flex-col min-w-0 min-h-0 border-r border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#13161D]">
             <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
-              {/* Target Social Profile Selector Pills */}
+              {/* Target Social Profile Selector */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280]">
                     1. Target Social Profiles ({selectedPlatforms.length} selected)
                   </label>
                   <button
                     type="button"
                     onClick={() => setSelectedPlatforms(['instagram', 'linkedin', 'x', 'tiktok', 'facebook', 'threads'])}
-                    className="text-[11px] font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline"
+                    className="text-[11px] font-medium text-[#06B6D4] hover:underline"
                   >
                     Select Core 6
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {COMPOSER_PLATFORMS.map((p) => {
                     const active = selectedPlatforms.includes(p);
                     const meta = PLATFORM_META[p];
@@ -439,15 +437,15 @@ export function ContentStudio({
                         key={p}
                         type="button"
                         onClick={() => togglePlatform(p)}
-                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        className={`px-2.5 py-1.5 rounded-md border text-[12px] font-medium flex items-center gap-1.5 transition-colors ${
                           active
-                            ? 'border-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/60 text-[#4F46E5] dark:text-indigo-300 shadow-xs'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 text-slate-500 hover:text-slate-800'
+                            ? 'border-[#06B6D4] bg-[#F8F9FB] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]'
+                            : 'border-[#E5E7EB] dark:border-white/[0.08] bg-white dark:bg-[#0E1015] text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                         }`}
                       >
-                        <SocialLogo platform={p} size={15} />
+                        <SocialLogo platform={p} size={14} />
                         {meta.label}
-                        {active && <Check size={12} />}
+                        {active && <Check size={12} className="text-[#06B6D4]" />}
                       </button>
                     );
                   })}
@@ -455,15 +453,15 @@ export function ContentStudio({
               </div>
 
               {/* Content Category & Evergreen Toggle */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280] block mb-1.5">
                     2. Content Category
                   </label>
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   >
                     {wsCategories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
@@ -474,56 +472,56 @@ export function ContentStudio({
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280] block mb-1.5">
                     Queue Recycling
                   </label>
                   <button
                     type="button"
                     onClick={() => setIsEvergreen(!isEvergreen)}
-                    className={`w-full px-3.5 py-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition-colors ${
+                    className={`w-full px-3 py-2 rounded-md border text-[12px] font-medium flex items-center justify-between transition-colors ${
                       isEvergreen
-                        ? 'border-[#4F46E5] bg-indigo-50/70 dark:bg-indigo-950/50 text-[#4F46E5] dark:text-indigo-300'
-                        : 'border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 text-slate-500'
+                        ? 'border-[#06B6D4] bg-[#F8F9FB] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]'
+                        : 'border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] text-[#6B7280]'
                     }`}
                   >
                     <span>{isEvergreen ? 'Evergreen Auto-Recycle ON' : 'Single-Run Post Only'}</span>
-                    <Layers size={14} />
+                    <Layers size={14} strokeWidth={1.5} className={isEvergreen ? 'text-[#06B6D4]' : ''} />
                   </button>
                 </div>
               </div>
 
               {/* AI Assistant Bar */}
-              <div className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900 space-y-2.5">
+              <div className="p-3.5 rounded-lg bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400 flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-amber-500" /> AI Copilot Assistant Bar
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-[#06B6D4] flex items-center gap-1.5">
+                    <Sparkles size={13} strokeWidth={1.5} /> AI Copilot Bar
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       type="button"
                       onClick={handleAiGenerate}
                       disabled={aiBusy}
-                      className="px-2.5 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 disabled:opacity-60 text-white rounded-md text-[11px] font-semibold flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] disabled:opacity-60 rounded-md text-[11px] font-medium flex items-center gap-1 transition-colors"
                     >
-                      <Wand2 size={12} /> {aiBusy ? 'Working...' : 'Generate with AI'}
+                      <Wand2 size={12} strokeWidth={1.5} className="text-[#06B6D4]" /> {aiBusy ? 'Working...' : 'Generate with AI'}
                     </button>
 
                     <div className="relative">
                       <button
                         type="button"
                         onClick={() => setShowToneMenu(!showToneMenu)}
-                        className="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-200"
+                        className="px-2.5 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-md text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] transition-colors"
                       >
                         Rewrite Tone ▾
                       </button>
                       {showToneMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl p-1 z-30">
+                        <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-lg p-1 z-30">
                           {(['Punchy', 'Professional', 'Viral'] as const).map((tone) => (
                             <button
                               key={tone}
                               type="button"
                               onClick={() => handleRewriteTone(tone)}
-                              className="w-full text-left px-2.5 py-1.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                              className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6]"
                             >
                               {tone} Tone
                             </button>
@@ -535,9 +533,9 @@ export function ContentStudio({
                     <button
                       type="button"
                       onClick={handleAutoHashtags}
-                      className="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-md text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1 transition-colors"
                     >
-                      <Hash size={12} /> Auto-Generate Hashtag Collection
+                      <Hash size={12} strokeWidth={1.5} /> Auto Hashtags
                     </button>
 
                     <button
@@ -548,10 +546,10 @@ export function ContentStudio({
                         if (next && activeEditorTab === 'master') setActiveEditorTab('instagram');
                         if (!next) setActiveEditorTab('master');
                       }}
-                      className={`px-2.5 py-1.5 rounded-md text-[11px] font-semibold border transition-colors ${
+                      className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium border transition-colors ${
                         customizePerNetwork
-                          ? 'bg-amber-500 border-amber-500 text-white'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                          ? 'border-[#06B6D4] bg-cyan-500/10 text-[#06B6D4]'
+                          : 'bg-white dark:bg-[#13161D] border-[#E5E7EB] dark:border-white/[0.08] text-[#4B5563] dark:text-[#9CA3AF]'
                       }`}
                     >
                       Customize per Network
@@ -564,13 +562,13 @@ export function ContentStudio({
                   value={aiPromptInput}
                   onChange={(e) => setAiPromptInput(e.target.value)}
                   placeholder="Optional topic or URL for AI (e.g. 'How our agency saves 10h/wk with category queues')..."
-                  className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-indigo-200/80 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
+                  className="w-full px-3 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-[12px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 />
               </div>
 
               {/* Per-Network Tabs when enabled */}
               {customizePerNetwork && (
-                <div className="flex flex-wrap gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2">
+                <div className="flex flex-wrap gap-1.5 border-b border-[#E5E7EB] dark:border-white/[0.08] pb-2">
                   {(
                     [
                       { id: 'master', label: 'Master Caption' },
@@ -586,10 +584,10 @@ export function ContentStudio({
                         setActiveEditorTab(tab.id);
                         if (tab.id !== 'master') setPreviewPlatform(tab.id);
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      className={`px-3 py-1.5 rounded-md text-[12px] font-medium border transition-colors ${
                         activeEditorTab === tab.id
-                          ? 'bg-[#4F46E5] text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                          ? 'border-[#06B6D4] bg-[#F8F9FB] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]'
+                          : 'border-transparent bg-[#F3F4F6] dark:bg-[#0E1015] text-[#6B7280]'
                       }`}
                     >
                       {tab.label}
@@ -601,12 +599,12 @@ export function ContentStudio({
               {/* Caption Editor + Emoji Picker */}
               <div className="relative">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280]">
                     3. {activeEditorTab === 'master' ? 'Master Post Caption' : `${PLATFORM_META[activeEditorTab].label} Tailored Caption`}
                   </label>
                   <span
                     className={`text-[11px] font-mono tabular-nums ${
-                      activeCaptionValue.length > currentCharLimit ? 'text-rose-600 font-bold' : 'text-slate-400'
+                      activeCaptionValue.length > currentCharLimit ? 'text-rose-500 font-semibold' : 'text-[#6B7280]'
                     }`}
                   >
                     {activeCaptionValue.length} / {currentCharLimit} chars
@@ -617,7 +615,7 @@ export function ContentStudio({
                   value={activeCaptionValue}
                   onChange={(e) => updateActiveCaption(e.target.value)}
                   placeholder="Write your post copy here..."
-                  className="w-full p-3.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 leading-relaxed outline-none focus:border-[#4F46E5]"
+                  className="w-full p-3.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg text-[13px] text-[#111827] dark:text-[#F3F4F6] leading-relaxed outline-none focus:border-[#06B6D4]"
                 />
 
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -625,19 +623,19 @@ export function ContentStudio({
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
                     >
-                      <Smile size={14} className="text-amber-500" /> Emoji Picker
+                      <Smile size={14} strokeWidth={1.5} /> Insert Emoji
                     </button>
 
                     {showEmojiPicker && (
-                      <div className="absolute left-0 bottom-full mb-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-2.5 grid grid-cols-8 gap-1 z-40">
+                      <div className="absolute left-0 bottom-full mb-2 w-64 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-lg p-2.5 grid grid-cols-8 gap-1 z-40">
                         {QUICK_EMOJIS.map((em) => (
                           <button
                             key={em}
                             type="button"
                             onClick={() => handleInsertEmoji(em)}
-                            className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-base"
+                            className="p-1.5 rounded hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] text-base"
                           >
                             {em}
                           </button>
@@ -648,18 +646,18 @@ export function ContentStudio({
                     <button
                       type="button"
                       onClick={() => setFirstCommentEnabled(!firstCommentEnabled)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 ${
+                      className={`px-2.5 py-1.5 rounded-md text-[12px] font-medium border flex items-center gap-1.5 transition-colors ${
                         firstCommentEnabled
-                          ? 'border-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/50 text-[#4F46E5] dark:text-indigo-300'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-500'
+                          ? 'border-[#06B6D4] bg-[#F8F9FB] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]'
+                          : 'border-[#E5E7EB] dark:border-white/[0.08] text-[#6B7280]'
                       }`}
                     >
-                      <MessageSquare size={13} /> First Comment {firstCommentEnabled ? 'ON' : 'OFF'}
+                      <MessageSquare size={13} strokeWidth={1.5} /> First Comment {firstCommentEnabled ? 'ON' : 'OFF'}
                     </button>
                   </div>
 
                   {activeCategoryObj && (
-                    <span className="text-[11px] font-semibold flex items-center gap-1.5 text-slate-500">
+                    <span className="text-[11px] font-medium flex items-center gap-1.5 text-[#6B7280]">
                       <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: activeCategoryObj.color }} />
                       {activeCategoryObj.name}
                     </span>
@@ -670,7 +668,7 @@ export function ContentStudio({
               {/* First Comment Input */}
               {firstCommentEnabled && (
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280] block mb-1">
                     Auto-Posted First Comment (Hashtags / CTA Link)
                   </label>
                   <input
@@ -678,18 +676,18 @@ export function ContentStudio({
                     value={firstComment}
                     onChange={(e) => setFirstComment(e.target.value)}
                     placeholder="Add hashtags or CTA link to post automatically as the first comment..."
-                    className="w-full px-3.5 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-[#4F46E5]"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-[12px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
               )}
 
-              {/* Media Uploader & Canva-style Template Picker */}
+              {/* Media Uploader & Template Picker */}
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    4. Visual Media & Canva-Style Templates
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280]">
+                    4. Visual Media &amp; Brand Templates
                   </label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -700,28 +698,28 @@ export function ContentStudio({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
                     >
-                      <Upload size={13} /> Upload Image
+                      <Upload size={13} strokeWidth={1.5} /> Upload Image
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowTemplateModal(true)}
-                      className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
                     >
-                      <Palette size={13} /> Canva-Style Template Picker
+                      <Palette size={13} strokeWidth={1.5} /> Template Picker
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 overflow-x-auto pb-1">
+                <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
                   {selectedMedia.map((url, idx) => (
-                    <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-[#4F46E5] shrink-0">
+                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-[#06B6D4] shrink-0">
                       <img src={url} alt="Attached media" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setSelectedMedia([])}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/80 text-white flex items-center justify-center"
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#090A0D]/80 text-white flex items-center justify-center"
                         title="Remove image"
                       >
                         <X size={11} />
@@ -735,15 +733,15 @@ export function ContentStudio({
                         type="button"
                         key={item.id}
                         onClick={() => setSelectedMedia([item.url])}
-                        className={`relative w-20 h-20 rounded-xl overflow-hidden border transition-all shrink-0 ${
+                        className={`relative w-20 h-20 rounded-lg overflow-hidden border transition-all shrink-0 ${
                           isPicked
-                            ? 'border-[#4F46E5] ring-2 ring-[#4F46E5]/30'
-                            : 'border-slate-200 dark:border-slate-700 opacity-80 hover:opacity-100'
+                            ? 'border-[#06B6D4]'
+                            : 'border-[#E5E7EB] dark:border-white/[0.08] opacity-80 hover:opacity-100'
                         }`}
                         title={`Use ${item.label}`}
                       >
                         <img src={item.url} alt={item.label} className="w-full h-full object-cover" />
-                        <span className="absolute inset-x-0 bottom-0 bg-slate-950/70 text-[9px] text-white font-semibold px-1 py-0.5 truncate">
+                        <span className="absolute inset-x-0 bottom-0 bg-[#090A0D]/80 text-[9px] text-white font-medium px-1 py-0.5 truncate">
                           {item.label}
                         </span>
                       </button>
@@ -754,21 +752,21 @@ export function ContentStudio({
             </div>
 
             {/* Footer Action Bar */}
-            <div className="px-6 py-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0 relative">
+            <div className="px-6 py-3.5 bg-[#F8F9FB] dark:bg-[#0E1015] border-t border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2 shrink-0 relative">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => buildAndSavePost('draft')}
-                  className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-md text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 transition-colors"
                 >
-                  <FileText size={13} /> Save as Draft
+                  <FileText size={13} strokeWidth={1.5} /> Save Draft
                 </button>
                 <button
                   type="button"
                   onClick={() => buildAndSavePost('pending_approval')}
-                  className="px-3.5 py-2 border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  className="px-3 py-1.5 border border-orange-500/30 bg-orange-500/[0.06] hover:bg-orange-500/[0.12] text-[#F97316] rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors"
                 >
-                  <Send size={13} /> Send for Client Approval
+                  <Send size={13} strokeWidth={1.5} /> Send for Approval
                 </button>
               </div>
 
@@ -781,33 +779,33 @@ export function ContentStudio({
                       true
                     )
                   }
-                  className="px-3.5 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] text-[#111827] dark:text-[#F3F4F6] rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors"
                 >
-                  <Layers size={13} /> Add to Category Queue
+                  <Layers size={13} strokeWidth={1.5} /> Add to Queue
                 </button>
 
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowSchedulePopover(!showSchedulePopover)}
-                    className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-indigo-600/20"
+                    className="px-3.5 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors"
                   >
-                    <Calendar size={13} /> Schedule Specific Date/Time
+                    <Calendar size={13} strokeWidth={1.5} /> Schedule Date/Time
                   </button>
 
                   {showSchedulePopover && (
-                    <div className="absolute right-0 bottom-full mb-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-4 space-y-3 z-50">
+                    <div className="absolute right-0 bottom-full mb-2 w-72 bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-xl p-4 space-y-3 z-50">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">Pick Publish Date & Time</p>
-                        <button onClick={() => setShowSchedulePopover(false)} className="text-slate-400">
-                          <X size={14} />
+                        <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6]">Pick Publish Date &amp; Time</p>
+                        <button onClick={() => setShowSchedulePopover(false)} className="text-[#6B7280]">
+                          <X size={14} strokeWidth={1.5} />
                         </button>
                       </div>
                       <input
                         type="datetime-local"
                         value={scheduleDateTime}
                         onChange={(e) => setScheduleDateTime(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
+                        className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-[12px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                       />
                       <button
                         type="button"
@@ -818,7 +816,7 @@ export function ContentStudio({
                             new Date(scheduleDateTime).toISOString()
                           )
                         }
-                        className="w-full py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold"
+                        className="w-full py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-white dark:text-[#090A0D] dark:hover:bg-[#E5E7EB] rounded-md text-[12px] font-medium transition-colors"
                       >
                         Confirm Schedule
                       </button>
@@ -829,25 +827,25 @@ export function ContentStudio({
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Pixel-Accurate Live Mobile Previews */}
-          <div className="w-full lg:w-[430px] xl:w-[460px] shrink-0 bg-[#F8FAFC] dark:bg-[#090D16] flex flex-col overflow-y-auto p-6 custom-scrollbar">
+          {/* RIGHT COLUMN: Pixel-Accurate Live Mobile Previews on Dot-Grid Canvas */}
+          <div className="canvas-dot-grid w-full lg:w-[430px] xl:w-[460px] shrink-0 bg-[#F8F9FB] dark:bg-[#090A0D] flex flex-col overflow-y-auto p-6 custom-scrollbar">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-1.5">
-                <Smartphone size={15} className="text-[#4F46E5]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Live Mobile Feed Preview
+                <Smartphone size={14} strokeWidth={1.5} className="text-[#06B6D4]" />
+                <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B7280]">
+                  Live Feed Preview
                 </span>
               </div>
-              <div className="inline-flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-0.5 rounded-lg text-[11px] font-semibold">
+              <div className="inline-flex bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] p-0.5 rounded-md text-[11px] font-medium">
                 {(['instagram', 'linkedin', 'x'] as const).map((pl) => (
                   <button
                     key={pl}
                     type="button"
                     onClick={() => setPreviewPlatform(pl)}
-                    className={`px-2.5 py-1 rounded-md capitalize flex items-center gap-1.5 transition-colors ${
+                    className={`px-2.5 py-1 rounded capitalize flex items-center gap-1.5 transition-colors ${
                       previewPlatform === pl
-                        ? 'bg-[#4F46E5] text-white'
-                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        ? 'bg-[#111827] text-white dark:bg-white dark:text-[#090A0D]'
+                        : 'text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                     }`}
                   >
                     <SocialLogo platform={pl} size={13} />
@@ -858,14 +856,14 @@ export function ContentStudio({
             </div>
 
             {previewPlatform === 'instagram' && (
-              <div className="mb-3 flex items-center justify-center gap-2 text-[11px]">
+              <div className="mb-3 flex items-center justify-center gap-1.5 text-[11px]">
                 <button
                   type="button"
                   onClick={() => setIgFormat('feed')}
-                  className={`px-2.5 py-1 rounded-md font-semibold ${
+                  className={`px-2.5 py-1 rounded-md font-medium border transition-colors ${
                     igFormat === 'feed'
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                      : 'text-slate-500'
+                      ? 'bg-[#111827] text-white dark:bg-white dark:text-[#090A0D] border-transparent'
+                      : 'bg-white dark:bg-[#13161D] text-[#6B7280] border-[#E5E7EB] dark:border-white/[0.08]'
                   }`}
                 >
                   IG Feed Post
@@ -873,10 +871,10 @@ export function ContentStudio({
                 <button
                   type="button"
                   onClick={() => setIgFormat('reels')}
-                  className={`px-2.5 py-1 rounded-md font-semibold ${
+                  className={`px-2.5 py-1 rounded-md font-medium border transition-colors ${
                     igFormat === 'reels'
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                      : 'text-slate-500'
+                      ? 'bg-[#111827] text-white dark:bg-white dark:text-[#090A0D] border-transparent'
+                      : 'bg-white dark:bg-[#13161D] text-[#6B7280] border-[#E5E7EB] dark:border-white/[0.08]'
                   }`}
                 >
                   IG Reels 9:16
@@ -885,44 +883,42 @@ export function ContentStudio({
             )}
 
             {/* Mobile Frame */}
-            <div className="mx-auto w-full max-w-[340px] rounded-[28px] border-[6px] border-slate-900 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden">
+            <div className="mx-auto w-full max-w-[340px] rounded-[24px] border-4 border-[#111827] dark:border-white/[0.15] bg-white dark:bg-[#13161D] overflow-hidden">
               {/* Status bar */}
-              <div className="px-5 py-2 flex items-center justify-between text-[10px] font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+              <div className="px-5 py-2 flex items-center justify-between text-[10px] font-mono text-[#111827] dark:text-[#F3F4F6] bg-white dark:bg-[#13161D] border-b border-[#E5E7EB] dark:border-white/[0.08]">
                 <span>9:41</span>
-                <span className="w-16 h-3 rounded-full bg-slate-900 dark:bg-slate-800" />
-                <span>5G · 100%</span>
+                <span className="w-14 h-2.5 rounded-full bg-[#111827] dark:bg-white/[0.15]" />
+                <span>5G</span>
               </div>
 
               {/* Instagram Preview */}
               {previewPlatform === 'instagram' && (
-                <div className="text-slate-900 dark:text-slate-100">
+                <div className="text-[#111827] dark:text-[#F3F4F6]">
                   <div className="px-3.5 py-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 p-0.5">
-                        <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-[10px] font-extrabold">
-                          {workspaceName.slice(0, 2).toUpperCase()}
-                        </div>
+                      <div className="w-7 h-7 rounded-full border-2 border-[#06B6D4] flex items-center justify-center text-[10px] font-semibold bg-[#F8F9FB] dark:bg-[#0E1015]">
+                        {workspaceName.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-xs font-bold leading-none">{workspaceHandle.replace('@', '')}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Sponsored · {igFormat === 'reels' ? 'Reels' : 'Original'}</p>
+                        <p className="text-[12px] font-semibold leading-none">{workspaceHandle.replace('@', '')}</p>
+                        <p className="text-[10px] text-[#6B7280] mt-0.5">{igFormat === 'reels' ? 'Reels Preview' : 'Original Post'}</p>
                       </div>
                     </div>
-                    <MoreHorizontal size={15} className="text-slate-400" />
+                    <MoreHorizontal size={15} className="text-[#6B7280]" />
                   </div>
 
                   {/* Media */}
-                  <div className={`relative bg-slate-100 dark:bg-slate-800 ${igFormat === 'reels' ? 'aspect-[4/5]' : 'aspect-square'} overflow-hidden`}>
+                  <div className={`relative bg-[#F3F4F6] dark:bg-[#0E1015] ${igFormat === 'reels' ? 'aspect-[4/5]' : 'aspect-square'} overflow-hidden`}>
                     {selectedMedia[0] ? (
                       <img src={selectedMedia[0]} alt="IG preview" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                        <ImagePlus size={24} className="mb-1" /> Attach visual media
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[#6B7280] text-[12px]">
+                        <ImagePlus size={22} strokeWidth={1.5} className="mb-1" /> Attach visual media
                       </div>
                     )}
                     {igFormat === 'reels' && (
-                      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-slate-950/80 to-transparent text-white">
-                        <p className="text-[11px] font-bold">{workspaceHandle}</p>
+                      <div className="absolute inset-x-0 bottom-0 p-3 bg-[#090A0D]/80 text-white">
+                        <p className="text-[11px] font-semibold">{workspaceHandle}</p>
                         <p className="text-[11px] line-clamp-2 opacity-90">{getPreviewText('instagram')}</p>
                       </div>
                     )}
@@ -932,23 +928,23 @@ export function ContentStudio({
                   <div className="p-3.5 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Heart size={18} />
-                        <MessageCircle size={18} />
-                        <Send size={17} />
+                        <Heart size={17} strokeWidth={1.5} />
+                        <MessageCircle size={17} strokeWidth={1.5} />
+                        <Send size={16} strokeWidth={1.5} />
                       </div>
-                      <Bookmark size={18} />
+                      <Bookmark size={17} strokeWidth={1.5} />
                     </div>
-                    <p className="text-[11px] font-bold">1,284 likes</p>
+                    <p className="text-[11px] font-mono text-[#6B7280]">Draft preview</p>
                     {igFormat === 'feed' && (
-                      <p className="text-xs leading-snug whitespace-pre-line">
-                        <span className="font-bold mr-1.5">{workspaceHandle.replace('@', '')}</span>
+                      <p className="text-[12px] leading-snug whitespace-pre-line">
+                        <span className="font-semibold mr-1.5">{workspaceHandle.replace('@', '')}</span>
                         {getPreviewText('instagram')}
                       </p>
                     )}
                     {firstCommentEnabled && firstComment.trim() && (
-                      <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">First comment:</span>
-                        <span className="text-[#4F46E5] dark:text-indigo-400">{firstComment}</span>
+                      <div className="pt-1.5 border-t border-[#E5E7EB] dark:border-white/[0.08] text-[11px] text-[#6B7280]">
+                        <span className="font-medium text-[#111827] dark:text-[#F3F4F6] mr-1">First comment:</span>
+                        <span className="text-[#06B6D4]">{firstComment}</span>
                       </div>
                     )}
                   </div>
@@ -957,72 +953,74 @@ export function ContentStudio({
 
               {/* LinkedIn Preview */}
               {previewPlatform === 'linkedin' && (
-                <div className="p-3.5 space-y-3 text-slate-900 dark:text-slate-100">
+                <div className="p-3.5 space-y-3 text-[#111827] dark:text-[#F3F4F6]">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-lg bg-[#0A66C2] text-white font-display font-bold flex items-center justify-center text-xs">
+                      <div className="w-8 h-8 rounded-md bg-[#0A66C2] text-white font-semibold flex items-center justify-center text-[11px]">
                         {workspaceName.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-xs font-bold">{workspaceName}</p>
-                        <p className="text-[10px] text-slate-500">31,400 followers · 1m · 🌐</p>
+                        <p className="text-[12px] font-semibold">{workspaceName}</p>
+                        <p className="text-[10px] text-[#6B7280] flex items-center gap-1">
+                          <span>Company Page · Just now</span>
+                          <Globe size={10} strokeWidth={1.5} />
+                        </p>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-[#0A66C2]">+ Follow</span>
+                    <span className="text-[11px] font-semibold text-[#0A66C2]">+ Follow</span>
                   </div>
 
-                  <p className="text-xs leading-relaxed whitespace-pre-line">{getPreviewText('linkedin')}</p>
+                  <p className="text-[12px] leading-relaxed whitespace-pre-line">{getPreviewText('linkedin')}</p>
 
                   {selectedMedia[0] && (
-                    <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 aspect-[16/10]">
+                    <div className="rounded-md overflow-hidden border border-[#E5E7EB] dark:border-white/[0.08] aspect-[16/10]">
                       <img src={selectedMedia[0]} alt="LinkedIn media" className="w-full h-full object-cover" />
                     </div>
                   )}
 
                   {firstCommentEnabled && firstComment.trim() && (
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
-                      <span className="font-bold">Pinned 1st Comment:</span> {firstComment}
+                    <div className="p-2 rounded-md bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] text-[11px] text-[#4B5563] dark:text-[#9CA3AF]">
+                      <span className="font-semibold text-[#111827] dark:text-[#F3F4F6]">Pinned 1st Comment:</span> {firstComment}
                     </div>
                   )}
 
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-around text-[11px] font-semibold text-slate-500">
-                    <span className="flex items-center gap-1"><ThumbsUp size={13} /> Like</span>
-                    <span className="flex items-center gap-1"><MessageCircle size={13} /> Comment</span>
-                    <span className="flex items-center gap-1"><Repeat2 size={13} /> Repost</span>
-                    <span className="flex items-center gap-1"><Send size={13} /> Send</span>
+                  <div className="pt-2 border-t border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-around text-[11px] font-medium text-[#6B7280]">
+                    <span className="flex items-center gap-1"><ThumbsUp size={13} strokeWidth={1.5} /> Like</span>
+                    <span className="flex items-center gap-1"><MessageCircle size={13} strokeWidth={1.5} /> Comment</span>
+                    <span className="flex items-center gap-1"><Repeat2 size={13} strokeWidth={1.5} /> Repost</span>
+                    <span className="flex items-center gap-1"><Send size={13} strokeWidth={1.5} /> Send</span>
                   </div>
                 </div>
               )}
 
               {/* X Preview */}
               {previewPlatform === 'x' && (
-                <div className="p-4 space-y-3 text-slate-900 dark:text-slate-100">
+                <div className="p-4 space-y-3 text-[#111827] dark:text-[#F3F4F6]">
                   <div className="flex gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-[#4F46E5] text-white font-display font-bold flex items-center justify-center text-xs shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#111827] dark:bg-[#191D26] border border-[#E5E7EB] dark:border-white/[0.12] text-white font-semibold flex items-center justify-center text-[11px] shrink-0">
                       {workspaceName.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <span className="font-bold truncate">{workspaceName}</span>
-                        <span className="text-sky-500">✓</span>
-                        <span className="text-slate-400 truncate">{workspaceHandle} · 1m</span>
+                      <div className="flex items-center gap-1.5 text-[12px]">
+                        <span className="font-semibold truncate">{workspaceName}</span>
+                        <span className="text-[#6B7280] font-mono text-[11px] truncate">{workspaceHandle} · Now</span>
                       </div>
-                      <p className="text-xs leading-relaxed whitespace-pre-line">{getPreviewText('x')}</p>
+                      <p className="text-[12px] leading-relaxed whitespace-pre-line">{getPreviewText('x')}</p>
                       {selectedMedia[0] && (
-                        <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-[16/9]">
+                        <div className="rounded-lg overflow-hidden border border-[#E5E7EB] dark:border-white/[0.08] aspect-[16/9]">
                           <img src={selectedMedia[0]} alt="X media" className="w-full h-full object-cover" />
                         </div>
                       )}
                       {firstCommentEnabled && firstComment.trim() && (
-                        <div className="pl-2.5 border-l-2 border-[#4F46E5] text-[11px] text-slate-500">
+                        <div className="pl-2.5 border-l-2 border-[#06B6D4] text-[11px] text-[#6B7280]">
                           Thread reply: {firstComment}
                         </div>
                       )}
-                      <div className="pt-1 flex items-center justify-between text-slate-400 text-[11px]">
-                        <span className="flex items-center gap-1"><MessageCircle size={13} /> 18</span>
-                        <span className="flex items-center gap-1"><Repeat2 size={13} /> 42</span>
-                        <span className="flex items-center gap-1"><Heart size={13} /> 219</span>
-                        <Share size={13} />
+                      <div className="pt-1 flex items-center justify-between text-[#6B7280] text-[11px]">
+                        <MessageCircle size={13} strokeWidth={1.5} />
+                        <Repeat2 size={13} strokeWidth={1.5} />
+                        <Heart size={13} strokeWidth={1.5} />
+                        <Share size={13} strokeWidth={1.5} />
                       </div>
                     </div>
                   </div>
@@ -1030,7 +1028,7 @@ export function ContentStudio({
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <div className="mt-4 flex flex-wrap justify-center gap-1.5">
               {selectedPlatforms.map((pl) => (
                 <PlatformTag key={pl} platform={pl} showFull={false} />
               ))}
@@ -1039,24 +1037,26 @@ export function ContentStudio({
         </div>
       )}
 
-      {/* Canva-Style Template Picker Modal */}
+      {/* Brand Template Picker Modal */}
       {showTemplateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/60" onClick={() => setShowTemplateModal(false)} />
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowTemplateModal(false)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-xl p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
               <div>
-                <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Palette size={16} className="text-amber-500" /> Canva-Style Brand Template Picker
+                <h3 className="text-[15px] font-semibold text-[#111827] dark:text-[#F3F4F6] flex items-center gap-2">
+                  <Palette size={15} strokeWidth={1.5} className="text-[#06B6D4]" /> Brand Template Picker
                 </h3>
-                <p className="text-xs text-slate-500">Apply a ready-to-publish visual layout + matched caption hook.</p>
+                <p className="text-[12px] text-[#4B5563] dark:text-[#9CA3AF]">
+                  Apply a ready-to-publish visual layout and matched caption hook.
+                </p>
               </div>
-              <button onClick={() => setShowTemplateModal(false)} className="text-slate-400 hover:text-slate-700">
-                <X size={18} />
+              <button onClick={() => setShowTemplateModal(false)} className="text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]">
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               {CANVA_TEMPLATES.map((tpl) => (
                 <button
                   key={tpl.id}
@@ -1067,7 +1067,7 @@ export function ContentStudio({
                     setShowTemplateModal(false);
                     onToast('Template Applied', `Loaded "${tpl.title}" design & caption hook.`);
                   }}
-                  className="text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] overflow-hidden bg-[#F8FAFC] dark:bg-slate-800 transition-all group"
+                  className="text-left rounded-lg border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] overflow-hidden bg-[#F8F9FB] dark:bg-[#0E1015] transition-colors group"
                 >
                   <div className="aspect-[4/3] overflow-hidden">
                     <img
@@ -1077,8 +1077,8 @@ export function ContentStudio({
                     />
                   </div>
                   <div className="p-3">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">{tpl.title}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{tpl.subtitle}</p>
+                    <p className="text-[12px] font-semibold text-[#111827] dark:text-[#F3F4F6]">{tpl.title}</p>
+                    <p className="text-[11px] text-[#6B7280] mt-0.5">{tpl.subtitle}</p>
                   </div>
                 </button>
               ))}

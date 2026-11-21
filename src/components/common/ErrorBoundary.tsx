@@ -46,34 +46,34 @@ export class ErrorBoundary extends React.Component<
     }
 
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-            <AlertTriangle size={22} />
+      <div className="min-h-screen bg-[#F8F9FB] dark:bg-[#090A0D] flex items-center justify-center p-6">
+        <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-xl p-6 space-y-4">
+          <div className="w-10 h-10 rounded-lg bg-[#F97316]/10 border border-[#F97316]/25 text-[#F97316] flex items-center justify-center">
+            <AlertTriangle size={18} strokeWidth={1.5} />
           </div>
           <div>
-            <h2 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
+            <h2 className="font-display text-base font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
               {friendlyTitle}
             </h2>
-            <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed break-words">
+            <p className="mt-1.5 text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed break-words">
               {friendlyDetail}
             </p>
           </div>
           <div className="flex items-center gap-2.5 pt-2">
             <button
               onClick={() => window.location.reload()}
-              className="flex-1 py-2.5 px-4 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+              className="flex-1 py-2 px-4 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
             >
-              <RefreshCw size={13} /> Reload App
+              <RefreshCw size={13} strokeWidth={1.5} /> Reload App
             </button>
             <button
               onClick={async () => {
                 await signOut(auth).catch(() => {});
                 window.location.reload();
               }}
-              className="py-2.5 px-4 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+              className="py-2 px-4 border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
             >
-              <LogOut size={13} /> Sign Out
+              <LogOut size={13} strokeWidth={1.5} /> Sign Out
             </button>
           </div>
         </div>

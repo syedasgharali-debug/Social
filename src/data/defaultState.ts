@@ -144,8 +144,8 @@ export const DEFAULT_API_HEALTH: ApiHealthNode[] = [
   },
   {
     id: 'api-youtube',
-    name: 'YouTube Data API',
-    provider: 'v3 Shorts Upload',
+    name: 'YouTube Data API v3',
+    provider: 'v3 Channels & Shorts Upload',
     status: 'operational',
     latencyMs: 0,
     rateLimitUsedPct: 0,
@@ -164,7 +164,67 @@ export const DEFAULT_API_HEALTH: ApiHealthNode[] = [
     webhookQueueDepth: 0,
     lastTestedAt: 'Not tested',
   },
+  {
+    id: 'api-cms-webhooks',
+    name: 'WordPress / CMS Webhooks',
+    provider: 'WP · Webflow · Shopify · Ghost',
+    status: 'operational',
+    latencyMs: 0,
+    rateLimitUsedPct: 0,
+    rateLimitLabel: 'No live traffic',
+    webhookQueueDepth: 0,
+    lastTestedAt: 'Not tested',
+  },
+  {
+    id: 'api-rss-crawler',
+    name: 'RSS & Trend Crawler',
+    provider: 'XML / Atom / News Parser',
+    status: 'operational',
+    latencyMs: 0,
+    rateLimitUsedPct: 0,
+    rateLimitLabel: 'No live traffic',
+    webhookQueueDepth: 0,
+    lastTestedAt: 'Not tested',
+  },
+  {
+    id: 'api-campaign-pixel',
+    name: 'Campaign Pixel Ingestion',
+    provider: 'UTM & Conversion Collector',
+    status: 'operational',
+    latencyMs: 0,
+    rateLimitUsedPct: 0,
+    rateLimitLabel: 'No live traffic',
+    webhookQueueDepth: 0,
+    lastTestedAt: 'Not tested',
+  },
 ];
+
+export const DEFAULT_MODULE_QUOTAS = {
+  bootstrap: {
+    youtubeChannels: 2,
+    seoArticlesPerMonth: 10,
+    rssAutoFeeds: 5,
+    activeViralCampaigns: 2,
+  },
+  accelerate: {
+    youtubeChannels: 5,
+    seoArticlesPerMonth: 35,
+    rssAutoFeeds: 20,
+    activeViralCampaigns: 10,
+  },
+  pro_agency: {
+    youtubeChannels: 25,
+    seoArticlesPerMonth: 120,
+    rssAutoFeeds: 100,
+    activeViralCampaigns: 50,
+  },
+  lifetime: {
+    youtubeChannels: 100,
+    seoArticlesPerMonth: 500,
+    rssAutoFeeds: 250,
+    activeViralCampaigns: 150,
+  },
+};
 
 export const DEFAULT_AI_GOVERNANCE: AiGovernanceConfig = {
   defaultModel: 'gemini-4-hydrogen',
@@ -176,6 +236,7 @@ export const DEFAULT_AI_GOVERNANCE: AiGovernanceConfig = {
     accelerate: 15000,
     pro_agency: 40000,
   },
+  moduleQuotas: DEFAULT_MODULE_QUOTAS,
   systemPromptTemplate:
     'You are a principal B2B & creator social strategist. Write concise, high-retention native posts tailored to each network constraint, avoiding clickbait filler and preserving brand voice.',
 };
@@ -196,6 +257,15 @@ export const DEFAULT_STATE: AppState = {
   ads: [],
   drafts: [],
   discoveryAlerts: [],
+  youtubeChannels: [],
+  youtubeVideos: [],
+  seoArticles: [],
+  cmsConnectors: [],
+  rssSources: [],
+  curatedItems: [],
+  ecommerceFeeds: [],
+  viralCampaigns: [],
+  workspaceCredits: {},
   tenants: [],
   featureFlags: DEFAULT_FEATURE_FLAGS,
   auditLogs: [],

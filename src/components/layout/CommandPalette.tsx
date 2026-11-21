@@ -26,6 +26,10 @@ import {
   Rocket,
   Radar,
   Repeat2,
+  Youtube,
+  FileText,
+  Rss,
+  Trophy,
 } from 'lucide-react';
 import { AppState, ViewMode } from '../../types';
 import { NavTabId } from './Shell';
@@ -61,6 +65,10 @@ const PAGE_ITEMS: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }[] = [
   { id: 'overview', label: 'Overview', subtitle: 'Workspace KPIs & upcoming queue', icon: LayoutDashboard },
+  { id: 'youtube', label: 'YouTube Studio', subtitle: 'Multi-channel scripts, SEO chapters, thumbnail studio & playlist queue', icon: Youtube },
+  { id: 'seo_blog', label: 'AI Blog & SEO', subtitle: 'Keyword-to-article generator, CMS connectors & social syndication', icon: FileText },
+  { id: 'discover', label: 'Discover & Curate', subtitle: 'Viral trend explorer, RSS auto-importer, AI repurposer & product feeds', icon: Rss },
+  { id: 'campaigns', label: 'Campaigns & Contests', subtitle: 'Viral giveaways, UGC contests, winner picker & conversion ROI tracker', icon: Trophy },
   { id: 'tools', label: 'Growth Tools', subtitle: 'Competitor Spy, URL Repurposer, Hook Lab, Trends, UTM/QR & ROI', icon: Rocket },
   { id: 'copilot', label: 'AI Copilot', subtitle: '7-day strategy & caption generator', icon: Sparkles },
   { id: 'studio', label: 'Content Studio', subtitle: 'Split-screen multi-network composer', icon: PenSquare },
@@ -108,6 +116,30 @@ export function CommandPalette({
         shortcut: 'N',
         icon: Plus,
         onSelect: onNewPost,
+      },
+      {
+        id: 'act-youtube-pipeline',
+        group: 'Quick Actions',
+        label: 'Generate YouTube Script & SEO Metadata',
+        subtitle: 'Open YouTube Multi-Channel Studio & Thumbnail A/B Preview',
+        icon: Youtube,
+        onSelect: () => onNavigateTab('youtube'),
+      },
+      {
+        id: 'act-seo-article',
+        group: 'Quick Actions',
+        label: 'Write AI SEO Blog Article & Auto-Syndicate',
+        subtitle: 'Generate H1–H3 article with FAQ schema & push to CMS + Scheduler',
+        icon: FileText,
+        onSelect: () => onNavigateTab('seo_blog'),
+      },
+      {
+        id: 'act-viral-campaign',
+        group: 'Quick Actions',
+        label: 'Launch Viral Giveaway or UGC Contest',
+        subtitle: 'Build referral giveaway, verify entries & sync leads to Social CRM',
+        icon: Trophy,
+        onSelect: () => onNavigateTab('campaigns'),
       },
       {
         id: 'act-competitor-spy',
@@ -250,6 +282,48 @@ export function CommandPalette({
             onSelect: () => onNavigateTab('scheduler', p.id),
           })
         );
+
+      (state.youtubeVideos || [])
+        .filter((v) => v.workspaceId === wsId && (v.selectedTitle.toLowerCase().includes(q) || v.topic.toLowerCase().includes(q)))
+        .slice(0, 2)
+        .forEach((v) =>
+          list.push({
+            id: `rec-yt-${v.id}`,
+            group: 'Workspace Records',
+            label: v.selectedTitle,
+            subtitle: `YouTube ${v.format} · ${v.status}`,
+            icon: Youtube,
+            onSelect: () => onNavigateTab('youtube', v.id),
+          })
+        );
+
+      (state.seoArticles || [])
+        .filter((a) => a.workspaceId === wsId && (a.title.toLowerCase().includes(q) || a.targetKeyword.toLowerCase().includes(q)))
+        .slice(0, 2)
+        .forEach((a) =>
+          list.push({
+            id: `rec-seo-${a.id}`,
+            group: 'Workspace Records',
+            label: a.title,
+            subtitle: `SEO Article · ${a.targetKeyword}`,
+            icon: FileText,
+            onSelect: () => onNavigateTab('seo_blog', a.id),
+          })
+        );
+
+      (state.viralCampaigns || [])
+        .filter((c) => c.workspaceId === wsId && (c.name.toLowerCase().includes(q) || c.prizeTitle.toLowerCase().includes(q)))
+        .slice(0, 2)
+        .forEach((c) =>
+          list.push({
+            id: `rec-camp-${c.id}`,
+            group: 'Workspace Records',
+            label: c.name,
+            subtitle: `Viral Campaign · ${c.entries.length} entries`,
+            icon: Trophy,
+            onSelect: () => onNavigateTab('campaigns', c.id),
+          })
+        );
     }
 
     if (!q) return list;
@@ -303,27 +377,27 @@ export function CommandPalette({
   const groups: PaletteItem['group'][] = ['Quick Actions', 'Pages', 'Workspaces', 'Workspace Records'];
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-start justify-center pt-[10vh] p-4">
+    <div className="fixed inset-0 z-[120] flex items-start justify-center pt-[12vh] p-4">
       <div
-        className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity"
+        className="absolute inset-0 bg-black/45 transition-opacity"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-xl bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-[12px] overflow-hidden">
         {/* Search Input */}
-        <div className="px-4 py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
-          <Search size={17} className="text-[#4F46E5] dark:text-indigo-400 shrink-0" />
+        <div className="h-12 px-4 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center gap-3">
+          <Search size={15} strokeWidth={1.5} className="text-[#06B6D4] shrink-0" />
           <input
             autoFocus
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Jump to any page, trigger New Post, switch workspace, or search CRM..."
-            className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
+            placeholder="Jump to module, run action, switch workspace, or search records..."
+            className="flex-1 bg-transparent text-[13px] text-[#111827] dark:text-[#F3F4F6] placeholder:text-[#6B7280] outline-none"
           />
           <button
             type="button"
             onClick={onClose}
-            className="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
+            className="px-1.5 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#191D26] border border-[#E5E7EB] dark:border-white/[0.1] text-[10px] font-mono text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
           >
             ESC
           </button>
@@ -331,16 +405,16 @@ export function CommandPalette({
             type="button"
             onClick={onClose}
             aria-label="Close command palette"
-            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+            className="p-1 text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
           >
-            <X size={16} />
+            <X size={15} strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Grouped Command List */}
-        <div className="max-h-[58vh] overflow-y-auto p-2 custom-scrollbar">
+        <div className="max-h-[56vh] overflow-y-auto p-1.5 custom-scrollbar">
           {items.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-500">
+            <div className="py-12 text-center text-[12px] text-[#6B7280]">
               No matching pages, actions, or workspace records found for “{query}”.
             </div>
           ) : (
@@ -348,8 +422,8 @@ export function CommandPalette({
               const groupItems = items.filter((item) => item.group === groupName);
               if (groupItems.length === 0) return null;
               return (
-                <div key={groupName} className="mb-2 last:mb-0">
-                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div key={groupName} className="mb-1.5 last:mb-0">
+                  <p className="px-2.5 py-1.5 text-[11px] font-medium text-[#6B7280]">
                     {groupName}
                   </p>
                   <div className="space-y-0.5">
@@ -366,48 +440,40 @@ export function CommandPalette({
                             item.onSelect();
                             onClose();
                           }}
-                          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-3 text-left transition-colors ${
+                          className={`w-full px-2.5 py-2 rounded-[8px] flex items-center justify-between gap-3 text-left transition-colors ${
                             isSelected
-                              ? 'bg-[#4F46E5] text-white shadow-sm'
-                              : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                              ? 'bg-black/[0.06] dark:bg-white/[0.08] text-[#111827] dark:text-[#F3F4F6]'
+                              : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
                           }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              className={`w-7 h-7 rounded-[6px] border flex items-center justify-center shrink-0 ${
                                 isSelected
-                                  ? 'bg-white/15 text-white'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-[#4F46E5] dark:text-indigo-400'
+                                  ? 'bg-[#FFFFFF] dark:bg-[#191D26] border-[#D1D5DB] dark:border-white/[0.15] text-[#06B6D4]'
+                                  : 'bg-[#F8F9FB] dark:bg-[#0E1015] border-[#E5E7EB] dark:border-white/[0.08] text-[#6B7280]'
                               }`}
                             >
-                              <Icon size={15} />
+                              <Icon size={14} className="shrink-0" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-bold truncate">{item.label}</p>
-                              <p
-                                className={`text-[11px] truncate ${
-                                  isSelected ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'
-                                }`}
-                              >
+                              <p className="text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] truncate">
+                                {item.label}
+                              </p>
+                              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate">
                                 {item.subtitle}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {item.shortcut && (
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                  isSelected
-                                    ? 'bg-white/20 text-white'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                                }`}
-                              >
+                              <span className="px-1.5 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#191D26] border border-[#E5E7EB] dark:border-white/[0.08] text-[10px] font-mono text-[#6B7280]">
                                 {item.shortcut}
                               </span>
                             )}
                             <ArrowRight
                               size={13}
-                              className={isSelected ? 'text-white opacity-90' : 'text-slate-400 opacity-0'}
+                              className={isSelected ? 'text-[#06B6D4] opacity-100' : 'opacity-0'}
                             />
                           </div>
                         </button>
@@ -421,22 +487,22 @@ export function CommandPalette({
         </div>
 
         {/* Footer Hints */}
-        <div className="px-4 py-2.5 bg-slate-50/90 dark:bg-slate-950/70 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+        <div className="px-4 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border-t border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6B7280]">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[10px]">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] font-mono text-[10px]">
                 ↑↓
               </kbd>
               Navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[10px]">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.1] font-mono text-[10px]">
                 ↵
               </kbd>
               Select
             </span>
           </div>
-          <span className="flex items-center gap-1 font-mono text-[10px] text-slate-400">
+          <span className="flex items-center gap-1 font-mono text-[10px] text-[#6B7280]">
             <Command size={11} /> + K anywhere
           </span>
         </div>

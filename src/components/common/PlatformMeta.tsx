@@ -124,19 +124,19 @@ export const PLATFORM_META: Record<
 export function PlatformTag({ platform, showFull = true }: { platform: Platform; showFull?: boolean }) {
   const meta = PLATFORM_META[platform] || PLATFORM_META.linkedin;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-tight ${meta.textClass}`}>
-      <SocialLogo platform={platform} size={14} />
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] whitespace-nowrap">
+      <SocialLogo platform={platform} size={16} />
       <span>{showFull ? meta.label : meta.short}</span>
     </span>
   );
 }
 
 const INITIAL_COLORS = [
-  'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
-  'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-  'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
-  'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  'bg-black/[0.05] text-[#111827] dark:bg-white/[0.08] dark:text-[#F3F4F6]',
+  'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400',
+  'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  'bg-black/[0.07] text-[#374151] dark:bg-white/[0.1] dark:text-[#D1D5DB]',
 ];
 
 export function ContactAvatar({
@@ -152,10 +152,10 @@ export function ContactAvatar({
 
   const dims = {
     xs: 'w-6 h-6 text-[10px]',
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-xs',
-    lg: 'w-12 h-12 text-sm',
-    xl: 'w-16 h-16 text-lg',
+    sm: 'w-7 h-7 text-[11px]',
+    md: 'w-9 h-9 text-xs',
+    lg: 'w-11 h-11 text-sm',
+    xl: 'w-14 h-14 text-base',
   }[size];
 
   const initials = name
@@ -174,14 +174,14 @@ export function ContactAvatar({
         alt={name}
         referrerPolicy="no-referrer"
         onError={() => setImgFailed(true)}
-        className={`${dims} rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0`}
+        className={`${dims} rounded-[8px] object-cover border border-[#E5E7EB] dark:border-white/[0.08] shrink-0`}
       />
     );
   }
 
   return (
     <div
-      className={`${dims} ${INITIAL_COLORS[colorIdx]} rounded-lg font-display font-bold flex items-center justify-center border border-slate-200/80 dark:border-slate-700 shrink-0`}
+      className={`${dims} ${INITIAL_COLORS[colorIdx]} rounded-[8px] font-medium flex items-center justify-center border border-[#E5E7EB] dark:border-white/[0.08] shrink-0`}
     >
       {initials || '?'}
     </div>

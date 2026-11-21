@@ -18,6 +18,12 @@ import { LandingPage } from './components/layout/LandingPage';
 import { SettingsModal } from './components/layout/SettingsModal';
 import { SuperAdminPanel } from './components/admin/SuperAdminPanel';
 import { GrowthToolsSuite, GrowthToolTab } from './components/tools/GrowthToolsSuite';
+import { YouTubeStudio } from './components/youtube/YouTubeStudio';
+import { SeoBlogEngine } from './components/seo/SeoBlogEngine';
+import { DiscoverCurateView } from './components/discover/DiscoverCurateView';
+import { ViralCampaignsView } from './components/campaigns/ViralCampaignsView';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { DEFAULT_MODULE_QUOTAS } from './data/defaultState';
 import { useAuth } from './contexts/AuthContext';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -39,6 +45,14 @@ import {
   AiGovernanceConfig,
   PromoCode,
   InvoiceRecord,
+  YouTubeChannel,
+  YouTubeVideoItem,
+  SeoArticle,
+  CmsConnector,
+  RssSource,
+  CuratedFeedItem,
+  EcommerceFeed,
+  ViralCampaign,
 } from './types';
 
 export default function App() {
@@ -149,6 +163,101 @@ export default function App() {
       ).length,
     [state.posts, state.activeWorkspaceId]
   );
+
+  // Unified workspace plan quotas & AI credit meter
+  const activePlanKey = useMemo<'bootstrap' | 'accelerate' | 'pro_agency' | 'lifetime'>(() => {
+    const plan = activeWorkspace?.plan || state.selectedPlan;
+    if (plan === 'lifetime' || plan === 'pro150') return 'lifetime';
+    if (plan === 'pro_agency' || plan === 'pro50' || plan === 'pro100') return 'pro_agency';
+    if (plan === 'accelerate') return 'accelerate';
+    return 'bootstrap';
+  }, [activeWorkspace?.plan, state.selectedPlan]);
+
+  const activeModuleQuotas = useMemo(() => {
+    const map = state.aiGovernance?.moduleQuotas || DEFAULT_MODULE_QUOTAS;
+    return map[activePlanKey] || DEFAULT_MODULE_QUOTAS.bootstrap;
+  }, [state.aiGovernance?.moduleQuotas, activePlanKey]);
+
+  const aiCreditsLimit = useMemo(() => {
+    if (activePlanKey === 'lifetime') return 100000;
+    const limits = state.aiGovernance?.tierLimits;
+    if (activePlanKey === 'pro_agency') return limits?.pro_agency || 40000;
+    if (activePlanKey === 'accelerate') return limits?.accelerate || 15000;
+    return limits?.bootstrap || 5000;
+  }, [activePlanKey, state.aiGovernance?.tierLimits]);
+
+  const aiCreditsUsed = (state.workspaceCredits || {})[state.activeWorkspaceId] || 0;
+  const aiCreditsRemaining = Math.max(0, aiCreditsLimit - aiCreditsUsed);
+
+  const handleConsumeCredits = (amount: number, reason: string): boolean => {
+    if (aiCreditsRemaining < amount) {
+      pushToast(
+        'AI Credit Limit Reached',
+        `This action needs ${amount} credits (${aiCreditsRemaining} remaining). Upgrade plan or reset in Settings.`,
+        'warning'
+      );
+      return false;
+    }
+    updateState((prev) => {
+      const current = (prev.workspaceCredits || {})[prev.activeWorkspaceId] || 0;
+      return {
+        ...prev,
+        workspaceCredits: {
+          ...(prev.workspaceCredits || {}),
+          [prev.activeWorkspaceId]: current + amount,
+        },
+      };
+    });
+    if (reason) {
+      // Credit deduction recorded cleanly on workspace state
+    }
+    return true;
+  };
+
+  const handleSyncEntryToCrm = (contact: Contact, deal?: Deal) => {
+    updateState((prev) => {
+      const emailLower = (contact.email || '').trim().toLowerCase();
+      const handleLower = contact.handle.trim().toLowerCase();
+      const existing = prev.contacts.find(
+        (c) =>
+          c.workspaceId === contact.workspaceId &&
+          ((emailLower && (c.email || '').trim().toLowerCase() === emailLower) ||
+            (handleLower && c.handle.trim().toLowerCase() === handleLower))
+      );
+
+      if (existing) {
+        const mergedContact: Contact = {
+          ...existing,
+          name: existing.name || contact.name,
+          email: existing.email || contact.email,
+          platforms: Array.from(new Set([...existing.platforms, ...contact.platforms])),
+          leadScore: Math.max(existing.leadScore, contact.leadScore),
+          ltv: Math.max(existing.ltv, contact.ltv),
+          lifecycleStage:
+            existing.lifecycleStage === 'Customer' || existing.lifecycleStage === 'Advocate'
+              ? existing.lifecycleStage
+              : contact.lifecycleStage,
+          tags: Array.from(new Set([...existing.tags, ...contact.tags])),
+          interactionHistory: [...contact.interactionHistory, ...existing.interactionHistory].slice(0, 50),
+          notes: existing.notes
+            ? `${existing.notes}\n${contact.notes}`
+            : contact.notes,
+        };
+        const linkedDeal = deal ? { ...deal, contactId: existing.id } : undefined;
+        return {
+          ...prev,
+          contacts: prev.contacts.map((c) => (c.id === existing.id ? mergedContact : c)),
+          deals: linkedDeal ? [linkedDeal, ...prev.deals] : prev.deals,
+        };
+      }
+
+      return {
+        ...prev,
+        contacts: [contact, ...prev.contacts],
+        deals: deal ? [deal, ...prev.deals] : prev.deals,
+      };
+    });
+  };
 
   const handleEmailSignIn = async (email: string, password: string) => {
     const signedInUser = await signInWithEmailPassword(email, password);
@@ -338,15 +447,15 @@ export default function App() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] flex flex-col items-center justify-center gap-3 text-slate-600 dark:text-slate-300">
-        <Loader2 size={28} className="animate-spin text-[#4F46E5]" />
-        <p className="text-xs font-semibold tracking-wide">Connecting to socialifyai.com...</p>
+      <div className="min-h-screen bg-[#F8F9FB] dark:bg-[#090A0D] flex flex-col items-center justify-center gap-3 text-[#4B5563] dark:text-[#9CA3AF]">
+        <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-[#06B6D4]" />
+        <p className="text-xs font-mono tracking-wide">Connecting to socialifyai.com...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#F8FAFC] dark:bg-[#090D16] text-slate-900 dark:text-slate-100 overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="flex flex-col h-screen bg-[#F8F9FB] dark:bg-[#090A0D] text-[#111827] dark:text-[#F3F4F6] overflow-hidden font-sans selection:bg-cyan-500/20 selection:text-cyan-900 dark:selection:text-cyan-200">
       {state.viewMode === 'landing' && (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <LandingPage
@@ -484,7 +593,7 @@ export default function App() {
             const start = performance.now();
             let healthy = true;
             try {
-              const res = await fetch('/api/health', { cache: 'no-store' });
+              const res = await fetch('/api/health?node=all', { cache: 'no-store' });
               healthy = res.ok;
             } catch {
               healthy = false;
@@ -611,9 +720,9 @@ export default function App() {
       {(state.viewMode === 'app' || (state.viewMode === 'admin' && !isAdmin)) && user && currentUserProfile && (
         <div className="flex-1 flex min-h-0 overflow-hidden relative">
           {cloudLoading && (
-            <div className="absolute top-3 right-5 z-50 px-3 py-1.5 rounded-lg bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 shadow-md flex items-center gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-              <Loader2 size={12} className="animate-spin text-[#4F46E5]" />
-              <span>Syncing workspace...</span>
+            <div className="absolute top-2 right-5 z-50 px-2.5 py-1 rounded-[7px] bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] flex items-center gap-2 text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+              <Loader2 size={12} className="animate-spin text-[#06B6D4]" />
+              <span>Syncing workspace</span>
             </div>
           )}
           <Sidebar
@@ -639,11 +748,14 @@ export default function App() {
             onBackToLanding={() => updateState({ viewMode: 'landing' })}
             isAdmin={isAdmin}
             onOpenAdmin={isAdmin ? () => updateState({ viewMode: 'admin' }) : undefined}
+            aiCreditsUsed={aiCreditsUsed}
+            aiCreditsLimit={aiCreditsLimit}
           />
 
-          <div className="flex-1 flex flex-col min-w-0 relative">
+          <div className="flex-1 flex flex-col min-w-0 relative bg-[#F8F9FB] dark:bg-[#090A0D]">
             <CommandBar
               state={state}
+              activeTab={activeTab}
               userProfile={currentUserProfile}
               onSignOut={handleSignOut}
               onQuickCreatePost={() => {
@@ -655,6 +767,14 @@ export default function App() {
                 updateState({ activeRole: role });
                 updateProfilePrefs({ activeRole: role }).catch(() => {});
                 pushToast('Active Role Updated', `Permissions set to ${role}.`);
+              }}
+              onSwitchWorkspace={(workspaceId) => {
+                updateState({ activeWorkspaceId: workspaceId });
+                setFocusedThreadId(undefined);
+                setFocusedContactId(undefined);
+                setEditingPost(null);
+                const ws = state.workspaces.find((w) => w.id === workspaceId);
+                pushToast('Workspace Switched', `Scoped all modules to ${ws?.name || 'workspace'}.`);
               }}
               onToggleDarkMode={() => {
                 const nextDark = !state.darkMode;
@@ -682,6 +802,7 @@ export default function App() {
             />
 
             <main className="flex-1 min-h-0 relative">
+              <ErrorBoundary key={`${activeTab}-${state.activeWorkspaceId}`}>
               {activeTab === 'overview' && (
                 <WorkspaceOverview
                   state={state}
@@ -690,6 +811,252 @@ export default function App() {
                     setActiveGrowthTool(tool);
                     setActiveTab('tools');
                   }}
+                />
+              )}
+
+              {activeTab === 'youtube' && (
+                <YouTubeStudio
+                  key={state.activeWorkspaceId}
+                  workspaceId={state.activeWorkspaceId}
+                  workspaceName={activeWorkspace.name}
+                  workspaceIndustry={activeWorkspace.industry}
+                  channels={state.youtubeChannels || []}
+                  videos={state.youtubeVideos || []}
+                  maxChannelsQuota={activeModuleQuotas.youtubeChannels}
+                  aiCreditsRemaining={aiCreditsRemaining}
+                  onConsumeCredits={handleConsumeCredits}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onAddChannel={(channel: YouTubeChannel) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      youtubeChannels: [channel, ...(prev.youtubeChannels || [])],
+                    }))
+                  }
+                  onUpdateChannel={(channel: YouTubeChannel) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      youtubeChannels: (prev.youtubeChannels || []).map((c) =>
+                        c.id === channel.id ? channel : c
+                      ),
+                    }))
+                  }
+                  onDeleteChannel={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      youtubeChannels: (prev.youtubeChannels || []).filter((c) => c.id !== id),
+                    }))
+                  }
+                  onAddVideo={(video: YouTubeVideoItem) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      youtubeVideos: [video, ...(prev.youtubeVideos || [])],
+                    }))
+                  }
+                  onUpdateVideo={(video: YouTubeVideoItem) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      youtubeVideos: (prev.youtubeVideos || []).map((v) =>
+                        v.id === video.id ? video : v
+                      ),
+                    }))
+                  }
+                  onDeleteVideo={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      youtubeVideos: (prev.youtubeVideos || []).filter((v) => v.id !== id),
+                    }))
+                  }
+                  onScheduleSocialPosts={(newPosts: SocialPost[], navigateToScheduler = false) => {
+                    updateState((prev) => ({ ...prev, posts: [...newPosts, ...prev.posts] }));
+                    if (navigateToScheduler) {
+                      setActiveTab('scheduler');
+                    }
+                  }}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
+                />
+              )}
+
+              {activeTab === 'seo_blog' && (
+                <SeoBlogEngine
+                  key={state.activeWorkspaceId}
+                  workspaceId={state.activeWorkspaceId}
+                  workspaceName={activeWorkspace.name}
+                  workspaceIndustry={activeWorkspace.industry}
+                  articles={state.seoArticles || []}
+                  connectors={state.cmsConnectors || []}
+                  maxArticlesQuota={activeModuleQuotas.seoArticlesPerMonth}
+                  aiCreditsRemaining={aiCreditsRemaining}
+                  onConsumeCredits={handleConsumeCredits}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onAddArticle={(article: SeoArticle) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      seoArticles: [article, ...(prev.seoArticles || [])],
+                    }))
+                  }
+                  onUpdateArticle={(article: SeoArticle) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      seoArticles: (prev.seoArticles || []).map((a) =>
+                        a.id === article.id ? article : a
+                      ),
+                    }))
+                  }
+                  onDeleteArticle={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      seoArticles: (prev.seoArticles || []).filter((a) => a.id !== id),
+                    }))
+                  }
+                  onAddConnector={(connector: CmsConnector) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      cmsConnectors: [connector, ...(prev.cmsConnectors || [])],
+                    }))
+                  }
+                  onUpdateConnector={(connector: CmsConnector) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      cmsConnectors: (prev.cmsConnectors || []).map((c) =>
+                        c.id === connector.id ? connector : c
+                      ),
+                    }))
+                  }
+                  onDeleteConnector={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      cmsConnectors: (prev.cmsConnectors || []).filter((c) => c.id !== id),
+                    }))
+                  }
+                  onScheduleSocialPosts={(newPosts: SocialPost[]) => {
+                    updateState((prev) => ({ ...prev, posts: [...newPosts, ...prev.posts] }));
+                  }}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
+                />
+              )}
+
+              {activeTab === 'discover' && (
+                <DiscoverCurateView
+                  key={state.activeWorkspaceId}
+                  workspaceId={state.activeWorkspaceId}
+                  workspaceName={activeWorkspace.name}
+                  workspaceIndustry={activeWorkspace.industry}
+                  categories={state.categories}
+                  rssSources={state.rssSources || []}
+                  curatedItems={state.curatedItems || []}
+                  ecommerceFeeds={state.ecommerceFeeds || []}
+                  maxRssQuota={activeModuleQuotas.rssAutoFeeds}
+                  aiCreditsRemaining={aiCreditsRemaining}
+                  onConsumeCredits={handleConsumeCredits}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onAddRssSource={(source: RssSource) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      rssSources: [source, ...(prev.rssSources || [])],
+                    }))
+                  }
+                  onUpdateRssSource={(source: RssSource) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      rssSources: (prev.rssSources || []).map((s) =>
+                        s.id === source.id ? source : s
+                      ),
+                    }))
+                  }
+                  onDeleteRssSource={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      rssSources: (prev.rssSources || []).filter((s) => s.id !== id),
+                    }))
+                  }
+                  onAddCuratedItems={(items: CuratedFeedItem[]) =>
+                    updateState((prev) => {
+                      const existingUrls = new Set(
+                        (prev.curatedItems || [])
+                          .filter((i) => i.workspaceId === prev.activeWorkspaceId)
+                          .map((i) => i.url)
+                      );
+                      const fresh = items.filter((item) => !existingUrls.has(item.url));
+                      return {
+                        ...prev,
+                        curatedItems: [...fresh, ...(prev.curatedItems || [])].slice(0, 120),
+                      };
+                    })
+                  }
+                  onMarkCuratedRepurposed={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      curatedItems: (prev.curatedItems || []).map((item) =>
+                        item.id === id ? { ...item, repurposed: true } : item
+                      ),
+                    }))
+                  }
+                  onAddEcommerceFeed={(feed: EcommerceFeed) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      ecommerceFeeds: [feed, ...(prev.ecommerceFeeds || [])],
+                    }))
+                  }
+                  onUpdateEcommerceFeed={(feed: EcommerceFeed) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      ecommerceFeeds: (prev.ecommerceFeeds || []).map((f) =>
+                        f.id === feed.id ? feed : f
+                      ),
+                    }))
+                  }
+                  onDeleteEcommerceFeed={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      ecommerceFeeds: (prev.ecommerceFeeds || []).filter((f) => f.id !== id),
+                    }))
+                  }
+                  onAddDrafts={(newDrafts: Draft[]) =>
+                    updateState((prev) => ({ ...prev, drafts: [...newDrafts, ...prev.drafts] }))
+                  }
+                  onScheduleSocialPosts={(newPosts: SocialPost[]) => {
+                    updateState((prev) => ({ ...prev, posts: [...newPosts, ...prev.posts] }));
+                  }}
+                  onOpenInStudio={(preset) => {
+                    setEditingPost(null);
+                    setComposerPreset(preset);
+                    setActiveTab('studio');
+                    pushToast('Loaded into Content Studio', 'Customize copy, preview per channel, or schedule.');
+                  }}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
+                />
+              )}
+
+              {activeTab === 'campaigns' && (
+                <ViralCampaignsView
+                  key={state.activeWorkspaceId}
+                  workspaceId={state.activeWorkspaceId}
+                  workspaceName={activeWorkspace.name}
+                  campaigns={state.viralCampaigns || []}
+                  maxCampaignsQuota={activeModuleQuotas.activeViralCampaigns}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onAddCampaign={(campaign: ViralCampaign) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      viralCampaigns: [campaign, ...(prev.viralCampaigns || [])],
+                    }))
+                  }
+                  onUpdateCampaign={(campaign: ViralCampaign) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      viralCampaigns: (prev.viralCampaigns || []).map((c) =>
+                        c.id === campaign.id ? campaign : c
+                      ),
+                    }))
+                  }
+                  onDeleteCampaign={(id: string) =>
+                    updateState((prev) => ({
+                      ...prev,
+                      viralCampaigns: (prev.viralCampaigns || []).filter((c) => c.id !== id),
+                    }))
+                  }
+                  onSyncEntryToCrm={handleSyncEntryToCrm}
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}
 
@@ -1038,6 +1405,7 @@ export default function App() {
                   onToast={(title, desc) => pushToast(title, desc, 'success')}
                 />
               )}
+              </ErrorBoundary>
             </main>
           </div>
         </div>
@@ -1118,29 +1486,33 @@ export default function App() {
       />
 
       {/* Live Toast Stack */}
-      <div className="fixed bottom-5 right-5 z-[130] space-y-2 max-w-sm w-[calc(100vw-2.5rem)] sm:w-full pointer-events-none">
+      <div className="fixed bottom-4 right-4 z-[130] space-y-2 max-w-sm w-[calc(100vw-2rem)] sm:w-full pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-2xl p-3.5 flex items-start justify-between gap-3 transition-all"
+            className="pointer-events-auto bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-[10px] p-3 flex items-start justify-between gap-3 transition-all"
           >
             <div className="flex items-start gap-2.5 min-w-0">
               {t.variant === 'warning' ? (
-                <TrendingUp size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                <TrendingUp size={15} strokeWidth={1.5} className="text-[#F97316] shrink-0 mt-0.5" />
               ) : (
-                <CheckCircle2 size={16} className="text-[#4F46E5] dark:text-indigo-400 shrink-0 mt-0.5" />
+                <CheckCircle2 size={15} strokeWidth={1.5} className="text-[#06B6D4] shrink-0 mt-0.5" />
               )}
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900 dark:text-white">{t.title}</p>
+                <p className="text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6]">{t.title}</p>
                 {t.description && (
-                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                  <p className="mt-0.5 text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-snug">
                     {t.description}
                   </p>
                 )}
               </div>
             </div>
-            <button onClick={() => dismissToast(t.id)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white shrink-0">
-              <X size={14} />
+            <button
+              type="button"
+              onClick={() => dismissToast(t.id)}
+              className="text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] shrink-0"
+            >
+              <X size={14} strokeWidth={1.5} />
             </button>
           </div>
         ))}

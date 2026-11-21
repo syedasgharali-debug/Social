@@ -25,6 +25,8 @@ import {
   Sun,
   Moon,
   LogOut,
+  Rss,
+  Code2,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -45,12 +47,19 @@ import {
   FeatureFlag,
   ApiHealthNode,
   AiGovernanceConfig,
+  PlanModuleQuota,
   PromoCode,
   InvoiceRecord,
 } from '../../types';
-import { DEFAULT_AI_GOVERNANCE } from '../../data/defaultState';
+import { DEFAULT_AI_GOVERNANCE, DEFAULT_MODULE_QUOTAS } from '../../data/defaultState';
 import { SocialLogo, SocialBrandKey } from '../common/SocialIcons';
 import { BrandLogo } from '../BrandLogo';
+import {
+  InspectorDrawer,
+  StatusBadge,
+  MonochromeSparkline,
+  EmptyStatePanel,
+} from '../common/DesignPrimitives';
 
 function resolveApiBrand(nodeName: string): SocialBrandKey {
   const lower = nodeName.toLowerCase();
@@ -63,6 +72,20 @@ function resolveApiBrand(nodeName: string): SocialBrandKey {
   if (lower.includes('threads')) return 'threads';
   if (lower.includes('google')) return 'gbp';
   return 'x';
+}
+
+function renderApiNodeIcon(node: ApiHealthNode) {
+  const lower = `${node.id} ${node.name}`.toLowerCase();
+  if (lower.includes('cms') || lower.includes('wordpress') || lower.includes('webhook')) {
+    return <Globe size={18} className="text-cyan-500" />;
+  }
+  if (lower.includes('rss') || lower.includes('crawler')) {
+    return <Rss size={18} className="text-orange-500" />;
+  }
+  if (lower.includes('pixel') || lower.includes('campaign')) {
+    return <Code2 size={18} className="text-emerald-500" />;
+  }
+  return <SocialLogo platform={resolveApiBrand(node.name)} size={20} />;
 }
 
 interface SuperAdminPanelProps {
@@ -112,9 +135,18 @@ const PLAN_PRICING: Record<PlanTier, { mrr: number; profiles: number; aiLimit: n
   pro150: { mrr: 799, profiles: 999, aiLimit: 100000, label: 'Lifetime ($799 one-time)' },
 };
 
-const PLAN_COLORS = ['#64748B', '#F59E0B', '#4F46E5', '#10B981'];
+const PLAN_COLORS = ['#6B7280', '#9CA3AF', '#06B6D4', '#10B981'];
 
 type AdminSection = 'all' | 'overview' | 'users' | 'apis' | 'ai' | 'billing';
+
+const ADMIN_SECTION_LABELS: Record<AdminSection, string> = {
+  all: 'All Modules',
+  overview: 'SaaS Overview',
+  users: 'Users & Workspaces',
+  apis: 'API & Webhooks',
+  ai: 'AI Governance',
+  billing: 'Billing & Flags',
+};
 
 export function SuperAdminPanel({
   state,
@@ -141,6 +173,7 @@ export function SuperAdminPanel({
   const [activeSection, setActiveSection] = useState<AdminSection>('all');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUserRecord[]>([]);
   const [testingNodeId, setTestingNodeId] = useState<string | null>(null);
+  const [inspectedTenantId, setInspectedTenantId] = useState<string | null>(null);
 
   const loadRegisteredUsers = useCallback(async () => {
     const collected: RegisteredUserRecord[] = [];
@@ -217,8 +250,38 @@ export function SuperAdminPanel({
     plan: 'bootstrap' as PlanTier,
   });
 
-  // Module 4: AI Governance Draft Form
-  const [aiDraft, setAiDraft] = useState<AiGovernanceConfig>(state.aiGovernance);
+  // Module 4: AI Governance & Module Quotas Draft Form
+  const [aiDraft, setAiDraft] = useState<AiGovernanceConfig>(() => ({
+    ...state.aiGovernance,
+    moduleQuotas: state.aiGovernance.moduleQuotas || DEFAULT_MODULE_QUOTAS,
+  }));
+
+  useEffect(() => {
+    setAiDraft({
+      ...state.aiGovernance,
+      moduleQuotas: state.aiGovernance.moduleQuotas || DEFAULT_MODULE_QUOTAS,
+    });
+  }, [state.aiGovernance]);
+
+  const updateModuleQuota = (
+    tier: 'bootstrap' | 'accelerate' | 'pro_agency' | 'lifetime',
+    field: keyof PlanModuleQuota,
+    value: number
+  ) => {
+    setAiDraft((prev) => {
+      const base = prev.moduleQuotas || DEFAULT_MODULE_QUOTAS;
+      return {
+        ...prev,
+        moduleQuotas: {
+          ...base,
+          [tier]: {
+            ...base[tier],
+            [field]: Math.max(1, value || 1),
+          },
+        },
+      };
+    });
+  };
 
   // Module 5: Promo Form
   const [promoForm, setPromoForm] = useState({
@@ -421,7 +484,7 @@ export function SuperAdminPanel({
     const start = performance.now();
     let healthy = true;
     try {
-      const res = await fetch('/api/health', { cache: 'no-store' });
+      const res = await fetch(`/api/health?node=${encodeURIComponent(node.id)}`, { cache: 'no-store' });
       healthy = res.ok;
     } catch {
       healthy = false;
@@ -435,130 +498,210 @@ export function SuperAdminPanel({
         latencyMs: elapsedMs,
         lastTestedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
-      `Tested ${node.name} (${elapsedMs}ms · ${healthy ? 'OK' : 'Degraded'})`
+      `Tested ${node.name} (${elapsedMs}ms · ${healthy ? 'Operational' : 'Degraded'})`
     );
   };
 
   const showBlock = (section: Exclude<AdminSection, 'all'>) =>
     activeSection === 'all' || activeSection === section;
 
+  const inspectedTenant = useMemo(
+    () => allTenants.find((t) => t.id === inspectedTenantId) || null,
+    [allTenants, inspectedTenantId]
+  );
+
+  const mrrSparkValues = useMemo(() => {
+    if (executiveMetrics.revenueSeries.length >= 2) {
+      return executiveMetrics.revenueSeries.map((r) => r.mrr);
+    }
+    return [0, executiveMetrics.totalMrr];
+  }, [executiveMetrics]);
+
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-[#090D16] custom-scrollbar">
-      {/* Clean Single Admin Header Bar */}
-      <header className="sticky top-0 z-30 h-14 px-6 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {onBackToWorkspace && (
-            <button
-              onClick={onBackToWorkspace}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
-            >
-              <ArrowLeft size={13} /> Workspace Dashboard
-            </button>
-          )}
-          <div className="flex items-center gap-3">
+    <div className="flex-1 flex min-h-0 overflow-hidden bg-[#F8F9FB] dark:bg-[#090A0D]">
+      {/* 248px Fixed Super Admin Sidebar */}
+      <aside className="hidden lg:flex w-[248px] shrink-0 bg-[#F3F4F6] dark:bg-[#0E1015] border-r border-[#E5E7EB] dark:border-white/[0.08] flex-col justify-between">
+        <div className="flex flex-col min-h-0">
+          <div className="h-12 px-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between gap-2">
             <BrandLogo size="sm" surface="auto" />
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 border-l border-slate-200 dark:border-slate-800 pl-3">
-              <ShieldCheck size={14} /> Super Admin
+            <span className="font-mono text-[10px] font-medium px-1.5 py-0.5 rounded bg-cyan-500/10 text-[#06B6D4] border border-cyan-500/20">
+              ADMIN
             </span>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {onBackToLanding && (
-            <button
-              onClick={onBackToLanding}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5"
-            >
-              <Globe size={13} /> Home
-            </button>
-          )}
-          {onToggleDarkMode && (
-            <button
-              onClick={onToggleDarkMode}
-              aria-label="Toggle dark mode"
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-            >
-              {darkMode ? <Sun size={14} className="text-amber-400" /> : <Moon size={14} />}
-            </button>
-          )}
-          {onSignOut && (
-            <button
-              onClick={onSignOut}
-              className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5"
-            >
-              <LogOut size={13} /> Sign Out
-            </button>
-          )}
-        </div>
-      </header>
 
-      <div className="p-6 md:p-8">
-      <div className="max-w-[1400px] mx-auto space-y-6">
-        {/* Top Control Plane Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 flex items-center gap-1.5">
-              <ShieldCheck size={15} /> Founder & Super Admin Control Plane
-            </p>
-            <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Platform Operations, API Health & AI Governance
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex flex-wrap bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl text-xs font-semibold">
-              {(
-                [
-                  { id: 'all', label: 'All Modules' },
-                  { id: 'overview', label: 'SaaS Overview' },
-                  { id: 'users', label: 'Users & Workspaces' },
-                  { id: 'apis', label: 'API & Webhooks' },
-                  { id: 'ai', label: 'AI Governance' },
-                  { id: 'billing', label: 'Billing & Flags' },
-                ] as const
-              ).map((tab) => (
+          <nav className="p-2.5 space-y-0.5">
+            <p className="px-2.5 py-1 text-[11px] font-medium text-[#6B7280]">Control Plane</p>
+            {(
+              [
+                { id: 'all', label: 'All Modules', icon: ShieldCheck },
+                { id: 'overview', label: 'SaaS Overview', icon: Activity },
+                { id: 'users', label: 'Users & Workspaces', icon: Users },
+                { id: 'apis', label: 'API & Webhooks', icon: Server },
+                { id: 'ai', label: 'AI Governance', icon: Cpu },
+                { id: 'billing', label: 'Billing & Flags', icon: CreditCard },
+              ] as const
+            ).map((item) => {
+              const Icon = item.icon;
+              const active = activeSection === item.id;
+              return (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveSection(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors ${
-                    activeSection === tab.id
-                      ? 'bg-[#4F46E5] text-white'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveSection(item.id)}
+                  className={`relative w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[7px] text-[13px] transition-colors ${
+                    active
+                      ? 'bg-black/[0.06] dark:bg-white/[0.06] text-[#111827] dark:text-[#F3F4F6] font-medium'
+                      : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                   }`}
                 >
-                  {tab.label}
+                  {active && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-[#06B6D4]"
+                    />
+                  )}
+                  <Icon size={15} strokeWidth={1.5} className="shrink-0" />
+                  <span className="truncate">{item.label}</span>
                 </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowNewTenant(true)}
-              className="px-4 py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            >
-              <Plus size={14} /> Provision Account
-            </button>
-          </div>
+              );
+            })}
+          </nav>
         </div>
+
+        <div className="p-2.5 border-t border-[#E5E7EB] dark:border-white/[0.08] space-y-1">
+          {onBackToWorkspace && (
+            <button
+              type="button"
+              onClick={onBackToWorkspace}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[13px] text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors"
+            >
+              <ArrowLeft size={14} strokeWidth={1.5} /> Workspace Dashboard
+            </button>
+          )}
+          {onBackToLanding && (
+            <button
+              type="button"
+              onClick={onBackToLanding}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[13px] text-[#6B7280] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors"
+            >
+              <Globe size={14} strokeWidth={1.5} /> socialifyai.com
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* 48px Top Utility Bar */}
+        <header className="h-12 px-4 md:px-5 bg-[#FFFFFF] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0 z-30">
+          <div className="flex items-center gap-2 text-[13px] min-w-0">
+            <span className="lg:hidden">
+              <BrandLogo size="sm" surface="auto" markOnly />
+            </span>
+            <span className="text-[#6B7280] whitespace-nowrap">Super Admin</span>
+            <span className="text-[#D1D5DB] dark:text-white/[0.15]" aria-hidden="true">/</span>
+            <span className="font-medium text-[#111827] dark:text-[#F3F4F6] truncate">
+              {ADMIN_SECTION_LABELS[activeSection]}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowNewTenant(true)}
+              className="h-8 px-3 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[7px] text-[12px] font-medium flex items-center gap-1.5 whitespace-nowrap transition-colors"
+            >
+              <Plus size={14} strokeWidth={1.75} /> Provision Account
+            </button>
+            {onBackToWorkspace && (
+              <button
+                type="button"
+                onClick={onBackToWorkspace}
+                className="lg:hidden h-8 px-2.5 rounded-[7px] border border-[#E5E7EB] dark:border-white/[0.08] text-[12px] font-medium text-[#4B5563] dark:text-[#9CA3AF] flex items-center gap-1"
+              >
+                <ArrowLeft size={13} strokeWidth={1.5} /> Workspace
+              </button>
+            )}
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label="Toggle theme"
+                className="h-8 w-8 rounded-[7px] border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#13161D] text-[#4B5563] dark:text-[#9CA3AF] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] flex items-center justify-center transition-colors"
+              >
+                {darkMode ? <Sun size={14} strokeWidth={1.5} /> : <Moon size={14} strokeWidth={1.5} />}
+              </button>
+            )}
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="h-8 px-2.5 rounded-[7px] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-rose-500/30 text-[#4B5563] dark:text-[#9CA3AF] hover:text-rose-600 dark:hover:text-rose-400 text-[12px] font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <LogOut size={13} strokeWidth={1.5} /> <span className="hidden sm:inline">Sign out</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Mobile/Tablet Section Tabs */}
+        <div className="lg:hidden px-4 py-2 bg-[#FFFFFF] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] flex items-center gap-1 overflow-x-auto">
+          {(Object.keys(ADMIN_SECTION_LABELS) as AdminSection[]).map((tabId) => (
+            <button
+              key={tabId}
+              type="button"
+              onClick={() => setActiveSection(tabId)}
+              className={`px-2.5 py-1 rounded-[6px] text-[12px] font-medium whitespace-nowrap shrink-0 transition-colors ${
+                activeSection === tabId
+                  ? 'bg-black/[0.06] dark:bg-white/[0.08] text-[#111827] dark:text-[#F3F4F6]'
+                  : 'text-[#6B7280]'
+              }`}
+            >
+              {ADMIN_SECTION_LABELS[tabId]}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 lg:p-6 custom-scrollbar">
+        <div className="max-w-[1440px] mx-auto space-y-5">
+          {/* Compact Page Heading */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <h1 className="text-[22px] font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em]">
+                Platform Operations &amp; Governance
+              </h1>
+              <p className="mt-0.5 text-[12px] text-[#6B7280] dark:text-[#9CA3AF]">
+                Live tenant subscriptions, gateway latency telemetry, AI credit metering, and billing controls.
+              </p>
+            </div>
+            <div className="text-[11px] font-mono text-[#6B7280] tabular-nums">
+              {executiveMetrics.activeAccounts} active / {executiveMetrics.totalAccounts} total accounts · {executiveMetrics.churnRate}% suspended
+            </div>
+          </div>
 
         {/* MODULE 1: EXECUTIVE SAAS OVERVIEW */}
         {showBlock('overview') && (
           <section className="space-y-5">
-            {/* 5 Real-Data KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Disciplined 4-Card KPI Strip with Monochrome Sparklines */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               {[
                 {
                   label: 'Monthly Recurring Revenue',
                   value: `$${executiveMetrics.totalMrr.toLocaleString()}`,
-                  sub: `${executiveMetrics.activeAccounts} active account${executiveMetrics.activeAccounts === 1 ? '' : 's'}`,
+                  sub: `${executiveMetrics.activeAccounts} active · ${executiveMetrics.churnRate}% suspended`,
+                  spark: mrrSparkValues,
                 },
                 {
                   label: 'Active Workspaces',
                   value: executiveMetrics.activeWorkspaces.toLocaleString(),
                   sub: `${executiveMetrics.totalAccounts} registered org${executiveMetrics.totalAccounts === 1 ? '' : 's'}`,
+                  spark: [0, Math.max(0, executiveMetrics.activeWorkspaces - 1), executiveMetrics.activeWorkspaces],
                 },
                 {
                   label: 'Scheduled Posts',
                   value: executiveMetrics.scheduledPosts.toLocaleString(),
                   sub: `${executiveMetrics.publishedPosts} published total`,
+                  spark: [0, executiveMetrics.publishedPosts, executiveMetrics.scheduledPosts],
                 },
                 {
                   label: 'AI Credits Used',
@@ -567,76 +710,73 @@ export function SuperAdminPanel({
                     executiveMetrics.totalAiLimit > 0
                       ? Math.round((executiveMetrics.totalAiCredits / executiveMetrics.totalAiLimit) * 100)
                       : 0
-                  }% of allocated quota`,
-                },
-                {
-                  label: 'Suspended Rate',
-                  value: `${executiveMetrics.churnRate}%`,
-                  sub: `${executiveMetrics.suspendedCount} suspended of ${executiveMetrics.totalAccounts}`,
+                  }% of ${executiveMetrics.totalAiLimit.toLocaleString()} quota`,
+                  spark: [0, Math.round(executiveMetrics.totalAiCredits * 0.6), executiveMetrics.totalAiCredits],
                 },
               ].map((kpi) => (
                 <div
                   key={kpi.label}
-                  className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+                  className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-4 sm:p-5 flex flex-col justify-between"
                 >
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{kpi.label}</p>
-                  <div className="mt-2.5">
-                    <p className="font-display text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-                      {kpi.value}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[12px] font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+                      {kpi.label}
                     </p>
-                    <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
-                      {kpi.sub}
-                    </p>
+                    <MonochromeSparkline values={kpi.spark} width={56} height={20} />
                   </div>
+                  <p className="mt-2 text-[26px] leading-none font-semibold text-[#111827] dark:text-[#F3F4F6] tracking-[-0.02em] tabular-nums">
+                    {kpi.value}
+                  </p>
+                  <p className="mt-2 text-[12px] text-[#6B7280] tabular-nums truncate">
+                    {kpi.sub}
+                  </p>
                 </div>
               ))}
             </div>
 
             {/* Revenue & Subscription Growth + Plan Distribution Donut */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div className="lg:col-span-8 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div>
-                    <h2 className="font-display text-sm font-bold text-slate-900 dark:text-white">
-                      Revenue & Subscription Growth
+                    <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                      Revenue &amp; Subscription Growth
                     </h2>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-[12px] text-[#6B7280]">
                       Cumulative MRR computed from registered active customer accounts
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 tabular-nums">
+                  <span className="font-mono text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] tabular-nums">
                     Current: ${executiveMetrics.totalMrr.toLocaleString()}
                   </span>
                 </div>
                 {executiveMetrics.revenueSeries.length === 0 ? (
-                  <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
-                    <CreditCard size={24} className="text-slate-300 dark:text-slate-600 mb-2" />
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      No subscription revenue data yet
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-500 max-w-sm">
-                      Monthly revenue charts populate automatically as customers sign up or accounts are provisioned.
-                    </p>
-                  </div>
+                  <EmptyStatePanel
+                    icon={CreditCard}
+                    title="No subscription revenue data yet"
+                    description="Monthly revenue charts populate automatically as customers sign up or accounts are provisioned."
+                    actionLabel="Provision first account"
+                    onAction={() => setShowNewTenant(true)}
+                  />
                 ) : (
-                  <div className="h-64">
+                  <div className="h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={executiveMetrics.revenueSeries}>
                         <defs>
                           <linearGradient id="adminMrrGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.28} />
-                            <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.18} />
+                            <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.16)" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
                         <Tooltip />
                         <Area
                           type="monotone"
                           dataKey="mrr"
-                          stroke="#4F46E5"
-                          strokeWidth={2.5}
+                          stroke="#06B6D4"
+                          strokeWidth={2}
                           fill="url(#adminMrrGrad)"
                           name="Cumulative MRR ($)"
                         />
@@ -646,32 +786,28 @@ export function SuperAdminPanel({
                 )}
               </div>
 
-              <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col">
-                <h2 className="font-display text-sm font-bold text-slate-900 dark:text-white">
+              <div className="lg:col-span-4 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 flex flex-col">
+                <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
                   Plan Distribution
                 </h2>
-                <p className="text-xs text-slate-500 mb-2">Starter · Growth · Agency Scale · Lifetime</p>
+                <p className="text-[12px] text-[#6B7280] mb-2">Starter · Growth · Agency Scale · Lifetime</p>
                 {executiveMetrics.totalAccounts === 0 ? (
-                  <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-5">
-                    <Users size={22} className="text-slate-300 dark:text-slate-600 mb-2" />
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      No active plans yet
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      Plan breakdown appears once customer accounts exist.
-                    </p>
-                  </div>
+                  <EmptyStatePanel
+                    icon={Users}
+                    title="No active plans yet"
+                    description="Plan breakdown appears once customer accounts exist."
+                  />
                 ) : (
                   <>
-                    <div className="relative h-52 flex-1">
+                    <div className="relative h-48 flex-1">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={executiveMetrics.planDistribution.filter((d) => d.value > 0)}
                             dataKey="value"
                             nameKey="name"
-                            innerRadius={52}
-                            outerRadius={78}
+                            innerRadius={50}
+                            outerRadius={74}
                             paddingAngle={2}
                           >
                             {executiveMetrics.planDistribution
@@ -692,23 +828,25 @@ export function SuperAdminPanel({
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-[10px] font-semibold text-slate-400">Accounts</span>
-                        <span className="font-display text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">
+                        <span className="text-[10px] font-medium text-[#6B7280]">Accounts</span>
+                        <span className="text-[20px] font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums">
                           {executiveMetrics.totalAccounts.toLocaleString()}
                         </span>
                       </div>
                     </div>
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5 text-xs tabular-nums">
+                    <div className="pt-3 border-t border-[#E5E7EB] dark:border-white/[0.08] space-y-1.5 text-[12px] tabular-nums">
                       {executiveMetrics.planDistribution.map((tier, idx) => (
                         <div key={tier.name} className="flex items-center justify-between">
-                          <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                          <span className="flex items-center gap-2 text-[#4B5563] dark:text-[#9CA3AF]">
                             <span
-                              className="w-2.5 h-2.5 rounded-xs shrink-0"
+                              className="w-2 h-2 rounded-full shrink-0"
                               style={{ backgroundColor: PLAN_COLORS[idx % PLAN_COLORS.length] }}
                             />
                             {tier.name}
                           </span>
-                          <span className="font-bold text-slate-900 dark:text-white">{tier.value}</span>
+                          <span className="font-mono font-medium text-[#111827] dark:text-[#F3F4F6]">
+                            {tier.value}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -721,26 +859,26 @@ export function SuperAdminPanel({
 
         {/* MODULE 2: USER & WORKSPACE MANAGEMENT TABLE */}
         {showBlock('users') && (
-          <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <section className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Users size={16} className="text-[#4F46E5]" /> User & Workspace Management ({filteredTenants.length})
+                <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums">
+                  Users &amp; Workspaces ({filteredTenants.length})
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Impersonate dashboards, adjust subscription plans, reset AI quotas, or suspend past-due accounts.
+                <p className="text-[12px] text-[#6B7280]">
+                  Click any organization row to open the slide-over inspector, adjust plans, or reset AI quotas.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={13} strokeWidth={1.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B7280]" />
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search user, agency, or email..."
-                    className="pl-8 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-[#4F46E5]"
+                    placeholder="Search user, org, or email..."
+                    className="h-8 pl-8 pr-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] text-[12px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
 
@@ -750,9 +888,9 @@ export function SuperAdminPanel({
                   onChange={(e) =>
                     setStatusFilter(e.target.value as 'all' | 'active' | 'trial' | 'past_due' | 'suspended')
                   }
-                  className="px-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                  className="h-8 px-2.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] text-[12px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 >
-                  <option value="all">All Statuses</option>
+                  <option value="all">All statuses</option>
                   <option value="active">Active</option>
                   <option value="trial">Trial</option>
                   <option value="past_due">Past Due</option>
@@ -763,9 +901,9 @@ export function SuperAdminPanel({
                   aria-label="Filter by plan tier"
                   value={planFilter}
                   onChange={(e) => setPlanFilter(e.target.value as PlanTier | 'all')}
-                  className="px-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none"
+                  className="h-8 px-2.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] text-[12px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 >
-                  <option value="all">All Plans</option>
+                  <option value="all">All plans</option>
                   {ACTIVE_PLAN_TIERS.map((tier) => (
                     <option key={tier} value={tier}>
                       {PLAN_PRICING[tier].label}
@@ -776,44 +914,56 @@ export function SuperAdminPanel({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500">
-                    <th className="py-3 px-5 font-semibold">Name & Agency</th>
-                    <th className="py-3 px-4 font-semibold">Current Plan</th>
-                    <th className="py-3 px-4 font-semibold text-right">Profiles</th>
-                    <th className="py-3 px-4 font-semibold text-right">Workspaces</th>
-                    <th className="py-3 px-4 font-semibold text-right">AI Credits</th>
-                    <th className="py-3 px-4 font-semibold">Status</th>
-                    <th className="py-3 px-5 font-semibold text-right">Row Actions</th>
+                  <tr className="border-b border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015]">
+                    <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Organization</th>
+                    <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Plan</th>
+                    <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280] text-right">Profiles</th>
+                    <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280] text-right">Workspaces</th>
+                    <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280] text-right">AI Credits</th>
+                    <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Status</th>
+                    <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-wider text-[#6B7280] text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
+                <tbody className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] text-[12px] tabular-nums">
                   {filteredTenants.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 px-5 text-center text-slate-500">
-                        {allTenants.length === 0
-                          ? 'No customer accounts registered yet. New signups and provisioned accounts will appear here.'
-                          : 'No accounts match your current search or filter.'}
+                      <td colSpan={7}>
+                        <EmptyStatePanel
+                          icon={Users}
+                          title={allTenants.length === 0 ? 'No customer accounts registered yet' : 'No matching accounts'}
+                          description={
+                            allTenants.length === 0
+                              ? 'New signups and provisioned accounts will appear in this operational table.'
+                              : 'Adjust your search query or filters to view matching organizations.'
+                          }
+                          actionLabel={allTenants.length === 0 ? 'Provision account' : undefined}
+                          onAction={allTenants.length === 0 ? () => setShowNewTenant(true) : undefined}
+                        />
                       </td>
                     </tr>
                   ) : (
                     filteredTenants.map((tenant) => (
-                      <tr key={tenant.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="py-3 px-5">
-                          <p className="font-bold text-slate-900 dark:text-white">
-                            {tenant.ownerName} <span className="text-slate-400 font-normal">·</span> {tenant.orgName}
+                      <tr
+                        key={tenant.id}
+                        onClick={() => setInspectedTenantId(tenant.id)}
+                        className="group h-[48px] hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] cursor-pointer transition-colors"
+                      >
+                        <td className="py-2 px-4">
+                          <p className="font-medium text-[#111827] dark:text-[#F3F4F6]">
+                            {tenant.ownerName} <span className="text-[#6B7280] font-normal">·</span> {tenant.orgName}
                           </p>
-                          <p className="text-[11px] text-slate-500">
-                            {tenant.ownerEmail} · Joined {tenant.joinedAt}
+                          <p className="text-[11px] font-mono text-[#6B7280]">
+                            {tenant.ownerEmail} · {tenant.joinedAt}
                           </p>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
                           <select
-                            aria-label={`Upgrade or change plan for ${tenant.orgName}`}
+                            aria-label={`Change plan for ${tenant.orgName}`}
                             value={tenant.plan}
                             onChange={(e) => handlePlanChange(tenant, e.target.value as PlanTier)}
-                            className="px-2.5 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold outline-none focus:border-[#4F46E5]"
+                            className="h-7 px-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[6px] text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                           >
                             {ACTIVE_PLAN_TIERS.map((tier) => (
                               <option key={tier} value={tier}>
@@ -822,53 +972,56 @@ export function SuperAdminPanel({
                             ))}
                           </select>
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
-                          {tenant.profilesUsed} / {tenant.profilesLimit}
+                        <td className="py-2 px-3 text-right font-mono text-[#4B5563] dark:text-[#9CA3AF]">
+                          {tenant.profilesUsed}/{tenant.profilesLimit}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                        <td className="py-2 px-3 text-right font-mono text-[#4B5563] dark:text-[#9CA3AF]">
                           {tenant.workspacesCount}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                        <td className="py-2 px-3 text-right font-mono text-[#4B5563] dark:text-[#9CA3AF]">
                           {tenant.aiCreditsUsed.toLocaleString()} / {tenant.aiCreditsLimit.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`text-xs font-bold ${
+                        <td className="py-2 px-3">
+                          <StatusBadge
+                            tone={
                               tenant.status === 'active'
-                                ? 'text-emerald-600 dark:text-emerald-400'
+                                ? 'emerald'
                                 : tenant.status === 'trial'
-                                ? 'text-[#4F46E5] dark:text-indigo-400'
-                                : tenant.status === 'past_due'
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-rose-600 dark:text-rose-400'
-                            }`}
+                                  ? 'cyan'
+                                  : tenant.status === 'past_due'
+                                    ? 'orange'
+                                    : 'rose'
+                            }
                           >
                             {tenant.status === 'past_due'
                               ? 'Past Due'
                               : tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
-                          </span>
+                          </StatusBadge>
                         </td>
-                        <td className="py-3 px-5 text-right">
-                          <div className="inline-flex items-center gap-3 whitespace-nowrap">
+                        <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="inline-flex items-center gap-2.5 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                             <button
+                              type="button"
                               onClick={() => onInspectWorkspace(tenant.linkedWorkspaceId)}
-                              className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                              className="text-[11px] font-medium text-[#06B6D4] hover:underline inline-flex items-center gap-1"
                             >
-                              Impersonate <ExternalLink size={11} />
+                              Impersonate <ExternalLink size={11} strokeWidth={1.5} />
                             </button>
                             <button
+                              type="button"
                               onClick={() => onResetTenantCredits(tenant)}
-                              className="text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1"
+                              className="text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] inline-flex items-center gap-1"
                               title="Reset monthly AI credits to 0"
                             >
-                              <RotateCcw size={11} /> Reset AI
+                              <RotateCcw size={11} strokeWidth={1.5} /> Reset
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleStatusToggle(tenant)}
-                              className={`text-xs font-semibold ${
+                              className={`text-[11px] font-medium ${
                                 tenant.status === 'suspended'
-                                  ? 'text-emerald-600 hover:underline'
-                                  : 'text-rose-600 hover:underline'
+                                  ? 'text-emerald-600 dark:text-emerald-400 hover:underline'
+                                  : 'text-rose-600 dark:text-rose-400 hover:underline'
                               }`}
                             >
                               {tenant.status === 'suspended' ? 'Reactivate' : 'Suspend'}
@@ -886,64 +1039,60 @@ export function SuperAdminPanel({
 
         {/* MODULE 3: SOCIAL API & WEBHOOK HEALTH MONITOR */}
         {showBlock('apis') && (
-          <section className="space-y-4">
+          <section className="space-y-3.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Server size={16} className="text-[#4F46E5]" /> Social API & Webhook Health Monitor
+                <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                  API Gateways &amp; Integration Health
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Live gateway latency, rate-limit consumption, and outbound webhook queue depth across all 6 social networks.
+                <p className="text-[12px] text-[#6B7280]">
+                  Gateway latency, rate-limit consumption, and webhook queue depth across connected services.
                 </p>
               </div>
               <button
+                type="button"
                 onClick={onTestAllApis}
-                className="px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                className="h-8 px-3 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[7px] text-[12px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors"
               >
-                <RefreshCw size={13} /> Ping All Gateways
+                <RefreshCw size={13} strokeWidth={1.5} /> Ping all gateways
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
               {state.apiHealthNodes.map((node) => {
                 const isDegraded = node.status === 'degraded';
                 return (
                   <div
                     key={node.id}
-                    className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between gap-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+                    className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-4 flex flex-col justify-between gap-3.5"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center shrink-0">
-                          <SocialLogo platform={resolveApiBrand(node.name)} size={20} />
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-[8px] bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-center shrink-0">
+                          {renderApiNodeIcon(node)}
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white truncate">
+                          <h3 className="text-[13px] font-semibold text-[#111827] dark:text-[#F3F4F6] truncate">
                             {node.name}
                           </h3>
-                          <p className="text-[11px] text-slate-500 truncate">
+                          <p className="text-[11px] text-[#6B7280] truncate">
                             {node.provider} · Tested {node.lastTestedAt}
                           </p>
                         </div>
                       </div>
-                      <span
-                        className={`text-xs font-bold flex items-center gap-1 shrink-0 ${
-                          isDegraded
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
-                        }`}
-                      >
-                        {isDegraded ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} />}
+                      <StatusBadge tone={isDegraded ? 'orange' : 'emerald'}>
                         {isDegraded ? 'Degraded' : 'Operational'}
-                      </span>
+                      </StatusBadge>
                     </div>
 
-                    <div className="space-y-2.5 text-xs tabular-nums">
+                    <div className="space-y-2.5 text-[12px] tabular-nums">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Gateway Latency</span>
+                        <span className="text-[#6B7280]">Latency</span>
                         <span
-                          className={`font-mono font-bold ${
-                            node.latencyMs > 300 ? 'text-amber-600' : 'text-slate-900 dark:text-white'
+                          className={`font-mono font-medium ${
+                            node.latencyMs > 300
+                              ? 'text-[#F97316]'
+                              : 'text-[#111827] dark:text-[#F3F4F6]'
                           }`}
                         >
                           {node.latencyMs > 0 ? `${node.latencyMs} ms` : '—'}
@@ -951,18 +1100,16 @@ export function SuperAdminPanel({
                       </div>
 
                       <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-slate-500">Rate Limit Usage</span>
-                          <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[#6B7280]">Rate limit</span>
+                          <span className="font-mono text-[11px] text-[#4B5563] dark:text-[#9CA3AF]">
                             {node.rateLimitUsedPct}% · {node.rateLimitLabel}
                           </span>
                         </div>
-                        <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div className="h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${
-                              node.rateLimitUsedPct >= 80
-                                ? 'bg-amber-500'
-                                : 'bg-[#4F46E5]'
+                            className={`h-full rounded-full transition-[width] duration-200 ${
+                              node.rateLimitUsedPct >= 80 ? 'bg-[#F97316]' : 'bg-[#06B6D4]'
                             }`}
                             style={{ width: `${node.rateLimitUsedPct}%` }}
                           />
@@ -970,22 +1117,24 @@ export function SuperAdminPanel({
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Webhook Queue Depth</span>
-                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                        <span className="text-[#6B7280]">Webhook queue</span>
+                        <span className="font-mono text-[#111827] dark:text-[#F3F4F6]">
                           {node.webhookQueueDepth} pending
                         </span>
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                    <div className="pt-3 border-t border-[#E5E7EB] dark:border-white/[0.08] flex items-center gap-2">
                       <button
+                        type="button"
                         disabled={testingNodeId === node.id}
                         onClick={() => handleTestSingleApiNode(node)}
-                        className="flex-1 py-1.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 disabled:opacity-60"
+                        className="flex-1 h-7 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-[7px] text-[11px] font-medium text-[#111827] dark:text-[#F3F4F6] flex items-center justify-center gap-1 disabled:opacity-50 transition-colors"
                       >
-                        <Activity size={12} /> {testingNodeId === node.id ? 'Testing...' : 'Test Connection'}
+                        <Activity size={12} strokeWidth={1.5} /> {testingNodeId === node.id ? 'Testing...' : 'Test'}
                       </button>
                       <button
+                        type="button"
                         onClick={() =>
                           onUpdateApiNode(
                             {
@@ -997,7 +1146,7 @@ export function SuperAdminPanel({
                             `Flushed webhook queue for ${node.name}`
                           )
                         }
-                        className="flex-1 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-[11px] font-semibold"
+                        className="flex-1 h-7 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[7px] text-[11px] font-medium transition-colors"
                       >
                         Flush Queue
                       </button>
@@ -1011,21 +1160,21 @@ export function SuperAdminPanel({
 
         {/* MODULE 4: AI COPILOT & PROMPT GOVERNANCE */}
         {showBlock('ai') && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 onSaveAiGovernance(aiDraft);
               }}
-              className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4"
+              className="lg:col-span-7 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 space-y-4"
             >
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center justify-between border-b border-[#E5E7EB] dark:border-white/[0.08] pb-3">
                 <div>
-                  <h2 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Cpu size={16} className="text-[#4F46E5]" /> AI Copilot & Prompt Governance
+                  <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                    AI Copilot &amp; Prompt Governance
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Configure default LLM routing, monthly tier credit quotas, and global caption prompt policy.
+                  <p className="text-[12px] text-[#6B7280]">
+                    Configure LLM routing, monthly tier credit quotas, and per-module limits.
                   </p>
                 </div>
                 <button
@@ -1034,16 +1183,16 @@ export function SuperAdminPanel({
                     setAiDraft(DEFAULT_AI_GOVERNANCE);
                     onSaveAiGovernance(DEFAULT_AI_GOVERNANCE);
                   }}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  className="text-[12px] font-medium text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors"
                 >
-                  Restore Defaults
+                  Restore defaults
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Default Primary Model
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                    Primary Model
                   </label>
                   <select
                     value={aiDraft.defaultModel}
@@ -1053,7 +1202,7 @@ export function SuperAdminPanel({
                         defaultModel: e.target.value as AiGovernanceConfig['defaultModel'],
                       })
                     }
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold outline-none"
+                    className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   >
                     <option value="gemini-4-hydrogen">Gemini 4 Hydrogen (Fastest)</option>
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
@@ -1062,18 +1211,18 @@ export function SuperAdminPanel({
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
                     Fallback Model
                   </label>
                   <input
                     value={aiDraft.fallbackModel}
                     onChange={(e) => setAiDraft({ ...aiDraft, fallbackModel: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
+                    className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1 tabular-nums">
                     Temperature ({aiDraft.temperature})
                   </label>
                   <input
@@ -1083,15 +1232,15 @@ export function SuperAdminPanel({
                     step="0.05"
                     value={aiDraft.temperature}
                     onChange={(e) => setAiDraft({ ...aiDraft, temperature: Number(e.target.value) })}
-                    className="w-full accent-[#4F46E5] mt-2"
+                    className="w-full accent-[#06B6D4] mt-2"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Starter ($99) Monthly Limit
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                    Starter ($99) Limit
                   </label>
                   <input
                     type="number"
@@ -1103,12 +1252,12 @@ export function SuperAdminPanel({
                         tierLimits: { ...aiDraft.tierLimits, bootstrap: Number(e.target.value) || 5000 },
                       })
                     }
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
+                    className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] font-mono text-[#111827] dark:text-[#F3F4F6] tabular-nums outline-none focus:border-[#06B6D4]"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Growth ($199) Monthly Limit
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                    Growth ($199) Limit
                   </label>
                   <input
                     type="number"
@@ -1120,12 +1269,12 @@ export function SuperAdminPanel({
                         tierLimits: { ...aiDraft.tierLimits, accelerate: Number(e.target.value) || 15000 },
                       })
                     }
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
+                    className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] font-mono text-[#111827] dark:text-[#F3F4F6] tabular-nums outline-none focus:border-[#06B6D4]"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    Agency ($349) &amp; Lifetime Limit
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                    Agency ($349) &amp; Lifetime
                   </label>
                   <input
                     type="number"
@@ -1137,50 +1286,138 @@ export function SuperAdminPanel({
                         tierLimits: { ...aiDraft.tierLimits, pro_agency: Number(e.target.value) || 40000 },
                       })
                     }
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
+                    className="w-full px-2.5 py-1.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] font-mono text-[#111827] dark:text-[#F3F4F6] tabular-nums outline-none focus:border-[#06B6D4]"
                   />
                 </div>
               </div>
 
-              <div className="text-xs">
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Global Caption Generation System Prompt Template
+              {/* Per-Plan Enterprise Module & Integration Quotas */}
+              <div className="pt-3 border-t border-[#E5E7EB] dark:border-white/[0.08] space-y-2.5 text-[12px]">
+                <div>
+                  <p className="font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                    Per-Plan Module Quotas
+                  </p>
+                  <p className="text-[11px] text-[#6B7280]">
+                    Enforce workspace limits across YouTube Channels, AI SEO Articles/mo, RSS Auto-Feeds, and Viral Campaigns.
+                  </p>
+                </div>
+                <div className="overflow-x-auto border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px]">
+                  <table className="w-full text-left text-[11px]">
+                    <thead>
+                      <tr className="bg-[#F8F9FB] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08] text-[#6B7280]">
+                        <th className="py-2 px-3 font-medium uppercase tracking-wider">Plan Tier</th>
+                        <th className="py-2 px-2 font-medium uppercase tracking-wider">YT Channels</th>
+                        <th className="py-2 px-2 font-medium uppercase tracking-wider">SEO/mo</th>
+                        <th className="py-2 px-2 font-medium uppercase tracking-wider">RSS Feeds</th>
+                        <th className="py-2 px-2 font-medium uppercase tracking-wider">Campaigns</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08]">
+                      {(
+                        [
+                          { key: 'bootstrap', label: 'Starter ($99)' },
+                          { key: 'accelerate', label: 'Growth / Accelerate ($199)' },
+                          { key: 'pro_agency', label: 'Agency Scale / Pro ($349)' },
+                          { key: 'lifetime', label: 'Lifetime ($799)' },
+                        ] as const
+                      ).map((tier) => {
+                        const quotas = (aiDraft.moduleQuotas || DEFAULT_MODULE_QUOTAS)[tier.key];
+                        return (
+                          <tr key={tier.key} className="h-[40px]">
+                            <td className="py-1.5 px-3 font-medium text-[#111827] dark:text-[#F3F4F6] whitespace-nowrap">
+                              {tier.label}
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={quotas.youtubeChannels}
+                                onChange={(e) =>
+                                  updateModuleQuota(tier.key, 'youtubeChannels', Number(e.target.value))
+                                }
+                                className="w-20 px-2 py-1 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[6px] font-mono tabular-nums text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={quotas.seoArticlesPerMonth}
+                                onChange={(e) =>
+                                  updateModuleQuota(tier.key, 'seoArticlesPerMonth', Number(e.target.value))
+                                }
+                                className="w-20 px-2 py-1 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[6px] font-mono tabular-nums text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={quotas.rssAutoFeeds}
+                                onChange={(e) =>
+                                  updateModuleQuota(tier.key, 'rssAutoFeeds', Number(e.target.value))
+                                }
+                                className="w-20 px-2 py-1 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[6px] font-mono tabular-nums text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={quotas.activeViralCampaigns}
+                                onChange={(e) =>
+                                  updateModuleQuota(tier.key, 'activeViralCampaigns', Number(e.target.value))
+                                }
+                                className="w-20 px-2 py-1 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[6px] font-mono tabular-nums text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="text-[12px]">
+                <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">
+                  Global Caption System Prompt Template
                 </label>
                 <textarea
                   rows={3}
                   value={aiDraft.systemPromptTemplate}
                   onChange={(e) => setAiDraft({ ...aiDraft, systemPromptTemplate: e.target.value })}
-                  className="w-full p-3 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="w-full p-2.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 />
               </div>
 
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold"
+                  className="h-8 px-4 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] text-[12px] font-medium transition-colors"
                 >
-                  Save AI Policy & Quotas
+                  Save AI Policy &amp; Quotas
                 </button>
               </div>
             </form>
 
-            {/* Token Cost Monitor per User */}
-            <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col">
-              <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <h3 className="font-display text-sm font-bold text-slate-900 dark:text-white">
-                    Token Cost Monitor per Organization
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Blended inference cost: ${aiDraft.costPer1kCreditsUsd.toFixed(2)} per 1k credits
-                  </p>
-                </div>
+            {/* Token Cost Monitor per Organization */}
+            <div className="lg:col-span-5 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden flex flex-col">
+              <div className="px-4 py-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                  Token Cost Monitor
+                </h3>
+                <p className="text-[12px] text-[#6B7280] font-mono tabular-nums">
+                  ${aiDraft.costPer1kCreditsUsd.toFixed(2)} blended cost / 1k credits
+                </p>
               </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-80">
+              <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] overflow-y-auto max-h-96">
                 {allTenants.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-500">
-                    No customer organizations registered yet. AI credit consumption per organization will appear here.
-                  </div>
+                  <EmptyStatePanel
+                    icon={Cpu}
+                    title="No usage recorded yet"
+                    description="Organization-level AI credit consumption appears as customers run generations."
+                  />
                 ) : (
                   allTenants
                     .slice()
@@ -1189,25 +1426,23 @@ export function SuperAdminPanel({
                       const estCost = ((t.aiCreditsUsed / 1000) * aiDraft.costPer1kCreditsUsd).toFixed(2);
                       const pct = Math.min(100, Math.round((t.aiCreditsUsed / Math.max(1, t.aiCreditsLimit)) * 100));
                       return (
-                        <div key={t.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-bold text-slate-900 dark:text-white truncate">{t.orgName}</p>
-                              <span className="font-mono font-bold text-slate-900 dark:text-white tabular-nums">
-                                ${estCost}
-                              </span>
+                        <div key={t.id} className="px-4 py-3 text-[12px]">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium text-[#111827] dark:text-[#F3F4F6] truncate">{t.orgName}</p>
+                            <span className="font-mono font-medium text-[#111827] dark:text-[#F3F4F6] tabular-nums">
+                              ${estCost}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-2.5">
+                            <div className="flex-1 h-1.5 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${pct >= 85 ? 'bg-[#F97316]' : 'bg-[#06B6D4]'}`}
+                                style={{ width: `${pct}%` }}
+                              />
                             </div>
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${pct >= 85 ? 'bg-amber-500' : 'bg-[#4F46E5]'}`}
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                              <span className="font-mono text-[10px] text-slate-500 tabular-nums shrink-0">
-                                {t.aiCreditsUsed.toLocaleString()} ({pct}%)
-                              </span>
-                            </div>
+                            <span className="font-mono text-[11px] text-[#6B7280] tabular-nums shrink-0">
+                              {t.aiCreditsUsed.toLocaleString()} ({pct}%)
+                            </span>
                           </div>
                         </div>
                       );
@@ -1220,24 +1455,24 @@ export function SuperAdminPanel({
 
         {/* MODULE 5: BILLING, COUPONS & FEATURE FLAGS */}
         {showBlock('billing') && (
-          <section className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <section className="space-y-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               {/* Promo Codes */}
-              <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+              <div className="lg:col-span-6 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] p-5 space-y-4">
                 <div>
-                  <h2 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Tag size={16} className="text-amber-500" /> Promo Codes & Discounts
+                  <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                    Promo Codes &amp; Discounts
                   </h2>
-                  <p className="text-xs text-slate-500">Create Stripe-synced coupons and toggle active campaigns.</p>
+                  <p className="text-[12px] text-[#6B7280]">Create Stripe-synced coupons and toggle active campaigns.</p>
                 </div>
 
-                <form onSubmit={handleCreatePromo} className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                <form onSubmit={handleCreatePromo} className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[12px]">
                   <input
                     required
                     value={promoForm.code}
                     onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase() })}
                     placeholder="LAUNCH25"
-                    className="px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono font-bold uppercase outline-none focus:border-[#4F46E5]"
+                    className="h-8 px-2.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] font-mono uppercase text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                   <input
                     type="number"
@@ -1246,14 +1481,14 @@ export function SuperAdminPanel({
                     value={promoForm.discountPct}
                     onChange={(e) => setPromoForm({ ...promoForm, discountPct: e.target.value })}
                     placeholder="% Off"
-                    className="px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono outline-none"
+                    className="h-8 px-2.5 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] font-mono tabular-nums text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                   <select
                     value={promoForm.duration}
                     onChange={(e) =>
                       setPromoForm({ ...promoForm, duration: e.target.value as PromoCode['duration'] })
                     }
-                    className="px-2.5 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold outline-none"
+                    className="h-8 px-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[7px] text-[#111827] dark:text-[#F3F4F6] outline-none"
                   >
                     <option value="forever">Forever</option>
                     <option value="3_months">3 Months</option>
@@ -1261,47 +1496,49 @@ export function SuperAdminPanel({
                   </select>
                   <button
                     type="submit"
-                    className="py-2 px-3 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg font-semibold"
+                    className="h-8 px-3 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[7px] font-medium transition-colors"
                   >
-                    + Add Code
+                    Add Code
                   </button>
                 </form>
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] text-[12px]">
                   {state.promoCodes.length === 0 ? (
-                    <p className="py-6 text-center text-slate-500">
-                      No promo codes created yet. Use the form above to add a discount code.
+                    <p className="py-6 text-center text-[#6B7280]">
+                      No promo codes created yet.
                     </p>
                   ) : (
                     state.promoCodes.map((promo) => (
-                      <div key={promo.id} className="py-3 flex items-center justify-between gap-3">
+                      <div key={promo.id} className="h-[48px] flex items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-slate-900 dark:text-white">{promo.code}</span>
-                            <span className="text-slate-400">·</span>
-                            <span className="font-semibold text-[#4F46E5] dark:text-indigo-400">
+                            <span className="font-mono font-medium text-[#111827] dark:text-[#F3F4F6]">{promo.code}</span>
+                            <span className="text-[#6B7280]">·</span>
+                            <span className="font-mono text-[#06B6D4] tabular-nums">
                               {promo.discountPct}% off ({promo.duration.replace('_', ' ')})
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-500 tabular-nums">
-                            {promo.redemptions} / {promo.maxRedemptions} redeemed · Created {promo.createdAt}
+                          <p className="text-[11px] font-mono text-[#6B7280] tabular-nums">
+                            {promo.redemptions}/{promo.maxRedemptions} redeemed · {promo.createdAt}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => onTogglePromoCode(promo)}
-                            className={`text-xs font-semibold ${
-                              promo.active ? 'text-emerald-600' : 'text-slate-400'
-                            }`}
+                            className="cursor-pointer"
                           >
-                            {promo.active ? 'Active' : 'Paused'}
+                            <StatusBadge tone={promo.active ? 'emerald' : 'neutral'}>
+                              {promo.active ? 'Active' : 'Paused'}
+                            </StatusBadge>
                           </button>
                           <button
+                            type="button"
                             onClick={() => onDeletePromoCode(promo.id)}
-                            className="p-1 text-slate-400 hover:text-rose-600"
+                            className="p-1 text-[#6B7280] hover:text-rose-500"
                             title="Delete promo code"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={13} strokeWidth={1.5} />
                           </button>
                         </div>
                       </div>
@@ -1311,45 +1548,46 @@ export function SuperAdminPanel({
               </div>
 
               {/* Global Feature Flags */}
-              <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-                  <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
-                    Global Feature Flags & Platform Switches
+              <div className="lg:col-span-6 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                  <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                    Global Feature Flags
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Toggle integrations, AI image synthesis, or emergency Maintenance Mode in real time.
+                  <p className="text-[12px] text-[#6B7280]">
+                    Toggle integrations, AI image synthesis, or Maintenance Mode in real time.
                   </p>
                 </div>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08]">
                   {state.featureFlags.map((flag) => (
-                    <div key={flag.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
+                    <div key={flag.id} className="px-5 py-3 flex items-center justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p
-                            className={`text-xs font-bold ${
+                            className={`text-[12px] font-medium ${
                               flag.key === 'maintenance_mode' && flag.enabled
                                 ? 'text-rose-600 dark:text-rose-400'
-                                : 'text-slate-900 dark:text-white'
+                                : 'text-[#111827] dark:text-[#F3F4F6]'
                             }`}
                           >
                             {flag.label}
                           </p>
-                          <span className="font-mono text-[10px] text-slate-400">{flag.rollout}</span>
+                          <span className="font-mono text-[10px] text-[#6B7280]">{flag.rollout}</span>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{flag.description}</p>
+                        <p className="mt-0.5 text-[11px] text-[#6B7280]">{flag.description}</p>
                       </div>
                       <button
+                        type="button"
                         onClick={() => onToggleFlag(flag)}
                         aria-label={`Toggle ${flag.label}`}
                         className={`shrink-0 ${
                           flag.key === 'maintenance_mode' && flag.enabled
-                            ? 'text-rose-600'
+                            ? 'text-rose-500'
                             : flag.enabled
-                            ? 'text-[#4F46E5] dark:text-indigo-400'
-                            : 'text-slate-400'
+                              ? 'text-[#06B6D4]'
+                              : 'text-[#6B7280]'
                         }`}
                       >
-                        {flag.enabled ? <ToggleRight size={26} /> : <ToggleLeft size={26} />}
+                        {flag.enabled ? <ToggleRight size={24} strokeWidth={1.5} /> : <ToggleLeft size={24} strokeWidth={1.5} />}
                       </button>
                     </div>
                   ))}
@@ -1358,75 +1596,67 @@ export function SuperAdminPanel({
             </div>
 
             {/* Stripe Invoice Logs */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Receipt size={16} className="text-[#4F46E5]" /> Recent Stripe Invoice Logs
-                  </h2>
-                  <p className="text-xs text-slate-500">Real-time billing ledger, applied coupons, and failed payment retries.</p>
-                </div>
+            <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+                <h2 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                  Stripe Invoice Ledger
+                </h2>
+                <p className="text-[12px] text-[#6B7280]">Billing history, applied coupons, and payment retries.</p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500">
-                      <th className="py-3 px-5 font-semibold">Invoice ID</th>
-                      <th className="py-3 px-4 font-semibold">Customer</th>
-                      <th className="py-3 px-4 font-semibold">Subscription</th>
-                      <th className="py-3 px-4 font-semibold">Promo</th>
-                      <th className="py-3 px-4 font-semibold text-right">Amount</th>
-                      <th className="py-3 px-4 font-semibold">Status</th>
-                      <th className="py-3 px-5 font-semibold text-right">Action</th>
+                    <tr className="border-b border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015]">
+                      <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Invoice ID</th>
+                      <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Customer</th>
+                      <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Subscription</th>
+                      <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Promo</th>
+                      <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280] text-right">Amount</th>
+                      <th className="py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">Status</th>
+                      <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-wider text-[#6B7280] text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
+                  <tbody className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] text-[12px] tabular-nums">
                     {state.invoices.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 px-5 text-center text-slate-500">
+                        <td colSpan={7} className="py-8 px-4 text-center text-[#6B7280]">
                           No invoices recorded yet. Live billing events will appear here.
                         </td>
                       </tr>
                     ) : (
                       state.invoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                          <td className="py-3 px-5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                        <tr key={inv.id} className="h-[44px] hover:bg-[#F8F9FB] dark:hover:bg-[#191D26] transition-colors">
+                          <td className="py-2 px-4 font-mono text-[11px] text-[#4B5563] dark:text-[#9CA3AF]">
                             {inv.stripeId}
                           </td>
-                          <td className="py-3 px-4">
-                            <p className="font-bold text-slate-900 dark:text-white">{inv.customerOrg}</p>
-                            <p className="text-[11px] text-slate-500">{inv.customerEmail}</p>
+                          <td className="py-2 px-3">
+                            <p className="font-medium text-[#111827] dark:text-[#F3F4F6]">{inv.customerOrg}</p>
+                            <p className="text-[11px] font-mono text-[#6B7280]">{inv.customerEmail}</p>
                           </td>
-                          <td className="py-3 px-4 text-slate-700 dark:text-slate-300">{inv.planLabel}</td>
-                          <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
+                          <td className="py-2 px-3 text-[#4B5563] dark:text-[#9CA3AF]">{inv.planLabel}</td>
+                          <td className="py-2 px-3 font-mono text-[11px] text-[#6B7280]">
                             {inv.promoApplied || '—'}
                           </td>
-                          <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                          <td className="py-2 px-3 text-right font-mono font-medium text-[#111827] dark:text-[#F3F4F6]">
                             ${inv.amount.toFixed(2)}
                           </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`text-xs font-bold ${
-                                inv.status === 'paid'
-                                  ? 'text-emerald-600 dark:text-emerald-400'
-                                  : inv.status === 'past_due'
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-slate-500'
-                              }`}
-                            >
+                          <td className="py-2 px-3">
+                            <StatusBadge tone={inv.status === 'paid' ? 'emerald' : 'orange'}>
                               {inv.status === 'past_due' ? 'Past Due' : 'Paid'}
-                            </span>
+                            </StatusBadge>
                           </td>
-                          <td className="py-3 px-5 text-right">
+                          <td className="py-2 px-4 text-right">
                             {inv.status === 'past_due' ? (
                               <button
+                                type="button"
                                 onClick={() => onRetryInvoice(inv)}
-                                className="text-xs font-semibold text-[#4F46E5] dark:text-indigo-400 hover:underline"
+                                className="text-[11px] font-medium text-[#06B6D4] hover:underline"
                               >
                                 Retry Charge
                               </button>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => {
                                   const receipt = `Stripe Invoice Receipt\nID: ${inv.stripeId}\nOrganization: ${inv.customerOrg}\nPlan: ${inv.planLabel}\nAmount Paid: $${inv.amount.toFixed(2)}\nIssued: ${inv.issuedAt}`;
                                   const blob = new Blob([receipt], { type: 'text/plain;charset=utf-8;' });
@@ -1438,9 +1668,9 @@ export function SuperAdminPanel({
                                   URL.revokeObjectURL(url);
                                   onToast('Receipt Downloaded', `${inv.stripeId}.txt saved.`);
                                 }}
-                                className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1"
+                                className="text-[11px] font-medium text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] inline-flex items-center gap-1"
                               >
-                                <Download size={12} /> Receipt
+                                <Download size={12} strokeWidth={1.5} /> Receipt
                               </button>
                             )}
                           </td>
@@ -1454,24 +1684,26 @@ export function SuperAdminPanel({
           </section>
         )}
 
-        {/* Audit Log */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-          <h2 className="font-display text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-            <CreditCard size={14} className="text-[#4F46E5]" /> Super Admin Audit Ledger
-          </h2>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+        {/* Audit Ledger */}
+        <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[12px] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+            <h2 className="text-[13px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+              Super Admin Audit Ledger
+            </h2>
+          </div>
+          <div className="divide-y divide-[#E5E7EB] dark:divide-white/[0.08] text-[12px]">
             {state.auditLogs.length === 0 ? (
-              <p className="py-5 text-center text-slate-500">
+              <p className="py-6 text-center text-[#6B7280]">
                 No admin actions recorded yet. Actions taken in this control plane are logged automatically.
               </p>
             ) : (
               state.auditLogs.slice(0, 8).map((log) => (
-                <div key={log.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900 dark:text-white">{log.action}</span>
-                    <span className="text-slate-500">· {log.target}</span>
+                <div key={log.id} className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-[#111827] dark:text-[#F3F4F6]">{log.action}</span>
+                    <span className="text-[#6B7280] truncate">· {log.target}</span>
                   </div>
-                  <span className="font-mono text-[11px] text-slate-400 tabular-nums">
+                  <span className="font-mono text-[11px] text-[#6B7280] tabular-nums">
                     {log.actor} · {new Date(log.timestamp).toLocaleString()}
                   </span>
                 </div>
@@ -1479,61 +1711,202 @@ export function SuperAdminPanel({
             )}
           </div>
         </div>
+        </div>
+        </div>
       </div>
 
-      {/* Provision Tenant Modal */}
-      {showNewTenant && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/60" onClick={() => setShowNewTenant(false)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">
-                Provision Customer Organization
-              </h3>
-              <button onClick={() => setShowNewTenant(false)} className="text-slate-400 hover:text-slate-700">
-                <X size={18} />
+      {/* Slide-Over Tenant Inspector Drawer (480px) */}
+      <InspectorDrawer
+        open={Boolean(inspectedTenant)}
+        onClose={() => setInspectedTenantId(null)}
+        title={inspectedTenant?.orgName || 'Organization'}
+        subtitle={inspectedTenant ? `${inspectedTenant.ownerName} · ${inspectedTenant.ownerEmail}` : undefined}
+        footer={
+          inspectedTenant ? (
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => handleStatusToggle(inspectedTenant)}
+                className={`h-8 px-3 rounded-[7px] border text-[12px] font-medium transition-colors ${
+                  inspectedTenant.status === 'suspended'
+                    ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                    : 'border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
+                }`}
+              >
+                {inspectedTenant.status === 'suspended' ? 'Reactivate Account' : 'Suspend Account'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onInspectWorkspace(inspectedTenant.linkedWorkspaceId);
+                  setInspectedTenantId(null);
+                }}
+                className="h-8 px-3.5 rounded-[7px] bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] text-[12px] font-medium inline-flex items-center gap-1.5"
+              >
+                Impersonate Workspace <ExternalLink size={12} strokeWidth={1.5} />
               </button>
             </div>
-            <form onSubmit={handleCreateTenant} className="mt-4 space-y-3.5 text-xs">
+          ) : undefined
+        }
+      >
+        {inspectedTenant && (
+          <div className="space-y-5 text-[12px]">
+            <div className="flex items-center justify-between">
+              <StatusBadge
+                tone={
+                  inspectedTenant.status === 'active'
+                    ? 'emerald'
+                    : inspectedTenant.status === 'trial'
+                      ? 'cyan'
+                      : inspectedTenant.status === 'past_due'
+                        ? 'orange'
+                        : 'rose'
+                }
+              >
+                {inspectedTenant.status === 'past_due'
+                  ? 'Past Due'
+                  : inspectedTenant.status.charAt(0).toUpperCase() + inspectedTenant.status.slice(1)}
+              </StatusBadge>
+              <span className="font-mono text-[11px] text-[#6B7280] tabular-nums">
+                Joined {inspectedTenant.joinedAt}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-[8px] bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08]">
+                <p className="text-[11px] text-[#6B7280]">Monthly Revenue</p>
+                <p className="mt-1 text-[18px] font-semibold font-mono text-[#111827] dark:text-[#F3F4F6] tabular-nums">
+                  ${inspectedTenant.mrr.toLocaleString()}
+                </p>
+              </div>
+              <div className="p-3 rounded-[8px] bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08]">
+                <p className="text-[11px] text-[#6B7280]">Workspaces</p>
+                <p className="mt-1 text-[18px] font-semibold font-mono text-[#111827] dark:text-[#F3F4F6] tabular-nums">
+                  {inspectedTenant.workspacesCount}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block">
+                Subscription Plan Tier
+              </label>
+              <select
+                value={inspectedTenant.plan}
+                onChange={(e) => handlePlanChange(inspectedTenant, e.target.value as PlanTier)}
+                className="w-full h-9 px-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
+              >
+                {ACTIVE_PLAN_TIERS.map((tier) => (
+                  <option key={tier} value={tier}>
+                    {PLAN_PRICING[tier].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-3 pt-2 border-t border-[#E5E7EB] dark:border-white/[0.08]">
               <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">Organization Name</label>
+                <div className="flex items-center justify-between mb-1.5 tabular-nums">
+                  <span className="text-[#4B5563] dark:text-[#9CA3AF]">Connected Profiles</span>
+                  <span className="font-mono text-[#111827] dark:text-[#F3F4F6]">
+                    {inspectedTenant.profilesUsed} / {inspectedTenant.profilesLimit}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#06B6D4]"
+                    style={{
+                      width: `${Math.min(100, Math.round((inspectedTenant.profilesUsed / Math.max(1, inspectedTenant.profilesLimit)) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5 tabular-nums">
+                  <span className="text-[#4B5563] dark:text-[#9CA3AF]">AI Credit Quota</span>
+                  <span className="font-mono text-[#111827] dark:text-[#F3F4F6]">
+                    {inspectedTenant.aiCreditsUsed.toLocaleString()} / {inspectedTenant.aiCreditsLimit.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#06B6D4]"
+                    style={{
+                      width: `${Math.min(100, Math.round((inspectedTenant.aiCreditsUsed / Math.max(1, inspectedTenant.aiCreditsLimit)) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onResetTenantCredits(inspectedTenant)}
+                  className="mt-2.5 text-[11px] font-medium text-[#06B6D4] hover:underline inline-flex items-center gap-1"
+                >
+                  <RotateCcw size={11} strokeWidth={1.5} /> Reset monthly AI credit balance to 0
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </InspectorDrawer>
+
+      {/* Focused Creation Modal: Provision Tenant */}
+      {showNewTenant && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/45" onClick={() => setShowNewTenant(false)} />
+          <div className="relative w-full max-w-md bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-[12px] p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
+              <h3 className="text-[14px] font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                Provision organization
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowNewTenant(false)}
+                className="p-1 text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6]"
+              >
+                <X size={16} strokeWidth={1.5} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateTenant} className="mt-4 space-y-3.5 text-[12px]">
+              <div>
+                <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Organization Name</label>
                 <input
                   required
                   value={tenantForm.orgName}
                   onChange={(e) => setTenantForm({ ...tenantForm, orgName: e.target.value })}
                   placeholder="e.g. Horizon Growth Labs"
-                  className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">Owner Name</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Owner Name</label>
                   <input
                     required
                     value={tenantForm.ownerName}
                     onChange={(e) => setTenantForm({ ...tenantForm, ownerName: e.target.value })}
                     placeholder="Jordan Lee"
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">Owner Email</label>
+                  <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Owner Email</label>
                   <input
                     required
                     type="email"
                     value={tenantForm.ownerEmail}
                     onChange={(e) => setTenantForm({ ...tenantForm, ownerEmail: e.target.value })}
                     placeholder="jordan@horizon.io"
-                    className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                    className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[8px] font-mono text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
               </div>
               <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">Subscription Tier</label>
+                <label className="font-medium text-[#4B5563] dark:text-[#9CA3AF] block mb-1">Subscription Tier</label>
                 <select
                   value={tenantForm.plan}
                   onChange={(e) => setTenantForm({ ...tenantForm, plan: e.target.value as PlanTier })}
-                  className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.1] rounded-[8px] text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 >
                   {ACTIVE_PLAN_TIERS.map((tier) => (
                     <option key={tier} value={tier}>
@@ -1542,23 +1915,25 @@ export function SuperAdminPanel({
                   ))}
                 </select>
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowNewTenant(false)}
-                  className="flex-1 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold"
+                  className="px-3.5 py-2 border border-[#E5E7EB] dark:border-white/[0.1] rounded-[8px] font-medium text-[#4B5563] dark:text-[#9CA3AF]"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="flex-[2] py-2 bg-[#4F46E5] text-white rounded-lg font-semibold">
-                  Create Account
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-[8px] font-medium transition-colors"
+                >
+                  Create account
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

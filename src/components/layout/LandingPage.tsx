@@ -172,10 +172,10 @@ export function LandingPage({
   // Tab 2: Scheduler & Instagram 3x3 Grid
   const [schedulerSubView, setSchedulerSubView] = useState<'calendar' | 'ig_grid'>('calendar');
   const [slots, setSlots] = useState([
-    { id: 's1', day: 'Mon 09:00', category: 'Educational', color: '#4F46E5', title: '4-1-1 Content Mix Playbook' },
-    { id: 's2', day: 'Tue 14:00', category: 'Product', color: '#0EA5E9', title: 'Bluesky + Threads Auto-Sync' },
-    { id: 's3', day: 'Wed 11:30', category: 'RSS Curated', color: '#F59E0B', title: '2026 Social Engagement Study' },
-    { id: 's4', day: 'Thu 15:00', category: 'Customer ROI', color: '#10B981', title: 'Northstar 3.8x Meta ROAS' },
+    { id: 's1', day: 'Mon 09:00', category: 'Educational', color: '#06B6D4', title: '4-1-1 Content Mix Playbook' },
+    { id: 's2', day: 'Tue 14:00', category: 'Product', color: '#10B981', title: 'Bluesky + Threads Auto-Sync' },
+    { id: 's3', day: 'Wed 11:30', category: 'RSS Curated', color: '#F97316', title: '2026 Social Engagement Study' },
+    { id: 's4', day: 'Thu 15:00', category: 'Customer ROI', color: '#64748B', title: 'Northstar 3.8x Meta ROAS' },
   ]);
 
   // Tab 3: Simulated Inbox Reply
@@ -332,11 +332,11 @@ export function LandingPage({
   const activeTestimonial = TESTIMONIALS[testimonialIdx];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] text-slate-900 dark:text-slate-100 selection:bg-indigo-100 selection:text-indigo-900">
-      {/* 1. Sticky Glass Navbar with Dropdown Mega-Menus */}
+    <div className="min-h-screen bg-[#F8F9FB] dark:bg-[#090A0D] text-[#111827] dark:text-[#F3F4F6] selection:bg-cyan-500/20 selection:text-cyan-900 dark:selection:text-cyan-200">
+      {/* 1. Sticky Hairline Navbar with Dropdown Mega-Menus */}
       <header
         onMouseLeave={() => setOpenMenu(null)}
-        className="sticky top-0 z-50 bg-white/80 dark:bg-[#090D16]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800"
+        className="sticky top-0 z-50 bg-[#FFFFFF] dark:bg-[#090A0D] border-b border-[#E5E7EB] dark:border-white/[0.08]"
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
           <a
@@ -349,20 +349,20 @@ export function LandingPage({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             aria-label="Socialify AI Home"
-            className="flex items-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] rounded-lg"
+            className="flex items-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#06B6D4] rounded-md"
           >
             <BrandLogo size="lg" surface="auto" />
           </a>
 
           {/* Nav Links & Mega Menus */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300 relative">
+          <nav className="hidden lg:flex items-center gap-6 text-[13px] font-medium text-[#4B5563] dark:text-[#9CA3AF] relative">
             <div className="relative">
               <button
                 onMouseEnter={() => setOpenMenu('product')}
                 onClick={() => setOpenMenu(openMenu === 'product' ? null : 'product')}
-                className="flex items-center gap-1 py-2 hover:text-slate-900 dark:hover:text-white whitespace-nowrap"
+                className="flex items-center gap-1 py-2 hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors whitespace-nowrap"
               >
-                Product <ChevronDown size={14} />
+                Product <ChevronDown size={14} strokeWidth={1.5} />
               </button>
             </div>
 
@@ -370,45 +370,45 @@ export function LandingPage({
               <button
                 onMouseEnter={() => setOpenMenu('solutions')}
                 onClick={() => setOpenMenu(openMenu === 'solutions' ? null : 'solutions')}
-                className="flex items-center gap-1 py-2 hover:text-slate-900 dark:hover:text-white whitespace-nowrap"
+                className="flex items-center gap-1 py-2 hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors whitespace-nowrap"
               >
-                Solutions <ChevronDown size={14} />
+                Solutions <ChevronDown size={14} strokeWidth={1.5} />
               </button>
             </div>
 
-            <a href="#showcase" className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
+            <a href="#showcase" className="hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors whitespace-nowrap">
               Features
             </a>
 
-            <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
+            <a href="#pricing" className="hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors whitespace-nowrap">
               Pricing
             </a>
           </nav>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {onToggleDarkMode && (
               <button
                 onClick={onToggleDarkMode}
                 aria-label="Toggle dark mode"
-                className="p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+                className="p-2 border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#13161D] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] text-[#4B5563] dark:text-[#9CA3AF] rounded-md transition-colors"
               >
-                {darkMode ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} />}
+                {darkMode ? <Sun size={15} strokeWidth={1.5} className="text-[#F97316]" /> : <Moon size={15} strokeWidth={1.5} />}
               </button>
             )}
             {!isSignedIn && onSignInClick && (
               <button
                 onClick={onSignInClick}
-                className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+                className="px-3.5 py-2 border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#13161D] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] text-[#111827] dark:text-[#F3F4F6] text-xs font-medium rounded-md transition-colors whitespace-nowrap"
               >
                 Sign In
               </button>
             )}
             <button
               onClick={() => onLaunch(selectedPlan)}
-              className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-md shadow-indigo-600/20 whitespace-nowrap flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] text-xs font-semibold rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5"
             >
               {isSignedIn ? `Open Dashboard${userDisplayName ? ` (${userDisplayName.split(' ')[0]})` : ''}` : 'Launch Dashboard'}{' '}
-              <ArrowRight size={15} />
+              <ArrowRight size={14} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -417,13 +417,13 @@ export function LandingPage({
         <AnimatePresence>
           {openMenu && (
             <motion.div
-              initial={{ opacity: 0, y: -6 }}
+              initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.16 }}
-              className="absolute left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 shadow-2xl"
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.14 }}
+              className="absolute left-0 right-0 bg-[#FFFFFF] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08]"
             >
-              <div className="max-w-5xl mx-auto px-6 py-6">
+              <div className="max-w-5xl mx-auto px-6 py-5">
                 {openMenu === 'product' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                     {[
@@ -442,11 +442,11 @@ export function LandingPage({
                             setOpenMenu(null);
                             aiSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                           }}
-                          className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-[#4F46E5] bg-slate-50/70 dark:bg-slate-800/50 text-left transition-colors"
+                          className="p-3.5 rounded-lg border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] dark:hover:border-cyan-500/50 bg-[#F8F9FB] dark:bg-[#13161D] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] text-left transition-colors"
                         >
-                          <Icon size={17} className="text-[#4F46E5] dark:text-indigo-400 mb-2" />
-                          <p className="text-xs font-bold text-slate-900 dark:text-white">{item.title}</p>
-                          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{item.desc}</p>
+                          <Icon size={16} strokeWidth={1.5} className="text-[#4B5563] dark:text-[#9CA3AF] mb-2" />
+                          <p className="text-xs font-semibold text-[#111827] dark:text-[#F3F4F6]">{item.title}</p>
+                          <p className="mt-0.5 text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">{item.desc}</p>
                         </button>
                       );
                     })}
@@ -476,12 +476,12 @@ export function LandingPage({
                           setOpenMenu(null);
                           setPlanModalTier(sol.tier);
                         }}
-                        className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-[#4F46E5] bg-slate-50/70 dark:bg-slate-800/50 text-left transition-colors"
+                        className="p-4 rounded-lg border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] dark:hover:border-cyan-500/50 bg-[#F8F9FB] dark:bg-[#13161D] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] text-left transition-colors"
                       >
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">{sol.title}</p>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{sol.desc}</p>
-                        <span className="mt-2 inline-block text-[11px] font-semibold text-[#4F46E5] dark:text-indigo-400">
-                          Explore Plan →
+                        <p className="text-sm font-semibold text-[#111827] dark:text-[#F3F4F6]">{sol.title}</p>
+                        <p className="mt-1 text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">{sol.desc}</p>
+                        <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">
+                          Explore Plan <ArrowRight size={11} strokeWidth={1.5} />
                         </span>
                       </button>
                     ))}
@@ -494,97 +494,97 @@ export function LandingPage({
       </header>
 
       {/* 2. Hero Section + Interactive 3D-Tilted Live Preview Widget */}
-      <section className="relative overflow-hidden pt-14 pb-20 md:pt-20 md:pb-24 border-b border-slate-200/80 dark:border-slate-800">
+      <section className="relative overflow-hidden pt-14 pb-20 md:pt-20 md:pb-24 border-b border-[#E5E7EB] dark:border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Left Copy */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
+            transition={{ duration: 0.35 }}
             className="lg:col-span-6"
           >
-            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#4F46E5] dark:text-indigo-400 mb-4">
-              <Sparkles size={14} className="text-amber-500" />
+            <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400 mb-4">
+              <Sparkles size={13} strokeWidth={1.5} />
               <span>AI Social Management · Category Queues · SCRM</span>
             </div>
 
-            <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.07]">
+            <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.03em] text-[#111827] dark:text-[#F3F4F6] leading-[1.06]">
               Plan, Create & Automate a Month of Content in Under an Hour
             </h1>
 
-            <p className="mt-5 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
-              Surpass manual scheduling spreadsheets. Combine AI Copilot strategy, evergreen category queues across 10 social networks, a unified CRM inbox, and white-label client reporting in one luminous workspace.
+            <p className="mt-5 text-[15px] sm:text-base text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed max-w-xl">
+              Surpass manual scheduling spreadsheets. Combine AI Copilot strategy, evergreen category queues across 10 social networks, a unified CRM inbox, and white-label client reporting in one precision workspace.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
+            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
                 onClick={() => setPlanModalTier('accelerate')}
-                className="px-6 py-3.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2"
+                className="px-5 py-3 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-2"
               >
-                Start 14-Day Free Trial — No Card Required <ArrowRight size={16} />
+                Start 14-Day Free Trial — No Card Required <ArrowRight size={15} strokeWidth={1.5} />
               </button>
               <button
                 onClick={handleJumpToAiDemo}
-                className="px-5 py-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2"
+                className="px-5 py-3 bg-[#FFFFFF] dark:bg-[#13161D] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
-                <Sparkles size={15} className="text-amber-500" /> Try Live AI Post Generator
+                <Sparkles size={14} strokeWidth={1.5} className="text-cyan-600 dark:text-cyan-400" /> Try Live AI Post Generator
               </button>
             </div>
 
             {/* Trust Badges */}
-            <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-6 text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <div className="mt-8 pt-6 border-t border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center gap-6 text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF]">
               <span className="flex items-center gap-2">
-                <Award size={16} className="text-amber-500" /> G2 Leader 2026 (4.9/5)
+                <Award size={15} strokeWidth={1.5} className="text-[#F97316]" /> G2 Leader 2026 (4.9/5)
               </span>
               <span className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#4F46E5] dark:text-indigo-400" /> Official API Partner (Meta · LinkedIn · TikTok · Bluesky)
+                <ShieldCheck size={15} strokeWidth={1.5} className="text-cyan-600 dark:text-cyan-400" /> Official API Partner (Meta · LinkedIn · TikTok · Bluesky)
               </span>
             </div>
           </motion.div>
 
           {/* Right 3D-Tilted Live Preview Widget */}
           <div
-            className="lg:col-span-6 [perspective:1200px]"
+            className="lg:col-span-6 [perspective:1200px] p-3 rounded-xl border border-[#E5E7EB] dark:border-white/[0.08] bg-[#F3F4F6] dark:bg-[#0E1015] canvas-dot-grid"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = (e.clientX - rect.left) / rect.width - 0.5;
               const y = (e.clientY - rect.top) / rect.height - 0.5;
-              setTilt({ rx: -y * 8, ry: x * 10 });
+              setTilt({ rx: -y * 6, ry: x * 8 });
             }}
             onMouseLeave={() => setTilt({ rx: -2, ry: 4 })}
           >
             <motion.div
               animate={{ rotateX: tilt.rx, rotateY: tilt.ry }}
-              transition={{ type: 'spring', stiffness: 180, damping: 20 }}
-              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl shadow-indigo-950/10 dark:shadow-black/50 p-5 space-y-4"
+              transition={{ type: 'spring', stiffness: 180, damping: 22 }}
+              className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.12] rounded-lg p-5 space-y-4"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="ml-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-[#D1D5DB] dark:bg-white/20" />
+                  <span className="w-2 h-2 rounded-full bg-[#D1D5DB] dark:bg-white/20" />
+                  <span className="w-2 h-2 rounded-full bg-[#D1D5DB] dark:bg-white/20" />
+                  <span className="ml-1.5 text-xs font-semibold text-[#111827] dark:text-[#F3F4F6]">
                     Scheduler & AI Copilot Live Preview
                   </span>
                 </div>
-                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-                  30 Days Queued
+                <span className="text-[11px] font-mono font-medium text-cyan-600 dark:text-cyan-400 tabular-nums">
+                  30 DAYS QUEUED
                 </span>
               </div>
 
               {/* Mini AI Output Card */}
-              <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900">
-                <div className="flex items-center justify-between text-[11px] font-bold text-[#4F46E5] dark:text-indigo-400">
+              <div className="p-3.5 rounded-md bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08]">
+                <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
                   <span className="flex items-center gap-1.5">
-                    <Sparkles size={12} /> AI Copilot · Educational Queue
+                    <Sparkles size={12} strokeWidth={1.5} /> AI Copilot · Educational Queue
                   </span>
-                  <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1.5 text-[#6B7280]">
                     <SocialLogo platform="linkedin" size={14} />
                     <SocialLogo platform="x" size={14} />
                     <SocialLogo platform="bluesky" size={14} />
                   </span>
                 </div>
-                <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                <p className="mt-2 text-xs text-[#4B5563] dark:text-[#D1D5DB] leading-relaxed">
                   “Stop rewriting captions manually. Assign every pillar to an Evergreen Queue and ship 30 days of omnichannel posts in 42 minutes.”
                 </p>
               </div>
@@ -592,27 +592,27 @@ export function LandingPage({
               {/* Interactive Mini Weekly Grid */}
               <div className="grid grid-cols-3 gap-2.5 text-xs">
                 {[
-                  { day: 'Mon · 09:00', cat: 'Educational', color: '#4F46E5', label: 'SaaS GTM Checklist' },
-                  { day: 'Wed · 11:30', cat: 'RSS Curated', color: '#F59E0B', label: '2026 Video Benchmarks' },
+                  { day: 'Mon · 09:00', cat: 'Educational', color: '#06B6D4', label: 'SaaS GTM Checklist' },
+                  { day: 'Wed · 11:30', cat: 'RSS Curated', color: '#F97316', label: '2026 Video Benchmarks' },
                   { day: 'Fri · 15:00', cat: 'Product Demo', color: '#10B981', label: 'Unified Inbox Tour' },
                 ].map((slot) => (
                   <div
                     key={slot.day}
-                    className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700"
+                    className="p-3 rounded-md bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08]"
                   >
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                      <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: slot.color }} />
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">
+                      <span className="w-1.5 h-1.5 rounded-xs shrink-0" style={{ backgroundColor: slot.color }} />
                       <span>{slot.day}</span>
                     </div>
-                    <p className="mt-1 font-semibold text-slate-900 dark:text-white leading-snug">{slot.label}</p>
-                    <p className="mt-1 text-[10px] text-slate-400">{slot.cat}</p>
+                    <p className="mt-1.5 font-semibold text-[#111827] dark:text-[#F3F4F6] leading-snug">{slot.label}</p>
+                    <p className="mt-1 text-[10px] text-[#6B7280]">{slot.cat}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500">
-                  {heroSlotDone ? 'Evergreen auto-queue activated for November!' : 'Click to auto-fill remaining 18 slots'}
+              <div className="flex items-center justify-between pt-3 border-t border-[#E5E7EB] dark:border-white/[0.08]">
+                <span className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                  {heroSlotDone ? 'Evergreen auto-queue activated for November.' : 'Click to auto-fill remaining 18 slots'}
                 </span>
                 <button
                   onClick={() => {
@@ -623,9 +623,15 @@ export function LandingPage({
                       next ? '18 November slots populated across Educational & Product queues.' : undefined
                     );
                   }}
-                  className="px-3 py-1.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-[11px] font-semibold transition-colors"
+                  className="px-3 py-1.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
                 >
-                  {heroSlotDone ? 'Filled 100% ✓' : 'Auto-Fill Month'}
+                  {heroSlotDone ? (
+                    <>
+                      <Check size={12} strokeWidth={2} /> Filled 100%
+                    </>
+                  ) : (
+                    'Auto-Fill Month'
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -634,47 +640,47 @@ export function LandingPage({
       </section>
 
       {/* 3. Supported 10-Network Animated Icon Dock */}
-      <section className="py-10 bg-white dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+      <section className="py-10 bg-[#FFFFFF] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
+          <p className="text-center text-[11px] font-mono uppercase tracking-[0.14em] text-[#6B7280] dark:text-[#9CA3AF] mb-6">
             10 NATIVE INTEGRATIONS · PUBLISH, RECYCLE & TRIAGE IN ONE PLACE
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2.5">
             {NETWORKS_DOCK.map((net, i) => (
               <motion.div
                 key={net.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.03 }}
-                whileHover={{ y: -4 }}
-                className="bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#4F46E5] rounded-xl p-3 text-center shadow-xs hover:shadow-md transition-all"
+                transition={{ delay: i * 0.025 }}
+                whileHover={{ y: -2 }}
+                className="bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] dark:hover:border-cyan-500/50 rounded-lg p-3 text-center transition-colors"
               >
-                <div className="w-10 h-10 mx-auto rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center mb-2 shadow-2xs">
-                  <SocialLogo platform={net.id} size={24} />
+                <div className="w-9 h-9 mx-auto rounded-md bg-[#FFFFFF] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex items-center justify-center mb-2">
+                  <SocialLogo platform={net.id} size={20} />
                 </div>
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{net.name}</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{net.type}</p>
+                <p className="text-xs font-semibold text-[#111827] dark:text-[#F3F4F6] truncate">{net.name}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] truncate mt-0.5">{net.type}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 4. Interactive Feature Showcase (4-Tab Luminous Bento Grid) */}
-      <section ref={aiSectionRef} id="showcase" className="py-20 border-b border-slate-200 dark:border-slate-800">
+      {/* 4. Interactive Feature Showcase (4-Tab Precision Bento) */}
+      <section ref={aiSectionRef} id="showcase" className="py-20 border-b border-[#E5E7EB] dark:border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#4F46E5] dark:text-indigo-400">
+            <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400">
               INTERACTIVE PRODUCT TOUR
             </p>
-            <h2 className="mt-2 font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
+            <h2 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
               Test every flagship workflow live right here.
             </h2>
           </div>
 
           {/* 4 Interactive Tabs */}
-          <div className="mt-8 flex flex-wrap gap-2 bg-white dark:bg-slate-900 p-1.5 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm w-fit">
+          <div className="mt-8 flex flex-wrap gap-1.5 bg-[#FFFFFF] dark:bg-[#0E1015] p-1 border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg w-fit">
             {(
               [
                 { id: 'ai', label: '1. AI Copilot & Strategy Builder', icon: Sparkles },
@@ -689,39 +695,39 @@ export function LandingPage({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+                  className={`px-3.5 py-2 rounded-md text-xs font-medium flex items-center gap-2 transition-colors ${
                     active
-                      ? 'bg-[#4F46E5] text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-[#111827] text-white dark:bg-[#FFFFFF] dark:text-[#090A0D]'
+                      : 'text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26]'
                   }`}
                 >
-                  <Icon size={14} /> {tab.label}
+                  <Icon size={14} strokeWidth={1.5} /> {tab.label}
                 </button>
               );
             })}
           </div>
 
           {/* Tab Panels */}
-          <div className="mt-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl shadow-slate-200/50 dark:shadow-black/40">
+          <div className="mt-6 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg p-6 md:p-8">
             {activeTab === 'ai' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-5 space-y-4">
-                  <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-lg font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
                     Live AI Post & Hashtag Generator
                   </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
                     Type any campaign topic, pick your brand tone, and watch AI Copilot generate platform-ready posts + hashtags instantly.
                   </p>
                   <form onSubmit={handleRunLiveAi} className="space-y-3">
                     <div>
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1.5">
                         Topic or Blog URL
                       </label>
                       <textarea
                         rows={3}
                         value={aiTopic}
                         onChange={(e) => setAiTopic(e.target.value)}
-                        className="w-full p-3 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-[#4F46E5]"
+                        className="w-full p-3 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-xs text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                       />
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -730,7 +736,7 @@ export function LandingPage({
                           key={preset}
                           type="button"
                           onClick={() => setAiTopic(preset)}
-                          className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+                          className="px-2.5 py-1 bg-[#F3F4F6] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] rounded-md text-[11px] font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors"
                         >
                           {preset}
                         </button>
@@ -740,7 +746,7 @@ export function LandingPage({
                       <select
                         value={aiTone}
                         onChange={(e) => setAiTone(e.target.value)}
-                        className="px-3 py-2.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none"
+                        className="px-3 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-xs font-medium text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                       >
                         <option value="Professional">Professional</option>
                         <option value="Witty">Witty</option>
@@ -750,9 +756,9 @@ export function LandingPage({
                       <button
                         type="submit"
                         disabled={aiGenerating}
-                        className="flex-1 py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
                       >
-                        <Sparkles size={14} /> {aiGenerating ? 'Generating...' : 'Generate Live Post'}
+                        <Sparkles size={13} strokeWidth={1.5} /> {aiGenerating ? 'Generating...' : 'Generate Live Post'}
                       </button>
                     </div>
                   </form>
@@ -765,11 +771,11 @@ export function LandingPage({
                   ].map((card) => (
                     <div
                       key={card.key}
-                      className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 flex flex-col justify-between"
+                      className="p-4 rounded-lg bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex flex-col justify-between"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
+                          <span className="text-[11px] font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
                             {card.label}
                           </span>
                           <button
@@ -779,29 +785,29 @@ export function LandingPage({
                               onToast?.('Copied to Clipboard', `${card.label} ready to paste.`);
                               setTimeout(() => setCopiedPlatform(null), 1500);
                             }}
-                            className="text-[11px] font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
+                            className="text-[11px] font-medium text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] flex items-center gap-1 transition-colors"
                           >
-                            <Copy size={11} /> {copiedPlatform === card.key ? 'Copied' : 'Copy'}
+                            <Copy size={11} strokeWidth={1.5} /> {copiedPlatform === card.key ? 'Copied' : 'Copy'}
                           </button>
                         </div>
-                        <p className="text-xs text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+                        <p className="text-xs text-[#4B5563] dark:text-[#D1D5DB] whitespace-pre-line leading-relaxed">
                           {card.text}
                         </p>
                       </div>
-                      <p className="mt-3 pt-2 border-t border-slate-200/80 dark:border-slate-700 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      <p className="mt-3 pt-2.5 border-t border-[#E5E7EB] dark:border-white/[0.08] text-[11px] font-mono text-cyan-600 dark:text-cyan-400">
                         {aiResult.hashtags.join(' ')}
                       </p>
                     </div>
                   ))}
-                  <div className="md:col-span-2 p-4 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-slate-600 dark:text-slate-300">
-                      <strong className="text-slate-900 dark:text-white">Instagram Caption:</strong> {aiResult.instagram}
+                  <div className="md:col-span-2 p-4 rounded-lg bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF]">
+                      <strong className="text-[#111827] dark:text-[#F3F4F6] font-semibold">Instagram Caption:</strong> {aiResult.instagram}
                     </p>
                     <button
                       onClick={() => onLaunch(selectedPlan)}
-                      className="px-3.5 py-2 bg-slate-900 dark:bg-[#4F46E5] text-white rounded-lg text-xs font-semibold shrink-0"
+                      className="px-3.5 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-xs font-semibold shrink-0 inline-flex items-center gap-1.5 transition-colors"
                     >
-                      Schedule in Workspace →
+                      Schedule in Workspace <ArrowRight size={12} strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
@@ -812,23 +818,23 @@ export function LandingPage({
               <div className="space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-lg font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
                       Category Visual Scheduler & Instagram 3×3 Grid
                     </h3>
-                    <p className="text-xs text-slate-500">Click any scheduled card to shift slots or preview Instagram visual harmony.</p>
+                    <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Click any scheduled card to shift slots or preview Instagram visual harmony.</p>
                   </div>
-                  <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold">
+                  <div className="inline-flex bg-[#F3F4F6] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] p-1 rounded-md text-xs font-medium">
                     <button
                       onClick={() => setSchedulerSubView('calendar')}
-                      className={`px-3 py-1.5 rounded-md ${schedulerSubView === 'calendar' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500'}`}
+                      className={`px-3 py-1.5 rounded-sm transition-colors ${schedulerSubView === 'calendar' ? 'bg-[#FFFFFF] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}
                     >
                       Category Calendar
                     </button>
                     <button
                       onClick={() => setSchedulerSubView('ig_grid')}
-                      className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 ${schedulerSubView === 'ig_grid' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500'}`}
+                      className={`px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-colors ${schedulerSubView === 'ig_grid' ? 'bg-[#FFFFFF] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}
                     >
-                      <Grid3X3 size={13} /> Instagram 3×3 Grid
+                      <Grid3X3 size={13} strokeWidth={1.5} /> Instagram 3×3 Grid
                     </button>
                   </div>
                 </div>
@@ -838,53 +844,53 @@ export function LandingPage({
                     {slots.map((slot) => (
                       <div
                         key={slot.id}
-                        className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-col justify-between"
+                        className="p-4 rounded-lg bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] flex flex-col justify-between"
                       >
                         <div>
-                          <div className="flex items-center justify-between text-[11px] font-bold">
-                            <span className="flex items-center gap-1.5" style={{ color: slot.color }}>
-                              <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: slot.color }} />
+                          <div className="flex items-center justify-between text-[11px] font-mono">
+                            <span className="flex items-center gap-1.5 font-medium" style={{ color: slot.color }}>
+                              <span className="w-1.5 h-1.5 rounded-xs" style={{ backgroundColor: slot.color }} />
                               {slot.category}
                             </span>
-                            <span className="text-slate-500 tabular-nums">{slot.day}</span>
+                            <span className="text-[#6B7280] dark:text-[#9CA3AF] tabular-nums">{slot.day}</span>
                           </div>
-                          <p className="mt-2 text-sm font-bold text-slate-900 dark:text-white">{slot.title}</p>
+                          <p className="mt-2.5 text-sm font-semibold text-[#111827] dark:text-[#F3F4F6]">{slot.title}</p>
                         </div>
                         <button
                           onClick={() => handleSwapSchedulerSlot(slot.id)}
-                          className="mt-4 w-full py-1.5 border border-slate-200 dark:border-slate-700 hover:border-[#4F46E5] rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1"
+                          className="mt-4 w-full py-1.5 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] dark:hover:border-cyan-500/50 rounded-md text-[11px] font-medium text-[#4B5563] dark:text-[#D1D5DB] flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <Repeat size={11} /> Move to Next Slot
+                          <Repeat size={11} strokeWidth={1.5} /> Move to Next Slot
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                    <div className="lg:col-span-5 grid grid-cols-3 gap-1.5 max-w-sm mx-auto w-full bg-slate-100 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="lg:col-span-5 grid grid-cols-3 gap-1.5 max-w-sm mx-auto w-full bg-[#F3F4F6] dark:bg-[#0E1015] p-2 rounded-lg border border-[#E5E7EB] dark:border-white/[0.08]">
                       {[mediaWorkspace, mediaTeamCollab, avatarElena, mediaTeamCollab, mediaWorkspace, avatarSarah, avatarMarcus, mediaWorkspace, avatarJames].map(
                         (img, idx) => (
-                          <div key={idx} className="aspect-square rounded-md overflow-hidden border border-slate-200/80 dark:border-slate-700 relative">
+                          <div key={idx} className="aspect-square rounded-sm overflow-hidden border border-[#E5E7EB] dark:border-white/[0.08] relative">
                             <img src={img} alt={`Grid tile ${idx + 1}`} className="w-full h-full object-cover" />
                           </div>
                         )
                       )}
                     </div>
                     <div className="lg:col-span-7 space-y-3">
-                      <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400">
                         VISUAL FEED PLANNER
                       </p>
-                      <h4 className="font-display text-lg font-bold text-slate-900 dark:text-white">
+                      <h4 className="text-lg font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
                         Preview your 3×3 Instagram profile grid before posts go live.
                       </h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
                         Balance product shots, founder portraits, and editorial team visuals so your grid stays cohesive across every scheduled Reels cover and carousel.
                       </p>
                       <button
                         onClick={() => onLaunch(selectedPlan)}
-                        className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg text-xs font-semibold"
+                        className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
                       >
-                        Open Full Calendar Studio →
+                        Open Full Calendar Studio <ArrowRight size={12} strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
@@ -899,32 +905,32 @@ export function LandingPage({
                     <button
                       key={t.name}
                       onClick={() => setSimInboxIdx(idx)}
-                      className={`w-full p-3.5 rounded-xl border text-left flex items-center gap-3 transition-colors ${
+                      className={`w-full p-3.5 rounded-lg border text-left flex items-center gap-3 transition-colors ${
                         simInboxIdx === idx
-                          ? 'border-[#4F46E5] bg-indigo-50/60 dark:bg-indigo-950/40'
-                          : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-800/50'
+                          ? 'border-[#06B6D4] bg-cyan-500/[0.05] dark:bg-cyan-500/[0.08]'
+                          : 'border-[#E5E7EB] dark:border-white/[0.08] bg-[#F8F9FB] dark:bg-[#0E1015] hover:border-[#D1D5DB] dark:hover:border-white/[0.15]'
                       }`}
                     >
-                      <img src={t.avatar} alt={t.name} className="w-10 h-10 rounded-lg object-cover border border-slate-200" />
+                      <img src={t.avatar} alt={t.name} className="w-9 h-9 rounded-md object-cover border border-[#E5E7EB] dark:border-white/[0.08]" />
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">
-                          {t.name} · <span className="text-[#4F46E5] dark:text-indigo-400">{t.channel}</span>
+                        <p className="text-xs font-semibold text-[#111827] dark:text-[#F3F4F6]">
+                          {t.name} · <span className="text-cyan-600 dark:text-cyan-400 font-medium">{t.channel}</span>
                         </p>
-                        <p className="text-[11px] text-slate-500 truncate">{t.messages[t.messages.length - 1]}</p>
+                        <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate">{t.messages[t.messages.length - 1]}</p>
                       </div>
                     </button>
                   ))}
                 </div>
 
-                <div className="lg:col-span-7 bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between min-h-[260px]">
+                <div className="lg:col-span-7 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg p-5 flex flex-col justify-between min-h-[260px]">
                   <div className="space-y-2.5 max-h-48 overflow-y-auto">
                     {simThreads[simInboxIdx].messages.map((m, idx) => (
                       <div
                         key={idx}
-                        className={`p-3 rounded-lg text-xs max-w-md ${
+                        className={`p-3 rounded-md text-xs max-w-md ${
                           m.startsWith('You:')
-                            ? 'ml-auto bg-[#4F46E5] text-white'
-                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+                            ? 'ml-auto bg-[#111827] text-white dark:bg-[#FFFFFF] dark:text-[#090A0D]'
+                            : 'bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] text-[#111827] dark:text-[#F3F4F6]'
                         }`}
                       >
                         {m}
@@ -932,7 +938,7 @@ export function LandingPage({
                     ))}
                   </div>
 
-                  <form onSubmit={handleSendSimReply} className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-2">
+                  <form onSubmit={handleSendSimReply} className="mt-4 pt-3 border-t border-[#E5E7EB] dark:border-white/[0.08] flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() =>
@@ -940,21 +946,21 @@ export function LandingPage({
                           `Hi ${simThreads[simInboxIdx].name.split(' ')[0]}! Yes—our Pro Agency tier supports custom branding and multi-client workflows. Want a quick link?`
                         )
                       }
-                      className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950 text-[#4F46E5] dark:text-indigo-300 rounded-lg text-xs font-semibold flex items-center gap-1"
+                      className="px-3 py-2 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] hover:border-[#06B6D4] text-cyan-600 dark:text-cyan-400 rounded-md text-xs font-medium flex items-center gap-1 transition-colors"
                     >
-                      <Sparkles size={12} /> AI Draft
+                      <Sparkles size={12} strokeWidth={1.5} /> AI Draft
                     </button>
                     <input
                       value={simReplyInput}
                       onChange={(e) => setSimReplyInput(e.target.value)}
                       placeholder="Write a reply..."
-                      className="flex-1 min-w-[180px] px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
+                      className="flex-1 min-w-[180px] px-3 py-2 bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-xs text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                      className="px-4 py-2 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors"
                     >
-                      <Send size={12} /> Send
+                      <Send size={12} strokeWidth={1.5} /> Send
                     </button>
                   </form>
                 </div>
@@ -964,14 +970,14 @@ export function LandingPage({
             {activeTab === 'reports' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                 <div className="lg:col-span-5 space-y-4">
-                  <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-lg font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
                     White-Label Agency Analytics & PDF Reports
                   </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
                     Customize your agency header, highlight follower growth & pipeline conversions, and export client-ready PDF briefs in one click.
                   </p>
                   <div>
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1.5">
                       White-Label Agency Name
                     </label>
                     <input
@@ -980,7 +986,7 @@ export function LandingPage({
                         setAgencyBrand(e.target.value);
                         setReportExported(false);
                       }}
-                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-[#4F46E5]"
+                      className="w-full px-3.5 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-xs text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                     />
                   </div>
                   <button
@@ -988,35 +994,43 @@ export function LandingPage({
                       setReportExported(true);
                       onToast?.('White-Label Report Prepared', `${agencyBrand || 'Agency'} November executive brief ready.`);
                     }}
-                    className="px-4 py-2.5 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                    className="px-4 py-2.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors"
                   >
-                    <FileDown size={14} /> {reportExported ? 'White-Label Report Prepared ✓' : 'Generate Sample PDF Summary'}
+                    {reportExported ? (
+                      <>
+                        <Check size={14} strokeWidth={1.75} /> White-Label Report Prepared
+                      </>
+                    ) : (
+                      <>
+                        <FileDown size={14} strokeWidth={1.5} /> Generate Sample PDF Summary
+                      </>
+                    )}
                   </button>
                 </div>
 
-                <div className="lg:col-span-7 bg-[#F8FAFC] dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
+                <div className="lg:col-span-7 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#4F46E5] dark:text-indigo-400">
+                      <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400">
                         MONTHLY CLIENT BRIEF · POWERED BY {agencyBrand.toUpperCase() || 'YOUR AGENCY'}
                       </p>
-                      <h4 className="font-display text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                      <h4 className="text-base font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6] mt-1">
                         Executive Social ROI Summary — November 2026
                       </h4>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3 tabular-nums">
-                    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <p className="text-[11px] text-slate-500">Total Reach</p>
-                      <p className="font-display text-xl font-extrabold text-slate-900 dark:text-white">117.4k</p>
+                    <div className="p-3.5 bg-[#FFFFFF] dark:bg-[#13161D] rounded-md border border-[#E5E7EB] dark:border-white/[0.08]">
+                      <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">Total Reach</p>
+                      <p className="font-mono text-xl font-semibold text-[#111827] dark:text-[#F3F4F6] mt-1">117.4k</p>
                     </div>
-                    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <p className="text-[11px] text-slate-500">Follower Growth</p>
-                      <p className="font-display text-xl font-extrabold text-emerald-600">+146%</p>
+                    <div className="p-3.5 bg-[#FFFFFF] dark:bg-[#13161D] rounded-md border border-[#E5E7EB] dark:border-white/[0.08]">
+                      <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">Follower Growth</p>
+                      <p className="font-mono text-xl font-semibold text-emerald-600 dark:text-emerald-400 mt-1">+146%</p>
                     </div>
-                    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <p className="text-[11px] text-slate-500">CRM Pipeline</p>
-                      <p className="font-display text-xl font-extrabold text-[#4F46E5] dark:text-indigo-400">$73.6k</p>
+                    <div className="p-3.5 bg-[#FFFFFF] dark:bg-[#13161D] rounded-md border border-[#E5E7EB] dark:border-white/[0.08]">
+                      <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">CRM Pipeline</p>
+                      <p className="font-mono text-xl font-semibold text-cyan-600 dark:text-cyan-400 mt-1">$73.6k</p>
                     </div>
                   </div>
                 </div>
@@ -1027,47 +1041,47 @@ export function LandingPage({
       </section>
 
       {/* 5. Pricing Plans ($99 Starter to $799 Lifetime) */}
-      <section id="pricing" className="py-20 bg-white dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
+      <section id="pricing" className="py-20 bg-[#FFFFFF] dark:bg-[#0E1015] border-b border-[#E5E7EB] dark:border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#4F46E5] dark:text-indigo-400">
+            <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400">
               TRANSPARENT PRICING · STARTING AT $99
             </p>
-            <h2 className="mt-2 font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
+            <h2 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
               Plans from $99/mo up to $799 Lifetime Access.
             </h2>
-            <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mt-3 text-sm text-[#4B5563] dark:text-[#9CA3AF]">
               Start on a flexible monthly plan or lock in unlimited agency &amp; AI features forever with a single $799 one-time payment.
             </p>
 
             {/* Monthly vs Annual (Save 16%) Toggle */}
-            <div className="mt-7 inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <div className="mt-7 inline-flex items-center p-1 bg-[#F3F4F6] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md">
               <button
                 onClick={() => setBilling('monthly')}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-4 py-1.5 rounded-sm text-xs font-medium transition-colors ${
                   billing === 'monthly'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-[#FFFFFF] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                 }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setBilling('annual')}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                className={`px-4 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center gap-2 ${
                   billing === 'annual'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-[#FFFFFF] dark:bg-[#191D26] text-[#111827] dark:text-[#F3F4F6]'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                 }`}
               >
                 <span>Annual</span>
-                <span className="text-amber-600 dark:text-amber-400 font-bold">Save 16%</span>
+                <span className="text-cyan-600 dark:text-cyan-400 font-mono text-[11px]">Save 16%</span>
               </button>
             </div>
           </div>
 
           {/* 4-Tier Pricing Grid: $99 -> $199 -> $349 -> $799 Lifetime */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
             {[
               {
                 id: 'bootstrap' as PlanTier,
@@ -1139,38 +1153,38 @@ export function LandingPage({
               return (
                 <div
                   key={tier.id}
-                  className={`rounded-2xl p-6 flex flex-col justify-between transition-all ${
+                  className={`rounded-lg p-6 flex flex-col justify-between transition-colors ${
                     tier.isLifetime
-                      ? 'bg-slate-950 text-white border-2 border-amber-400/90 shadow-2xl shadow-amber-500/15'
+                      ? 'bg-[#090A0D] text-[#F3F4F6] border border-[#06B6D4]'
                       : tier.popular
-                      ? 'bg-[#F8FAFC] dark:bg-slate-900 border-2 border-[#4F46E5] shadow-xl shadow-indigo-600/10'
-                      : 'bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+                      ? 'bg-[#F8F9FB] dark:bg-[#13161D] border border-[#06B6D4]'
+                      : 'bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08]'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <h3
-                        className={`font-display text-xl font-bold flex items-center gap-1.5 ${
-                          tier.isLifetime ? 'text-white' : 'text-slate-900 dark:text-white'
+                        className={`text-lg font-semibold tracking-[-0.02em] flex items-center gap-1.5 ${
+                          tier.isLifetime ? 'text-[#F3F4F6]' : 'text-[#111827] dark:text-[#F3F4F6]'
                         }`}
                       >
-                        {tier.isLifetime && <InfinityIcon size={18} className="text-amber-400 shrink-0" />}
+                        {tier.isLifetime && <InfinityIcon size={17} strokeWidth={1.5} className="text-[#06B6D4] shrink-0" />}
                         {tier.name}
                       </h3>
                       {tier.popular && (
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
                           Most Popular
                         </span>
                       )}
                       {tier.isLifetime && (
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#F97316]">
                           Pay Once
                         </span>
                       )}
                     </div>
                     <p
                       className={`mt-1.5 text-xs leading-relaxed ${
-                        tier.isLifetime ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'
+                        tier.isLifetime ? 'text-[#9CA3AF]' : 'text-[#4B5563] dark:text-[#9CA3AF]'
                       }`}
                     >
                       {tier.desc}
@@ -1178,17 +1192,17 @@ export function LandingPage({
 
                     <div className="mt-6 flex items-baseline gap-1.5">
                       <span
-                        className={`font-display text-4xl font-extrabold tabular-nums ${
-                          tier.isLifetime ? 'text-white' : 'text-slate-900 dark:text-white'
+                        className={`font-mono text-4xl font-semibold tracking-tight tabular-nums ${
+                          tier.isLifetime ? 'text-[#FFFFFF]' : 'text-[#111827] dark:text-[#F3F4F6]'
                         }`}
                       >
                         ${displayPrice}
                       </span>
-                      <span className={`text-xs font-medium ${tier.isLifetime ? 'text-amber-400' : 'text-slate-500'}`}>
+                      <span className={`text-xs font-mono ${tier.isLifetime ? 'text-cyan-400' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}>
                         {tier.isLifetime ? '/ lifetime' : '/ month'}
                       </span>
                     </div>
-                    <p className={`mt-1 text-[11px] ${tier.isLifetime ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <p className={`mt-1 text-[11px] ${tier.isLifetime ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}`}>
                       {tier.isLifetime
                         ? 'One-time payment · Never pay again'
                         : billing === 'annual'
@@ -1197,10 +1211,10 @@ export function LandingPage({
                     </p>
 
                     <div
-                      className={`mt-4 p-2.5 rounded-lg text-[11px] font-semibold leading-snug ${
+                      className={`mt-4 p-2.5 rounded-md text-[11px] font-medium leading-snug ${
                         tier.isLifetime
-                          ? 'bg-slate-900 border border-slate-800 text-amber-300'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+                          ? 'bg-[#13161D] border border-white/[0.08] text-cyan-400'
+                          : 'bg-[#FFFFFF] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] text-[#111827] dark:text-[#D1D5DB]'
                       }`}
                     >
                       {tier.limits}
@@ -1211,13 +1225,14 @@ export function LandingPage({
                         <li
                           key={f}
                           className={`flex items-start gap-2 text-xs ${
-                            tier.isLifetime ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'
+                            tier.isLifetime ? 'text-[#D1D5DB]' : 'text-[#4B5563] dark:text-[#9CA3AF]'
                           }`}
                         >
                           <Check
                             size={14}
+                            strokeWidth={1.75}
                             className={`shrink-0 mt-0.5 ${
-                              tier.isLifetime ? 'text-amber-400' : 'text-[#4F46E5] dark:text-indigo-400'
+                              tier.isLifetime ? 'text-[#06B6D4]' : 'text-cyan-600 dark:text-cyan-400'
                             }`}
                           />
                           <span>{f}</span>
@@ -1228,12 +1243,12 @@ export function LandingPage({
 
                   <button
                     onClick={() => setPlanModalTier(tier.id)}
-                    className={`mt-8 w-full py-3 rounded-xl text-sm font-semibold transition-colors ${
+                    className={`mt-8 w-full py-2.5 rounded-md text-xs font-semibold transition-colors ${
                       tier.isLifetime
-                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold shadow-lg shadow-amber-400/20'
+                        ? 'bg-[#FFFFFF] hover:bg-[#E5E7EB] text-[#090A0D]'
                         : tier.popular
-                        ? 'bg-[#4F46E5] hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20'
-                        : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white'
+                        ? 'bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D]'
+                        : 'bg-[#FFFFFF] dark:bg-[#191D26] hover:bg-[#F3F4F6] dark:hover:bg-[#1F2430] text-[#111827] dark:text-[#F3F4F6] border border-[#E5E7EB] dark:border-white/[0.12]'
                     }`}
                   >
                     {tier.cta}
@@ -1244,17 +1259,17 @@ export function LandingPage({
           </div>
 
           {/* Interactive Agency Scale & Lifetime Savings Calculator */}
-          <div className="mt-10 bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 shadow-sm">
+          <div className="mt-10 bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg p-6 md:p-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-7 space-y-5">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                    <SlidersHorizontal size={14} /> Agency Scale Calculator
+                  <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.14em] text-[#F97316]">
+                    <SlidersHorizontal size={13} strokeWidth={1.5} /> Agency Scale Calculator
                   </div>
-                  <h3 className="mt-1.5 font-display text-2xl font-bold text-slate-900 dark:text-white">
+                  <h3 className="mt-1.5 text-2xl font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6]">
                     Need more than 25 profiles? Slide to scale.
                   </h3>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-[#4B5563] dark:text-[#9CA3AF]">
                     Drag any slider or click a preset below to match your exact profile, workspace, and team size.
                   </p>
                 </div>
@@ -1278,10 +1293,10 @@ export function LandingPage({
                           setCalcWorkspaces(preset.w);
                           setCalcSeats(preset.s);
                         }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
                           isSelected
-                            ? 'bg-[#4F46E5] border-[#4F46E5] text-white'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-[#4F46E5]'
+                            ? 'bg-[#111827] border-[#111827] text-white dark:bg-[#FFFFFF] dark:border-[#FFFFFF] dark:text-[#090A0D]'
+                            : 'bg-[#FFFFFF] dark:bg-[#0E1015] border-[#E5E7EB] dark:border-white/[0.08] text-[#4B5563] dark:text-[#9CA3AF] hover:border-[#06B6D4] hover:text-[#111827] dark:hover:text-[#F3F4F6]'
                         }`}
                       >
                         {preset.label}
@@ -1293,26 +1308,26 @@ export function LandingPage({
                 {/* Slider 1: Social Profiles */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">Social Profiles</span>
+                    <span className="font-medium text-[#111827] dark:text-[#F3F4F6]">Social Profiles</span>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         aria-label="Decrease social profiles"
                         onClick={() => setCalcProfiles((v) => Math.max(5, v - 5))}
-                        className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                        className="w-6 h-6 rounded-sm border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0E1015] flex items-center justify-center hover:border-[#06B6D4] transition-colors"
                       >
-                        <Minus size={12} />
+                        <Minus size={12} strokeWidth={1.5} />
                       </button>
-                      <span className="min-w-[68px] text-center font-mono font-bold text-[#4F46E5] dark:text-indigo-400 tabular-nums">
+                      <span className="min-w-[68px] text-center font-mono font-semibold text-cyan-600 dark:text-cyan-400 tabular-nums">
                         {calcProfiles >= 250 ? '250+' : calcProfiles}
                       </span>
                       <button
                         type="button"
                         aria-label="Increase social profiles"
                         onClick={() => setCalcProfiles((v) => Math.min(250, v + 5))}
-                        className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                        className="w-6 h-6 rounded-sm border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0E1015] flex items-center justify-center hover:border-[#06B6D4] transition-colors"
                       >
-                        <Plus size={12} />
+                        <Plus size={12} strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
@@ -1325,9 +1340,9 @@ export function LandingPage({
                     onChange={(e) => setCalcProfiles(Number(e.target.value))}
                     onInput={(e) => setCalcProfiles(Number((e.target as HTMLInputElement).value))}
                     aria-label="Social profiles slider"
-                    className="w-full h-2 rounded-lg accent-[#4F46E5] cursor-pointer"
+                    className="w-full h-1.5 rounded-full accent-[#06B6D4] cursor-pointer"
                   />
-                  <div className="flex justify-between text-[11px] font-medium text-slate-500 tabular-nums">
+                  <div className="flex justify-between text-[11px] font-mono text-[#6B7280] tabular-nums">
                     <span>5</span>
                     <span>25</span>
                     <span>75</span>
@@ -1340,26 +1355,26 @@ export function LandingPage({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">Client Workspaces</span>
+                      <span className="font-medium text-[#111827] dark:text-[#F3F4F6]">Client Workspaces</span>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           aria-label="Decrease client workspaces"
                           onClick={() => setCalcWorkspaces((v) => Math.max(1, v - 1))}
-                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                          className="w-6 h-6 rounded-sm border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0E1015] flex items-center justify-center hover:border-[#06B6D4] transition-colors"
                         >
-                          <Minus size={12} />
+                          <Minus size={12} strokeWidth={1.5} />
                         </button>
-                        <span className="min-w-[36px] text-center font-mono font-bold text-slate-900 dark:text-white tabular-nums">
+                        <span className="min-w-[36px] text-center font-mono font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums">
                           {calcWorkspaces >= 30 ? '30+' : calcWorkspaces}
                         </span>
                         <button
                           type="button"
                           aria-label="Increase client workspaces"
                           onClick={() => setCalcWorkspaces((v) => Math.min(30, v + 1))}
-                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                          className="w-6 h-6 rounded-sm border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0E1015] flex items-center justify-center hover:border-[#06B6D4] transition-colors"
                         >
-                          <Plus size={12} />
+                          <Plus size={12} strokeWidth={1.5} />
                         </button>
                       </div>
                     </div>
@@ -1372,32 +1387,32 @@ export function LandingPage({
                       onChange={(e) => setCalcWorkspaces(Number(e.target.value))}
                       onInput={(e) => setCalcWorkspaces(Number((e.target as HTMLInputElement).value))}
                       aria-label="Client workspaces slider"
-                      className="w-full h-2 rounded-lg accent-[#4F46E5] cursor-pointer"
+                      className="w-full h-1.5 rounded-full accent-[#06B6D4] cursor-pointer"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">Team Seats</span>
+                      <span className="font-medium text-[#111827] dark:text-[#F3F4F6]">Team Seats</span>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           aria-label="Decrease team seats"
                           onClick={() => setCalcSeats((v) => Math.max(1, v - 1))}
-                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                          className="w-6 h-6 rounded-sm border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0E1015] flex items-center justify-center hover:border-[#06B6D4] transition-colors"
                         >
-                          <Minus size={12} />
+                          <Minus size={12} strokeWidth={1.5} />
                         </button>
-                        <span className="min-w-[36px] text-center font-mono font-bold text-slate-900 dark:text-white tabular-nums">
+                        <span className="min-w-[36px] text-center font-mono font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums">
                           {calcSeats >= 30 ? '30+' : calcSeats}
                         </span>
                         <button
                           type="button"
                           aria-label="Increase team seats"
                           onClick={() => setCalcSeats((v) => Math.min(30, v + 1))}
-                          className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-[#4F46E5]"
+                          className="w-6 h-6 rounded-sm border border-[#E5E7EB] dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0E1015] flex items-center justify-center hover:border-[#06B6D4] transition-colors"
                         >
-                          <Plus size={12} />
+                          <Plus size={12} strokeWidth={1.5} />
                         </button>
                       </div>
                     </div>
@@ -1410,7 +1425,7 @@ export function LandingPage({
                       onChange={(e) => setCalcSeats(Number(e.target.value))}
                       onInput={(e) => setCalcSeats(Number((e.target as HTMLInputElement).value))}
                       aria-label="Team seats slider"
-                      className="w-full h-2 rounded-lg accent-[#4F46E5] cursor-pointer"
+                      className="w-full h-1.5 rounded-full accent-[#06B6D4] cursor-pointer"
                     />
                   </div>
                 </div>
@@ -1418,41 +1433,41 @@ export function LandingPage({
 
               {/* Calculated Result Card */}
               <div
-                className={`lg:col-span-5 rounded-2xl p-6 space-y-4 border ${
+                className={`lg:col-span-5 rounded-lg p-6 space-y-4 border ${
                   scaleRecommendation.isLifetime
-                    ? 'bg-slate-950 text-white border-amber-400/90 shadow-xl shadow-amber-500/10'
-                    : 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-sm'
+                    ? 'bg-[#090A0D] text-[#F3F4F6] border-[#06B6D4]'
+                    : 'bg-[#FFFFFF] dark:bg-[#0E1015] border-[#E5E7EB] dark:border-white/[0.08]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p
-                      className={`text-[11px] font-bold uppercase tracking-wider ${
-                        scaleRecommendation.isLifetime ? 'text-amber-400' : 'text-[#4F46E5] dark:text-indigo-400'
+                      className={`text-[10px] font-mono uppercase tracking-[0.14em] ${
+                        scaleRecommendation.isLifetime ? 'text-[#F97316]' : 'text-cyan-600 dark:text-cyan-400'
                       }`}
                     >
                       Recommended Plan
                     </p>
                     <h4
-                      className={`font-display text-xl font-extrabold flex items-center gap-1.5 mt-0.5 ${
-                        scaleRecommendation.isLifetime ? 'text-white' : 'text-slate-900 dark:text-white'
+                      className={`text-xl font-semibold tracking-[-0.02em] flex items-center gap-1.5 mt-1 ${
+                        scaleRecommendation.isLifetime ? 'text-[#FFFFFF]' : 'text-[#111827] dark:text-[#F3F4F6]'
                       }`}
                     >
-                      {scaleRecommendation.isLifetime && <InfinityIcon size={18} className="text-amber-400" />}
+                      {scaleRecommendation.isLifetime && <InfinityIcon size={17} strokeWidth={1.5} className="text-[#06B6D4]" />}
                       {scaleRecommendation.name}
                     </h4>
                   </div>
                   <div className="text-right tabular-nums">
                     <span
-                      className={`font-display text-3xl font-extrabold ${
-                        scaleRecommendation.isLifetime ? 'text-amber-400' : 'text-[#4F46E5] dark:text-indigo-400'
+                      className={`font-mono text-3xl font-semibold ${
+                        scaleRecommendation.isLifetime ? 'text-[#06B6D4]' : 'text-[#111827] dark:text-[#F3F4F6]'
                       }`}
                     >
                       ${scaleRecommendation.displayPrice}
                     </span>
                     <span
-                      className={`text-xs block ${
-                        scaleRecommendation.isLifetime ? 'text-slate-400' : 'text-slate-500'
+                      className={`text-[11px] font-mono block ${
+                        scaleRecommendation.isLifetime ? 'text-[#9CA3AF]' : 'text-[#6B7280]'
                       }`}
                     >
                       {scaleRecommendation.isLifetime ? 'one-time lifetime' : `/ month (${billing})`}
@@ -1462,7 +1477,7 @@ export function LandingPage({
 
                 <p
                   className={`text-xs leading-relaxed ${
-                    scaleRecommendation.isLifetime ? 'text-slate-300' : 'text-slate-600 dark:text-slate-300'
+                    scaleRecommendation.isLifetime ? 'text-[#9CA3AF]' : 'text-[#4B5563] dark:text-[#9CA3AF]'
                   }`}
                 >
                   {scaleRecommendation.limitsSummary}
@@ -1470,31 +1485,31 @@ export function LandingPage({
 
                 {/* Live Savings Breakdown */}
                 <div
-                  className={`p-3.5 rounded-xl text-xs space-y-1.5 tabular-nums ${
+                  className={`p-3.5 rounded-md text-xs space-y-1.5 tabular-nums ${
                     scaleRecommendation.isLifetime
-                      ? 'bg-slate-900 border border-slate-800'
-                      : 'bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
+                      ? 'bg-[#13161D] border border-white/[0.08]'
+                      : 'bg-[#F8F9FB] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08]'
                   }`}
                 >
                   <div className="flex justify-between">
-                    <span className={scaleRecommendation.isLifetime ? 'text-slate-400' : 'text-slate-500'}>
+                    <span className={scaleRecommendation.isLifetime ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}>
                       Your Configuration
                     </span>
-                    <span className="font-semibold">
+                    <span className="font-mono font-medium">
                       {calcProfiles} profiles · {calcWorkspaces} ws · {calcSeats} seats
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className={scaleRecommendation.isLifetime ? 'text-slate-400' : 'text-slate-500'}>
+                    <span className={scaleRecommendation.isLifetime ? 'text-[#9CA3AF]' : 'text-[#6B7280]'}>
                       {scaleRecommendation.isLifetime ? 'Lifetime Payment (Year 1+)' : '12-Month Subscription Total'}
                     </span>
-                    <span className="font-bold">${scaleRecommendation.yearCost.toLocaleString()}</span>
+                    <span className="font-mono font-semibold">${scaleRecommendation.yearCost.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between pt-1.5 border-t border-slate-200/70 dark:border-slate-800">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <div className="flex justify-between pt-2 border-t border-[#E5E7EB] dark:border-white/[0.08]">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                       $799 Lifetime Break-Even
                     </span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
                       {scaleRecommendation.breakEvenMonths} mo · Save ${scaleRecommendation.lifetimeSavings.toLocaleString()}/yr
                     </span>
                   </div>
@@ -1504,10 +1519,10 @@ export function LandingPage({
                   <button
                     type="button"
                     onClick={() => setPlanModalTier(scaleRecommendation.id)}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors ${
+                    className={`w-full py-2.5 rounded-md text-xs font-semibold transition-colors ${
                       scaleRecommendation.isLifetime
-                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-                        : 'bg-[#4F46E5] hover:bg-indigo-700 text-white'
+                        ? 'bg-[#FFFFFF] hover:bg-[#E5E7EB] text-[#090A0D]'
+                        : 'bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D]'
                     }`}
                   >
                     Select {scaleRecommendation.name} ({scaleRecommendation.priceLabel})
@@ -1516,7 +1531,7 @@ export function LandingPage({
                     <button
                       type="button"
                       onClick={() => setPlanModalTier('lifetime')}
-                      className="w-full py-2 rounded-xl border border-amber-400/70 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-semibold transition-colors"
+                      className="w-full py-2 rounded-md border border-[#F97316]/40 bg-orange-500/[0.06] hover:bg-orange-500/[0.12] text-[#F97316] text-xs font-medium transition-colors"
                     >
                       Or Lock In $799 Lifetime Deal (Save ${scaleRecommendation.lifetimeSavings.toLocaleString()} in Year 1)
                     </button>
@@ -1529,10 +1544,10 @@ export function LandingPage({
       </section>
 
       {/* 6. Social Proof Metrics + Testimonial Carousel + FAQ Accordion */}
-      <section className="py-20 border-b border-slate-200 dark:border-slate-800">
+      <section className="py-20 border-b border-[#E5E7EB] dark:border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6 space-y-16">
           {/* Metrics Counters */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { value: '+146%', label: 'Average follower growth in first 90 days' },
               { value: '8 hrs', label: 'Saved per marketer every week on scheduling' },
@@ -1541,35 +1556,35 @@ export function LandingPage({
             ].map((m) => (
               <div
                 key={m.value}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs"
+                className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg p-6"
               >
-                <p className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tabular-nums">
+                <p className="font-mono text-3xl sm:text-4xl font-semibold text-[#111827] dark:text-[#F3F4F6] tabular-nums">
                   {m.value}
                 </p>
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-snug">{m.label}</p>
+                <p className="mt-2 text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-snug">{m.label}</p>
               </div>
             ))}
           </div>
 
           {/* Testimonial Carousel */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm">
+          <div className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg p-8">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex items-start gap-4 max-w-3xl">
                 <img
                   src={activeTestimonial.avatar}
                   alt={activeTestimonial.name}
-                  className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                  className="w-12 h-12 rounded-md object-cover border border-[#E5E7EB] dark:border-white/[0.08] shrink-0"
                 />
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1.5">
+                  <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400 mb-1.5">
                     {activeTestimonial.metric}
                   </p>
-                  <p className="text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-relaxed">
+                  <p className="text-sm sm:text-[15px] text-[#111827] dark:text-[#F3F4F6] leading-relaxed">
                     “{activeTestimonial.quote}”
                   </p>
-                  <p className="mt-3 text-xs font-bold text-slate-900 dark:text-white">
+                  <p className="mt-3 text-xs font-semibold text-[#111827] dark:text-[#F3F4F6]">
                     {activeTestimonial.name}{' '}
-                    <span className="font-normal text-slate-500">· {activeTestimonial.role}</span>
+                    <span className="font-normal text-[#6B7280] dark:text-[#9CA3AF]">· {activeTestimonial.role}</span>
                   </p>
                 </div>
               </div>
@@ -1578,16 +1593,16 @@ export function LandingPage({
                 <button
                   onClick={() => setTestimonialIdx((testimonialIdx - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)}
                   aria-label="Previous testimonial"
-                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="p-2 rounded-md border border-[#E5E7EB] dark:border-white/[0.08] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] text-[#4B5563] dark:text-[#9CA3AF] transition-colors"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={16} strokeWidth={1.5} />
                 </button>
                 <button
                   onClick={() => setTestimonialIdx((testimonialIdx + 1) % TESTIMONIALS.length)}
                   aria-label="Next testimonial"
-                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="p-2 rounded-md border border-[#E5E7EB] dark:border-white/[0.08] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] hover:border-[#D1D5DB] dark:hover:border-white/[0.15] text-[#4B5563] dark:text-[#9CA3AF] transition-colors"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={16} strokeWidth={1.5} />
                 </button>
               </div>
             </div>
@@ -1595,29 +1610,30 @@ export function LandingPage({
 
           {/* FAQ Accordion */}
           <div className="max-w-3xl mx-auto">
-            <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-center text-slate-900 dark:text-white mb-8">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-[-0.02em] text-center text-[#111827] dark:text-[#F3F4F6] mb-8">
               Frequently Asked Questions
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {FAQS.map((faq, idx) => {
                 const isOpen = openFaq === idx;
                 return (
                   <div
                     key={faq.q}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
+                    className="bg-[#FFFFFF] dark:bg-[#13161D] border border-[#E5E7EB] dark:border-white/[0.08] rounded-lg overflow-hidden"
                   >
                     <button
                       onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 text-sm font-bold text-slate-900 dark:text-white"
+                      className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 text-sm font-semibold text-[#111827] dark:text-[#F3F4F6]"
                     >
                       <span>{faq.q}</span>
                       <ChevronDown
                         size={16}
-                        className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-[#4F46E5]' : 'text-slate-400'}`}
+                        strokeWidth={1.5}
+                        className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-cyan-600 dark:text-cyan-400' : 'text-[#6B7280]'}`}
                       />
                     </button>
                     {isOpen && (
-                      <div className="px-5 pb-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <div className="px-5 pb-4 text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
                         {faq.a}
                       </div>
                     )}
@@ -1630,9 +1646,9 @@ export function LandingPage({
       </section>
 
       {/* Multi-Column Footer */}
-      <footer className="bg-slate-950 text-slate-300 pt-14 pb-10">
+      <footer className="bg-[#0E1015] text-[#9CA3AF] pt-14 pb-10 border-t border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 pb-12 border-b border-slate-800">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 pb-12 border-b border-white/[0.08]">
             <div className="lg:col-span-4 space-y-4">
               <a
                 href="/"
@@ -1644,12 +1660,12 @@ export function LandingPage({
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 aria-label="Socialify AI Home"
-                className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded-lg"
+                className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#06B6D4] rounded-md"
               >
                 <BrandLogo size="md" surface="dark" />
               </a>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-                Luminous AI social media scheduling, evergreen category queues, unified CRM inbox, and agency reporting across 10 networks.
+              <p className="text-xs text-[#9CA3AF] leading-relaxed max-w-sm">
+                Precision AI social media scheduling, evergreen category queues, unified CRM inbox, and agency reporting across 10 networks.
               </p>
               <form
                 onSubmit={(e) => {
@@ -1662,16 +1678,16 @@ export function LandingPage({
                 className="flex gap-2 max-w-sm"
               >
                 <div className="relative flex-1">
-                  <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Mail size={13} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
                   <input
                     type="email"
                     value={newsletterEmail}
                     onChange={(e) => setNewsletterEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="w-full pl-8 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white outline-none focus:border-[#4F46E5]"
+                    className="w-full pl-8 pr-3 py-2 bg-[#13161D] border border-white/[0.08] rounded-md text-xs text-[#F3F4F6] placeholder:text-[#6B7280] outline-none focus:border-[#06B6D4]"
                   />
                 </div>
-                <button type="submit" className="px-4 py-2 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                <button type="submit" className="px-4 py-2 bg-[#FFFFFF] hover:bg-[#E5E7EB] text-[#090A0D] rounded-md text-xs font-semibold transition-colors">
                   Subscribe
                 </button>
               </form>
@@ -1682,44 +1698,44 @@ export function LandingPage({
 
             <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-8 text-xs">
               <div>
-                <h4 className="font-display font-bold text-white uppercase tracking-wider mb-3">Product</h4>
-                <ul className="space-y-2 text-slate-400">
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">Content Studio</button></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">AI Copilot</button></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">Visual Scheduler</button></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">Unified Inbox</button></li>
+                <h4 className="font-mono text-[11px] font-semibold text-[#F3F4F6] uppercase tracking-[0.14em] mb-3">Product</h4>
+                <ul className="space-y-2 text-[#9CA3AF]">
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">Content Studio</button></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">AI Copilot</button></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">Visual Scheduler</button></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">Unified Inbox</button></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-display font-bold text-white uppercase tracking-wider mb-3">Solutions</h4>
-                <ul className="space-y-2 text-slate-400">
-                  <li><a href="#pricing" className="hover:text-white transition-colors">Starter ($99/mo)</a></li>
-                  <li><a href="#pricing" className="hover:text-white transition-colors">Growth ($199/mo)</a></li>
-                  <li><a href="#pricing" className="hover:text-white transition-colors">Agency &amp; Lifetime ($799)</a></li>
-                  <li><a href="#showcase" className="hover:text-white transition-colors">White-Label PDF</a></li>
+                <h4 className="font-mono text-[11px] font-semibold text-[#F3F4F6] uppercase tracking-[0.14em] mb-3">Solutions</h4>
+                <ul className="space-y-2 text-[#9CA3AF]">
+                  <li><a href="#pricing" className="hover:text-[#F3F4F6] transition-colors">Starter ($99/mo)</a></li>
+                  <li><a href="#pricing" className="hover:text-[#F3F4F6] transition-colors">Growth ($199/mo)</a></li>
+                  <li><a href="#pricing" className="hover:text-[#F3F4F6] transition-colors">Agency &amp; Lifetime ($799)</a></li>
+                  <li><a href="#showcase" className="hover:text-[#F3F4F6] transition-colors">White-Label PDF</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-display font-bold text-white uppercase tracking-wider mb-3">Networks</h4>
-                <ul className="space-y-2 text-slate-400">
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">Instagram & Threads</button></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">TikTok & YouTube Shorts</button></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">LinkedIn & X (Twitter)</button></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white transition-colors">Bluesky & Google Business</button></li>
+                <h4 className="font-mono text-[11px] font-semibold text-[#F3F4F6] uppercase tracking-[0.14em] mb-3">Networks</h4>
+                <ul className="space-y-2 text-[#9CA3AF]">
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">Instagram & Threads</button></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">TikTok & YouTube Shorts</button></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">LinkedIn & X (Twitter)</button></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">Bluesky & Google Business</button></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-display font-bold text-white uppercase tracking-wider mb-3">Resources</h4>
-                <ul className="space-y-2 text-slate-400">
-                  <li><a href="#showcase" className="hover:text-white">Features & AI Copilot</a></li>
-                  <li><a href="#pricing" className="hover:text-white">Pricing Calculator</a></li>
-                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-white">Launch Workspace</button></li>
+                <h4 className="font-mono text-[11px] font-semibold text-[#F3F4F6] uppercase tracking-[0.14em] mb-3">Resources</h4>
+                <ul className="space-y-2 text-[#9CA3AF]">
+                  <li><a href="#showcase" className="hover:text-[#F3F4F6] transition-colors">Features & AI Copilot</a></li>
+                  <li><a href="#pricing" className="hover:text-[#F3F4F6] transition-colors">Pricing Calculator</a></li>
+                  <li><button onClick={() => onLaunch(selectedPlan)} className="hover:text-[#F3F4F6] transition-colors">Launch Workspace</button></li>
                 </ul>
               </div>
             </div>
           </div>
 
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#6B7280]">
             <p>© {new Date().getFullYear()} socialifyai.com. All rights reserved.</p>
             <p>10 Networks · Evergreen Automation · Social CRM</p>
           </div>
@@ -1729,21 +1745,24 @@ export function LandingPage({
       {/* Plan Confirmation Modal */}
       {planModalTier && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/70" onClick={() => setPlanModalTier(null)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="absolute inset-0 bg-[#090A0D]/75" onClick={() => setPlanModalTier(null)} />
+          <div className="relative w-full max-w-md bg-[#FFFFFF] dark:bg-[#13161D] rounded-lg border border-[#E5E7EB] dark:border-white/[0.12] p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] dark:border-white/[0.08]">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#4F46E5] dark:text-indigo-400">
+                <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400">
                   {PLAN_LABELS[planModalTier]?.isLifetime
                     ? 'ONE-TIME LIFETIME LICENSE · $799 FOREVER'
                     : `14-DAY FREE TRIAL · ${PLAN_LABELS[planModalTier]?.priceTag || '$99/mo'}`}
                 </p>
-                <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
+                <h3 className="text-lg font-semibold tracking-[-0.02em] text-[#111827] dark:text-[#F3F4F6] mt-0.5">
                   Launch {PLAN_LABELS[planModalTier]?.name || planModalTier} Workspace
                 </h3>
               </div>
-              <button onClick={() => setPlanModalTier(null)} className="text-slate-400 hover:text-slate-700">
-                <X size={18} />
+              <button
+                onClick={() => setPlanModalTier(null)}
+                className="p-1 rounded-md text-[#6B7280] hover:text-[#111827] dark:hover:text-[#F3F4F6] transition-colors"
+              >
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
             <form
@@ -1755,22 +1774,27 @@ export function LandingPage({
               className="mt-4 space-y-4 text-xs"
             >
               <div>
-                <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">Workspace Name</label>
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block mb-1.5">
+                  Workspace Name
+                </label>
                 <input
                   value={workspaceInput}
                   onChange={(e) => setWorkspaceInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#4F46E5]"
+                  className="w-full px-3.5 py-2 bg-[#F8F9FB] dark:bg-[#0E1015] border border-[#E5E7EB] dark:border-white/[0.08] rounded-md text-[#111827] dark:text-[#F3F4F6] outline-none focus:border-[#06B6D4]"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setPlanModalTier(null)}
-                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold"
+                  className="flex-1 py-2.5 border border-[#E5E7EB] dark:border-white/[0.08] hover:bg-[#F3F4F6] dark:hover:bg-[#191D26] text-[#4B5563] dark:text-[#9CA3AF] rounded-md font-medium transition-colors"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="flex-[2] py-2.5 bg-[#4F46E5] text-white rounded-lg font-semibold">
+                <button
+                  type="submit"
+                  className="flex-[2] py-2.5 bg-[#111827] hover:bg-[#1F2937] text-white dark:bg-[#FFFFFF] dark:hover:bg-[#E5E7EB] dark:text-[#090A0D] rounded-md font-semibold transition-colors"
+                >
                   Confirm & Launch Dashboard
                 </button>
               </div>

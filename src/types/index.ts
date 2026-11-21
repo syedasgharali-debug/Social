@@ -237,6 +237,13 @@ export interface ApiHealthNode {
   lastTestedAt: string;
 }
 
+export interface PlanModuleQuota {
+  youtubeChannels: number;
+  seoArticlesPerMonth: number;
+  rssAutoFeeds: number;
+  activeViralCampaigns: number;
+}
+
 export interface AiGovernanceConfig {
   defaultModel: 'gemini-4-hydrogen' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
   fallbackModel: string;
@@ -246,6 +253,12 @@ export interface AiGovernanceConfig {
     bootstrap: number;
     accelerate: number;
     pro_agency: number;
+  };
+  moduleQuotas?: {
+    bootstrap: PlanModuleQuota;
+    accelerate: PlanModuleQuota;
+    pro_agency: PlanModuleQuota;
+    lifetime: PlanModuleQuota;
   };
   systemPromptTemplate: string;
 }
@@ -297,6 +310,228 @@ export interface ToastItem {
   variant?: 'info' | 'success' | 'warning';
 }
 
+// =============================================================================
+// Module 1: AI YouTube Multi-Channel & Video Studio
+// =============================================================================
+export interface YouTubeChannel {
+  id: string;
+  workspaceId: string;
+  channelName: string;
+  handle: string;
+  channelId: string;
+  niche: string;
+  subscribers: number;
+  watchHours30d: number;
+  dailyUploadQuotaUsed: number;
+  dailyUploadQuotaLimit: number;
+  defaultPlaylist: string;
+  playlists: string[];
+  status: 'connected' | 'needs_reauth';
+  createdAt: string;
+}
+
+export interface YouTubeVideoItem {
+  id: string;
+  workspaceId: string;
+  channelId: string;
+  format: 'long_form' | 'short';
+  topic: string;
+  seoTitles: string[];
+  selectedTitle: string;
+  description: string;
+  script: {
+    hook: string;
+    body: string;
+    cta: string;
+  };
+  chapters: { timestamp: string; label: string }[];
+  tags: string[];
+  pinnedComment: string;
+  thumbnailPrompt: string;
+  thumbnailHeadline: string;
+  thumbnailAccent: 'cyan' | 'orange' | 'indigo' | 'emerald';
+  thumbnailUrl?: string;
+  playlist: string;
+  status: 'idea' | 'scripted' | 'queued' | 'scheduled' | 'published';
+  scheduledAt?: string;
+  crossPostedPlatforms?: Platform[];
+  createdAt: string;
+}
+
+// =============================================================================
+// Module 2: AI SEO Content & Blog CMS Engine
+// =============================================================================
+export type CmsProvider = 'wordpress' | 'webflow' | 'shopify' | 'ghost' | 'webhook';
+
+export interface CmsConnector {
+  id: string;
+  workspaceId: string;
+  provider: CmsProvider;
+  label: string;
+  endpointUrl: string;
+  status: 'connected' | 'disconnected';
+  autoSyndicateDefault: boolean;
+  lastPublishedAt?: string;
+}
+
+export interface SeoArticleSection {
+  heading: string;
+  level: 'h2' | 'h3';
+  body: string;
+  visualAlt?: string;
+  visualCaption?: string;
+  visualType?: 'infographic' | 'diagram' | 'callout';
+}
+
+export interface SeoArticle {
+  id: string;
+  workspaceId: string;
+  targetKeyword: string;
+  sourceUrl?: string;
+  title: string;
+  slug: string;
+  metaTitle: string;
+  metaDescription: string;
+  h1: string;
+  sections: SeoArticleSection[];
+  heroImageAlt: string;
+  heroVisualAccent: 'cyan' | 'orange' | 'indigo';
+  schemaFaq: { question: string; answer: string }[];
+  internalLinks: { anchor: string; suggestedSlug: string; rationale: string }[];
+  wordCount: number;
+  readabilityScore: number;
+  seoScore: number;
+  estimatedMonthlyTraffic: number;
+  status: 'draft' | 'published';
+  publishedCms?: CmsProvider;
+  autoSyndicateSocial: boolean;
+  syndicatedPostIds?: string[];
+  socialBundle?: {
+    linkedinCarousel: string;
+    xThread: string;
+    instagramCaption: string;
+    facebookPost: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =============================================================================
+// Module 3: Viral Content Discovery & RSS Automation
+// =============================================================================
+export interface RssSource {
+  id: string;
+  workspaceId: string;
+  name: string;
+  feedUrl: string;
+  sourceType: 'rss' | 'youtube' | 'blog' | 'reddit';
+  keywordFilter: string;
+  automationRule: 'manual' | 'auto_draft' | 'evergreen_queue';
+  targetCategoryId?: string;
+  targetPlatforms: Platform[];
+  active: boolean;
+  itemsImported: number;
+  lastFetchedAt?: string;
+  createdAt: string;
+}
+
+export interface CuratedFeedItem {
+  id: string;
+  workspaceId: string;
+  sourceId?: string;
+  sourceName: string;
+  channel: 'youtube' | 'x' | 'reddit' | 'news' | 'blog' | 'rss';
+  title: string;
+  summary: string;
+  url: string;
+  publishedAt: string;
+  velocityLabel: string;
+  repurposed?: boolean;
+}
+
+export interface EcommerceProduct {
+  id: string;
+  title: string;
+  price: string;
+  compareAtPrice?: string;
+  url: string;
+  category: string;
+}
+
+export interface EcommerceFeed {
+  id: string;
+  workspaceId: string;
+  platform: 'shopify' | 'woocommerce';
+  storeName: string;
+  feedUrl: string;
+  status: 'connected' | 'paused';
+  products: EcommerceProduct[];
+  lastSyncedAt?: string;
+}
+
+// =============================================================================
+// Module 4: Viral Campaigns, Contests & ROI Tracker
+// =============================================================================
+export type ViralCampaignType = 'sweepstakes' | 'ugc_contest' | 'referral_giveaway' | 'instant_win';
+
+export interface CampaignBonusAction {
+  id: string;
+  platform: Platform | 'referral' | 'ugc';
+  label: string;
+  points: number;
+  enabled: boolean;
+}
+
+export interface CampaignEntry {
+  id: string;
+  name: string;
+  email: string;
+  handle: string;
+  platform: Platform;
+  entriesPoints: number;
+  referralsCount: number;
+  completedActions: string[];
+  ugcUrl?: string;
+  ipFingerprint: string;
+  fraudStatus: 'verified' | 'flagged_duplicate' | 'flagged_bot';
+  syncedToCrm: boolean;
+  estimatedLtv: number;
+  submittedAt: string;
+}
+
+export interface CampaignWinner {
+  entryId: string;
+  name: string;
+  email: string;
+  pickedAt: string;
+  verificationHash: string;
+}
+
+export interface ViralCampaign {
+  id: string;
+  workspaceId: string;
+  name: string;
+  type: ViralCampaignType;
+  status: 'draft' | 'live' | 'ended';
+  prizeTitle: string;
+  prizeValueUsd: number;
+  description: string;
+  accentColor: 'cyan' | 'orange' | 'indigo';
+  startDate: string;
+  endDate: string;
+  embedMode: 'hosted' | 'embeddable';
+  slug: string;
+  bonusActions: CampaignBonusAction[];
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  pixelId: string;
+  attributedRevenueUsd: number;
+  entries: CampaignEntry[];
+  winners: CampaignWinner[];
+  createdAt: string;
+}
+
 export interface AppState {
   workspaces: Workspace[];
   activeWorkspaceId: string;
@@ -313,6 +548,15 @@ export interface AppState {
   ads: AdCampaign[];
   drafts: Draft[];
   discoveryAlerts: DiscoveryAlert[];
+  youtubeChannels: YouTubeChannel[];
+  youtubeVideos: YouTubeVideoItem[];
+  seoArticles: SeoArticle[];
+  cmsConnectors: CmsConnector[];
+  rssSources: RssSource[];
+  curatedItems: CuratedFeedItem[];
+  ecommerceFeeds: EcommerceFeed[];
+  viralCampaigns: ViralCampaign[];
+  workspaceCredits: Record<string, number>;
   tenants: TenantAccount[];
   featureFlags: FeatureFlag[];
   auditLogs: AdminAuditEntry[];
