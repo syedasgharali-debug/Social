@@ -138,7 +138,7 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ userId, authToken, onT
     try {
       const [catalogRes, progressRes] = await Promise.all([
         academyService.getCatalog(false, authToken),
-        academyService.getProgress(authToken),
+        academyService.getProgress(authToken, userId),
       ]);
       setChannelUrl(catalogRes.channelUrl || 'https://www.youtube.com/@socialifyaicom');
       setCategories(catalogRes.categories || []);
@@ -271,7 +271,7 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ userId, authToken, onT
     setActiveTutorialId(tutorial.id);
     setPlayerActivated(autoPlay);
     try {
-      const updated = await academyService.markWatched(tutorial.id, authToken);
+      const updated = await academyService.markWatched(tutorial.id, authToken, userId);
       setProgress(updated);
     } catch {
       // Keep UI responsive even if background watch ping fails
@@ -283,7 +283,7 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ userId, authToken, onT
     const currentlyDone = completedSet.has(tutorial.id);
     setSavingProgressId(tutorial.id);
     try {
-      const updated = await academyService.toggleCompleted(tutorial.id, !currentlyDone, authToken);
+      const updated = await academyService.toggleCompleted(tutorial.id, !currentlyDone, authToken, userId);
       setProgress(updated);
       onToast(
         !currentlyDone ? 'Tutorial Completed' : 'Marked as Incomplete',
@@ -414,7 +414,7 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ userId, authToken, onT
                     type="button"
                     onClick={() => {
                       setPlayerActivated(true);
-                      void academyService.markWatched(activeTutorial.id, authToken).then(setProgress).catch(() => {});
+                      void academyService.markWatched(activeTutorial.id, authToken, userId).then(setProgress).catch(() => {});
                     }}
                     className="group block w-full text-left focus:outline-none"
                     aria-label={`Play ${activeTutorial.title}`}
