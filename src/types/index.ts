@@ -614,3 +614,54 @@ export interface AppState {
   invoices: InvoiceRecord[];
   viewMode: ViewMode;
 }
+
+// =============================================================================
+// SocialifyAI Academy / Video Tutorials
+// =============================================================================
+export interface AcademyCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AcademyStep {
+  title: string;
+  detail: string;
+}
+
+export interface AcademyTutorial {
+  id: string;
+  videoId: string;
+  youtubeUrl: string;
+  title: string;
+  shortDescription: string;
+  fullDescription: string;
+  thumbnailUrl: string;
+  duration: string;
+  categoryId: string;
+  keywords: string[];
+  learningObjectives: string[];
+  steps: AcademyStep[];
+  tips: string[];
+  order: number;
+  published: boolean;
+  featured?: boolean;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AcademyProgress {
+  userId: string;
+  completedTutorialIds: string[];
+  watchedTutorialIds: string[];
+  recentTutorialIds: string[];
+  lastWatchedTutorialId: string | null;
+  lastWatchedAt: string | null;
+  updatedAt: string;
+}
+

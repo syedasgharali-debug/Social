@@ -22,6 +22,7 @@ import { YouTubeStudio } from './components/youtube/YouTubeStudio';
 import { SeoBlogEngine } from './components/seo/SeoBlogEngine';
 import { DiscoverCurateView } from './components/discover/DiscoverCurateView';
 import { ViralCampaignsView } from './components/campaigns/ViralCampaignsView';
+import { AcademyView } from './components/academy/AcademyView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { DEFAULT_MODULE_QUOTAS } from './data/defaultState';
 import { useAuth } from './contexts/AuthContext';
@@ -96,7 +97,12 @@ export default function App() {
     isAdmin
   );
 
-  const [activeTab, setActiveTab] = useState<NavTabId>('overview');
+  const [activeTab, setActiveTab] = useState<NavTabId>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/academy') {
+      return 'academy';
+    }
+    return 'overview';
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -158,6 +164,17 @@ export default function App() {
       updateState({ viewMode: 'app' });
     }
   }, [user, isAdmin, state.viewMode, updateState]);
+
+  // Keep /academy route cleanly synchronized with activeTab for direct URL access
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user || state.viewMode !== 'app') return;
+    const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    if (activeTab === 'academy' && currentPath !== '/academy') {
+      window.history.replaceState(null, '', '/academy');
+    } else if (activeTab !== 'academy' && currentPath === '/academy') {
+      window.history.replaceState(null, '', '/');
+    }
+  }, [activeTab, user, state.viewMode]);
 
   const activeWorkspace = useMemo(
     () => state.workspaces.find((w) => w.id === state.activeWorkspaceId) || state.workspaces[0],
@@ -1490,6 +1507,14 @@ export default function App() {
                       ads: prev.ads.filter((a) => a.id !== id),
                     }))
                   }
+                  onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
+                />
+              )}
+
+              {activeTab === 'academy' && (
+                <AcademyView
+                  userId={user.uid}
+                  authToken={user.token}
                   onToast={(title, desc, variant) => pushToast(title, desc, variant || 'success')}
                 />
               )}

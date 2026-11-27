@@ -27,6 +27,7 @@ import {
   LogOut,
   Rss,
   Code2,
+  GraduationCap,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -62,6 +63,7 @@ import {
 } from '../common/DesignPrimitives';
 import { aiService, AdminEnvStatusItem } from '../../services/aiService';
 import { upsertLocalAdminAccount, setLocalAccountStatus } from '../../contexts/AuthContext';
+import { AcademyAdminSection } from './AcademyAdminSection';
 
 function resolveApiBrand(nodeName: string): SocialBrandKey {
   const lower = nodeName.toLowerCase();
@@ -144,7 +146,7 @@ const PLAN_PRICING: Record<PlanTier, { mrr: number; profiles: number; aiLimit: n
 
 const PLAN_COLORS = ['#6B7280', '#9CA3AF', '#06B6D4', '#10B981'];
 
-type AdminSection = 'all' | 'overview' | 'users' | 'apis' | 'ai' | 'billing';
+type AdminSection = 'all' | 'overview' | 'users' | 'apis' | 'ai' | 'billing' | 'academy';
 
 const ADMIN_SECTION_LABELS: Record<AdminSection, string> = {
   all: 'All Modules',
@@ -153,6 +155,7 @@ const ADMIN_SECTION_LABELS: Record<AdminSection, string> = {
   apis: 'API & Webhooks',
   ai: 'AI Governance',
   billing: 'Billing & Flags',
+  academy: 'Academy',
 };
 
 export function SuperAdminPanel({
@@ -667,6 +670,7 @@ export function SuperAdminPanel({
                 { id: 'apis', label: 'API & Webhooks', icon: Server },
                 { id: 'ai', label: 'AI Governance', icon: Cpu },
                 { id: 'billing', label: 'Billing & Flags', icon: CreditCard },
+                { id: 'academy', label: 'Academy', icon: GraduationCap },
               ] as const
             ).map((item) => {
               const Icon = item.icon;
@@ -1825,6 +1829,10 @@ export function SuperAdminPanel({
               </div>
             </div>
           </section>
+        )}
+
+        {showBlock('academy') && (
+          <AcademyAdminSection authToken={authToken} onToast={onToast} />
         )}
 
         {/* Audit Ledger */}

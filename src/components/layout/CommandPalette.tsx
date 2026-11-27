@@ -30,6 +30,7 @@ import {
   FileText,
   Rss,
   Trophy,
+  GraduationCap,
 } from 'lucide-react';
 import { AppState, ViewMode } from '../../types';
 import { NavTabId } from './Shell';
@@ -80,6 +81,7 @@ const PAGE_ITEMS: {
   { id: 'profiles', label: 'Connected Profiles', subtitle: 'Manage social accounts & OAuth health', icon: Share2 },
   { id: 'crm', label: 'Social CRM', subtitle: 'Kanban deal pipeline & contact drawer', icon: Users },
   { id: 'ads', label: 'Ad Manager', subtitle: 'TikTok, Meta & Google campaign ROAS', icon: Megaphone },
+  { id: 'academy', label: 'Academy', subtitle: 'Video tutorials, onboarding walkthroughs & learning progress', icon: GraduationCap },
 ];
 
 export function CommandPalette({
@@ -156,6 +158,14 @@ export function CommandPalette({
         subtitle: 'Turn any live webpage into LinkedIn, X Thread, IG Carousel & TikTok',
         icon: Repeat2,
         onSelect: () => onNavigateTab('tools', 'repurposer'),
+      },
+      {
+        id: 'act-open-academy',
+        group: 'Quick Actions',
+        label: 'Watch SocialifyAI Academy Video Tutorials',
+        subtitle: 'Browse official tutorials & track your platform mastery progress',
+        icon: GraduationCap,
+        onSelect: () => onNavigateTab('academy'),
       },
       {
         id: 'act-ai-strategy',

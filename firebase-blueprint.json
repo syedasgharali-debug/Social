@@ -343,6 +343,64 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "ownerId", "workspaceId", "platform", "accountName", "handle", "status", "createdAt", "updatedAt"]
+    },
+    "AcademyCategory": {
+      "title": "AcademyCategory",
+      "description": "Admin-managed tutorial category for SocialifyAI Academy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 80 },
+        "slug": { "type": "string", "maxLength": 80, "pattern": "^[a-z0-9\\-]+$" },
+        "description": { "type": "string", "maxLength": 400 },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "description", "order", "createdAt", "updatedAt"]
+    },
+    "AcademyTutorial": {
+      "title": "AcademyTutorial",
+      "description": "Published or draft YouTube video tutorial in SocialifyAI Academy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "videoId": { "type": "string", "maxLength": 11, "pattern": "^[a-zA-Z0-9_\\-]{11}$" },
+        "youtubeUrl": { "type": "string", "maxLength": 512 },
+        "title": { "type": "string", "maxLength": 200 },
+        "shortDescription": { "type": "string", "maxLength": 500 },
+        "fullDescription": { "type": "string", "maxLength": 8000 },
+        "thumbnailUrl": { "type": "string", "maxLength": 512 },
+        "duration": { "type": "string", "maxLength": 24 },
+        "categoryId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "keywords": { "type": "array" },
+        "learningObjectives": { "type": "array" },
+        "steps": { "type": "array" },
+        "tips": { "type": "array" },
+        "order": { "type": "number" },
+        "published": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "publishedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "videoId", "youtubeUrl", "title", "shortDescription", "fullDescription", "thumbnailUrl", "duration", "categoryId", "keywords", "learningObjectives", "steps", "tips", "order", "published", "publishedAt", "createdAt", "updatedAt"]
+    },
+    "AcademyProgress": {
+      "title": "AcademyProgress",
+      "description": "Customer-specific tutorial completion and watch progress",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "completedTutorialIds": { "type": "array" },
+        "watchedTutorialIds": { "type": "array" },
+        "recentTutorialIds": { "type": "array" },
+        "lastWatchedTutorialId": { "type": "string", "maxLength": 128 },
+        "lastWatchedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "completedTutorialIds", "watchedTutorialIds", "recentTutorialIds", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -361,6 +419,18 @@
     "/users/{userId}/workspaces/{workspaceDocId}/socialConnections/{connectionId}": {
       "schema": { "$ref": "#/entities/SocialConnection" },
       "description": "Workspace-scoped OAuth and App Password social connections"
+    },
+    "/users/{userId}/academyProgress/{progressDocId}": {
+      "schema": { "$ref": "#/entities/AcademyProgress" },
+      "description": "Authenticated customer's saved Academy learning progress"
+    },
+    "/academyCategories/{categoryId}": {
+      "schema": { "$ref": "#/entities/AcademyCategory" },
+      "description": "SocialifyAI Academy categories managed by Super Admins"
+    },
+    "/academyTutorials/{tutorialId}": {
+      "schema": { "$ref": "#/entities/AcademyTutorial" },
+      "description": "SocialifyAI Academy video tutorials managed by Super Admins"
     },
     "/admins/{adminId}": {
       "schema": { "$ref": "#/entities/AdminRole" },

@@ -8,6 +8,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 import { createSocialRouter } from './server/socialRoutes';
 import { createIntegrationsRouter } from './server/integrationsRoutes';
+import { createAcademyRouter } from './server/academyRoutes';
 
 dotenv.config();
 
@@ -222,6 +223,11 @@ function toPublicUser(u: StoredUser) {
 // Initialize auth user store on boot & mount real OAuth + Integration routers
 loadUsers();
 app.use('/api/social', createSocialRouter(TOKEN_SECRET));
+app.use('/api/academy', createAcademyRouter({
+  dataDir: DATA_DIR,
+  extractBearerUser,
+  isStrictSuperAdminUser,
+}));
 app.use('/api', createIntegrationsRouter(DATA_DIR));
 
 app.post('/api/auth/signup', (req, res) => {

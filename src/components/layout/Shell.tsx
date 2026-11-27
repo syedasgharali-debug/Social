@@ -35,6 +35,7 @@ import {
   FileText,
   Rss,
   Trophy,
+  GraduationCap,
 } from 'lucide-react';
 import { AppState, TeamRole, DiscoveryAlert } from '../../types';
 import { ContactAvatar } from '../common/PlatformMeta';
@@ -56,7 +57,8 @@ export type NavTabId =
   | 'approvals'
   | 'profiles'
   | 'crm'
-  | 'ads';
+  | 'ads'
+  | 'academy';
 
 export const NAV_TAB_LABELS: Record<NavTabId, { group: string; label: string }> = {
   overview: { group: 'Workspace', label: 'Overview' },
@@ -75,6 +77,7 @@ export const NAV_TAB_LABELS: Record<NavTabId, { group: string; label: string }> 
   analytics: { group: 'Engagement & CRM', label: 'Analytics & Reports' },
   approvals: { group: 'Operations', label: 'Team & Approvals' },
   profiles: { group: 'Operations', label: 'Connected Profiles' },
+  academy: { group: 'Learning', label: 'Academy' },
 };
 
 interface SidebarProps {
@@ -174,6 +177,12 @@ export function Sidebar({
       items: [
         { id: 'approvals', label: 'Team & Approvals', icon: ShieldCheck, badge: pendingApprovalCount },
         { id: 'profiles', label: 'Connected Profiles', icon: Share2 },
+      ],
+    },
+    {
+      group: 'Learning',
+      items: [
+        { id: 'academy', label: 'Academy', icon: GraduationCap },
       ],
     },
   ];
